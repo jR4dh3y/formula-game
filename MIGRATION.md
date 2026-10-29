@@ -2,7 +2,7 @@
 
 Exit condition: the existing race runs through Bevy, with no custom-engine dependency in the game, and the real Spa/car assets render in a captured frame.
 
-Branch: `t3/recreate-game-bevy`, starting at `8da559c`. The initial worktree was clean. No remote is configured. No commit or push is authorized.
+The migration started on `t3/recreate-game-bevy` at `8da559c`. Bevy is now the only active game engine; the latest custom-engine workspace is frozen at `archive/custom-engine/`, with source tag `archive/custom-engine-2026-10-29` pointing to `d0679e2`. The Bevy branch incorporates main's tyre-aware braking updates and multi-track asset tools. The verification notes below retain historical results from earlier migration stages.
 
 ## Constraints
 
@@ -17,7 +17,7 @@ Branch: `t3/recreate-game-bevy`, starting at `8da559c`. The initial worktree was
 
 ## Ownership
 
-`racecraft-sim` owns the deterministic 360 Hz race, AI, collisions, assists, powertrain, tyres, timing and results. Bevy owns scheduling, window lifecycle, glTF scenes, PBR materials, lights, transforms, input and camera. `bevy_egui` draws the existing HUD using Bevy's renderer. No renderer or ECS compatibility layer is retained. The old `engine/` source is excluded from the active workspace as historical source.
+`racecraft-sim` owns the deterministic 360 Hz race, AI, collisions, assists, powertrain, tyres, timing and results. Bevy owns scheduling, window lifecycle, glTF scenes, PBR materials, lights, transforms, input and camera. `bevy_egui` draws the existing HUD using Bevy's renderer. No renderer or ECS compatibility layer is retained. The old engine and client are preserved in the independent, excluded `archive/custom-engine/` workspace; there is no active root `engine/` crate.
 
 ## Coverage and completion ledger
 
@@ -66,4 +66,21 @@ No physical gamepad was connected. Gamepad tests inject analog values, button pr
 
 Captures and logs are preserved under `target/bevy-migration-proof/` as ignored local artifacts. The Rust test and CLI commands above reproduce the checks. The one-time build took about 22 minutes with the existing optimized dependency profile and three build jobs; later builds were incremental.
 
-Final Git state: branch `t3/recreate-game-bevy`, HEAD remains `8da559c`. Task changes are unstaged. No commit or push was made. No remote is configured. The migration exit condition is met; the baseline simulation tuning issue remains recorded above.
+The historical starting revision above is not the current Git state. The Bevy migration, gameplay/presentation improvements, portable packaging and custom-engine archive are committed for the transition to `main`. No remote is configured, so this transition is a local merge.
+
+## Final engine transition
+
+The root workspace contains only `game` and `sim`, with no Dhool dependency.
+`archive/custom-engine/` preserves all 97 tracked files from `d0679e2`
+byte-for-byte, plus an archive README. Its own Cargo workspace and lockfile
+remain independent. `AGENTS.md` and the Cursor project rule direct future
+development to Bevy and keep the archive frozen.
+
+After merging main's simulation and asset-tool changes: 52 Rust unit tests,
+three real-asset track tests (both cars on Bahrain, COTA and Silverstone), the
+one-minute Spa driving-guidance regression, six asset-tool tests, strict
+workspace Clippy, formatting and whitespace checks pass. The Spa field test
+still fails the existing 150-second lap ceiling: all six entrants finish,
+best lap 151.73 seconds. That threshold remains unchanged. The archived
+workspace was checked through Cargo metadata and source-integrity comparison;
+its optional legacy build is not part of the active checks.

@@ -1,5 +1,7 @@
 # F1 Racecraft
 
+Bevy is the sole active game engine. New gameplay, rendering, input, audio and UI work belongs in `game/` and `sim/`. The previous custom engine and its original client are preserved as a frozen, independent workspace under [archive/custom-engine](archive/custom-engine/README.md); do not add features there or restore it as an active dependency.
+
 A Bevy 0.20 racing game with a deterministic 360 Hz simcade simulation. Select a circuit, car and driving aids from the in-game menu, then race against up to 15 AI drivers. The default RB6 field matches the V8-era sound and proportions; the RB22 provides the modern car and matching field. The simulation includes manual gearing, tyre temperature and wear, wing setup, slipstream, dirty air, car contacts, track collisions, timing and results.
 
 ## Run
@@ -104,6 +106,6 @@ The CLI exit test launches separate game processes, quits after 1 and 12 frames,
 - `game/`: Bevy app, glTF entities, input, three camera modes, daylight, menus and HUD through `bevy_egui`.
 - `sim/`: renderer-independent physics, AI and race rules. Post-migration polish fixes reverse engine braking, repeated shifts during a torque cut, and stale crash dynamics after recovery while preserving tyre condition and timing.
 - `tools/`: asset converters.
-- `engine/`: historical custom-engine source, excluded from the active workspace and game dependencies.
+- `archive/custom-engine/`: complete frozen custom-engine workspace, excluded from the active build. Includes the legacy engine, client, simulation, lockfile and asset tools from the last custom-engine `main` revision.
 
-See [MIGRATION.md](MIGRATION.md) for migration coverage and recorded verification limits. The gameplay design in [handoff.md](handoff.md) also describes future features; those are not all implemented.
+See [MIGRATION.md](MIGRATION.md) for migration coverage and recorded verification limits. The historical gameplay design in [the archived handoff](archive/custom-engine/handoff.md) also describes future features; those are not all implemented.

@@ -1,0 +1,9 @@
+---
+description: Use Bevy for all active game development and preserve the custom-engine archive.
+alwaysApply: true
+---
+
+Follow the repository's `AGENTS.md`. Bevy in `game/` and the simulation in `sim/`
+are the active implementation. `archive/custom-engine/` is frozen history;
+do not develop there or restore it as an active dependency unless explicitly
+requested by the user.

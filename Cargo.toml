@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["sim", "game"]
-exclude = ["engine"]
+exclude = ["archive/custom-engine"]
 
 [workspace.package]
 edition = "2021"
