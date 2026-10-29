@@ -18,6 +18,8 @@ pub struct Preferences {
     pub graphics: crate::graphics::Quality,
     #[serde(default = "vsync_default")]
     pub vsync: bool,
+    #[serde(default)]
+    pub display: crate::hud::Settings,
 }
 
 fn vsync_default() -> bool {
@@ -36,6 +38,7 @@ impl Preferences {
                 .into(),
             graphics: options.graphics,
             vsync: options.vsync,
+            display: crate::hud::Settings::default(),
         }
     }
     pub fn sanitize(&mut self) {
@@ -141,6 +144,10 @@ mod tests {
         prefs.corner_braking = 0.35;
         prefs.aids.automatic_gears = false;
         prefs.views.get_mut("rb22").unwrap().cockpit.height = 1.12;
+        prefs.display = crate::hud::Settings {
+            layout: crate::hud::Layout::Gauges,
+            map: crate::hud::MapMode::Nearby,
+        };
         let path = std::env::temp_dir().join(format!("f1-prefs-{}.json", std::process::id()));
         let mut store = Store {
             path: Some(path.clone()),
@@ -150,5 +157,15 @@ mod tests {
         let restored: Preferences = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert!(restored == prefs);
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn older_preferences_default_to_segment_display_and_full_circuit() {
+        let prefs = Preferences::defaults(&Options::parse(std::iter::empty()).unwrap());
+        let mut json = serde_json::to_value(&prefs).unwrap();
+        json.as_object_mut().unwrap().remove("display");
+        let restored: Preferences = serde_json::from_value(json).unwrap();
+        assert_eq!(restored.display.layout, crate::hud::Layout::Segments);
+        assert_eq!(restored.display.map, crate::hud::MapMode::FullCircuit);
     }
 }

@@ -33,7 +33,75 @@ def surface(name, config):
     )
 
 
-def walls_from(triangles, points):
+def convert_material(model, material, config, centerline_only=False):
+    """Repair known exporter alpha mistakes explicitly, never by texture guessing.
+
+    Legacy racing textures also store specular/roughness data in alpha. A low
+    alpha value alone therefore cannot distinguish a fence from opaque asphalt.
+    """
+    name = material.get("name", "unnamed")
+    sid = surface(name, config)
+    pbr = dict(material.get("pbrMetallicRoughness", {}))
+    # Explicit audited repairs for legacy shaders exported as metallic surfaces.
+    for pattern, properties in config.get("material_pbr", {}).items():
+        if matches(name, [pattern]):
+            if set(properties) - {"metallicFactor", "roughnessFactor", "baseColorFactor"}:
+                raise ValueError(f"unsupported PBR override for {name}")
+            pbr.update(properties)
+    # Some legacy exporters placed diffuse artwork in a specular slot. Select
+    # only explicitly audited source images; never reinterpret other tracks.
+    texture_rules = [
+        image_name
+        for pattern, image_name in config.get("material_base_color_texture", {}).items()
+        if matches(name, [pattern])
+    ]
+    if len(texture_rules) > 1:
+        raise ValueError(f"conflicting base color image rules for {name}")
+    image_material = material
+    if texture_rules:
+        image_name = texture_rules[0]
+        sources = [
+            i for i, entry in enumerate(model.json.get("images", []))
+            if entry.get("name") == image_name
+        ]
+        if len(sources) != 1:
+            raise ValueError(f"expected one source image {image_name!r} for {name}")
+        textures = [
+            i for i, entry in enumerate(model.json.get("textures", []))
+            if entry.get("source") == sources[0]
+        ]
+        if not textures:
+            raise ValueError(f"source image {image_name!r} has no texture for {name}")
+        image_material = {
+            **material,
+            "pbrMetallicRoughness": {**pbr, "baseColorTexture": {"index": textures[0]}},
+        }
+    image = None if centerline_only else model.image(image_material, config.get("max_texture", 1024))
+    mode = material.get("alphaMode", "OPAQUE")
+    overrides = config.get("material_alpha", {})
+    selected = [key for key, patterns in overrides.items() if matches(name, patterns)]
+    if len(selected) > 1 or any(key not in ("OPAQUE", "MASK", "BLEND") for key in selected):
+        raise ValueError(f"invalid/conflicting alpha rules for {name}: {selected}")
+    if selected:
+        mode = selected[0]
+    if image is not None and image.mode == "RGBA" and mode == "OPAQUE":
+        image = image.convert("RGB")
+    return GlbMaterial(
+        name=("ground:" if sid is not None else "")
+        + ("decal:" if matches(name, config.get("decals", [])) else "")
+        + name,
+        base_color=tuple(pbr.get("baseColorFactor", [1, 1, 1, 1])),
+        image=image,
+        alpha_mask=mode == "MASK",
+        alpha_blend=mode == "BLEND",
+        alpha_cutoff=material.get("alphaCutoff", 0.5),
+        roughness=pbr.get("roughnessFactor", 0.8),
+        metallic=pbr.get("metallicFactor", 0),
+        emissive=tuple(material.get("emissiveFactor", [0, 0, 0])),
+    )
+
+
+def walls_from(triangles, points, min_face_height=0.4, probe_height=0.2):
     """Intersect tall vertical faces at bumper height, excluding overhead rails."""
     from scipy.spatial import cKDTree
 
@@ -41,13 +109,14 @@ def walls_from(triangles, points):
         triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]
     )
     norm = np.linalg.norm(cross, axis=1)
-    tall = np.ptp(triangles[:, :, 1], axis=1) >= 0.4
+    tall = np.ptp(triangles[:, :, 1], axis=1) >= min_face_height
     vertical = np.abs(cross[:, 1]) < 0.5 * norm
     triangles = triangles[tall & vertical & (norm > 1e-8)]
     tree = cKDTree(points[:, [0, 2]])
     distance, station = tree.query(triangles[:, :, [0, 2]].mean(axis=1))
     heights = np.where(
-        distance <= 50, points[station, 1] + 0.2, triangles[:, :, 1].min(axis=1) + 0.2
+        distance <= 50, points[station, 1] + probe_height,
+        triangles[:, :, 1].min(axis=1) + probe_height
     )
     segments = []
     for tri, height in zip(triangles, heights):
@@ -71,6 +140,80 @@ def walls_from(triangles, points):
             a, b = b, a
         segments.append(np.r_[a, b])
     return np.unique(np.round(segments, 2), axis=0).astype("f4").reshape(-1, 4)
+
+
+def widths_inside_walls(points, widths, walls):
+    """Constrain route widths where asphalt continues behind a physical barrier."""
+    from scipy.ndimage import minimum_filter1d
+
+    def cross(a, b):
+        return a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
+
+    flat = np.asarray(points, dtype=float)[:, [0, 2]]
+    tangent = np.roll(flat, -1, axis=0) - np.roll(flat, 1, axis=0)
+    tangent /= np.linalg.norm(tangent, axis=1, keepdims=True)
+    normals = np.column_stack([-tangent[:, 1], tangent[:, 0]])
+    a = walls[:, :2]
+    delta = walls[:, 2:] - a
+    limits = []
+    for point, normal in zip(flat, normals):
+        det = cross(normal, delta)
+        valid = np.abs(det) > 1e-7
+        safe = np.where(valid, det, 1)
+        along = cross(a - point, delta) / safe
+        fraction = cross(a - point, normal) / safe
+        hit = valid & (fraction >= 0) & (fraction <= 1)
+        limits.append(np.abs(along[hit]).min() if hit.any() else float("inf"))
+    # A car occupies several metres longitudinally, not a single cross section.
+    limits = minimum_filter1d(limits, size=5, mode="wrap")
+    result = np.minimum(widths, limits)
+    if result.min() < 1.5:
+        raise ValueError("route too close to a wall; repair its centreline")
+    return result
+
+
+def bridge_road_seams(road, rules):
+    """Underpin audited narrow source cracks between matching road boundary edges.
+
+    The source kerb remains above these patches. Only parallel edges with matching
+    endpoints and elevation can join; large gaps and vertical steps stay open.
+    """
+    if not rules:
+        return np.empty((0, 3, 3), dtype="f4")
+    from scipy.spatial import cKDTree
+
+    vertices, inverse = np.unique(np.round(road.reshape(-1, 3), 4), axis=0, return_inverse=True)
+    faces = inverse.reshape(-1, 3)
+    edges = np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    edges = np.sort(edges, axis=1)
+    edges, counts = np.unique(edges, axis=0, return_counts=True)
+    boundary = vertices[edges[counts == 1]]
+    patches = []
+    for rule in rules:
+        lo, hi = np.asarray(rule["bounds"])
+        inside = ((boundary[:, :, [0, 2]] >= lo) & (boundary[:, :, [0, 2]] <= hi)).all(axis=(1, 2))
+        selected = boundary[inside]
+        if not len(selected):
+            continue
+        gap = rule["max_gap"]
+        for i, j in sorted(cKDTree(selected.mean(axis=1)[:, [0, 2]]).query_pairs(gap)):
+            a, b = selected[i], selected[j]
+            if np.linalg.norm(a[0] - b[1]) < np.linalg.norm(a[0] - b[0]):
+                b = b[::-1]
+            delta = a - b
+            if np.max(np.linalg.norm(delta[:, [0, 2]], axis=1)) > gap or np.max(np.abs(delta[:, 1])) > 0.03:
+                continue
+            u, v = a[1] - a[0], b[1] - b[0]
+            lengths = np.linalg.norm([u, v], axis=1)
+            if lengths.min() < 1 or lengths.max() / lengths.min() > 1.1:
+                continue
+            if abs(np.dot(u, v)) / np.prod(lengths) < 0.995:
+                continue
+            cross = np.cross(u, b[0] - a[0])
+            if np.linalg.norm(cross) < 0.005 or abs(cross[1]) < np.linalg.norm(cross) * 0.95:
+                continue
+            patches.extend([[a[0], a[1], b[0]], [a[1], b[1], b[0]]])
+    return np.asarray(patches, dtype="f4").reshape(-1, 3, 3)
 
 
 def remove_placeholders(positions, faces, material, rules):
@@ -165,35 +308,9 @@ def convert(config_path, source, destination, centerline_only=False):
     out.mkdir(parents=True, exist_ok=True)
     model = Glb(source)
     source_materials = model.json["materials"]
-    materials = []
-    for m in source_materials:
-        name = m.get("name", "unnamed")
-        sid = surface(name, config)
-        pbr = m.get("pbrMetallicRoughness", {})
-        image = (
-            None if centerline_only else model.image(m, config.get("max_texture", 1024))
-        )
-        mode = m.get("alphaMode", "OPAQUE")
-        alpha = mode == "MASK"
-        # glTF OPAQUE explicitly ignores texture alpha (these asphalt maps
-        # store auxiliary data there). Only BLEND billboards need conversion.
-        if image is not None and image.mode == "RGBA":
-            if mode == "OPAQUE":
-                image = image.convert("RGB")
-            elif mode == "BLEND":
-                a = np.asarray(image.getchannel("A"))
-                alpha = bool((a < 128).mean() > 0.01)
-        materials.append(
-            GlbMaterial(
-                name=("ground:" if sid is not None else "") + name,
-                base_color=tuple(pbr.get("baseColorFactor", [1, 1, 1, 1])),
-                image=image,
-                alpha_mask=alpha,
-                roughness=pbr.get("roughnessFactor", 0.8),
-                metallic=pbr.get("metallicFactor", 0),
-                emissive=tuple(m.get("emissiveFactor", [0, 0, 0])),
-            )
-        )
+    materials = [
+        convert_material(model, m, config, centerline_only) for m in source_materials
+    ]
     total = 0
     protected = 0
     for m, p, n, u, f in model.primitives(config.get("scale", 1)):
@@ -228,7 +345,7 @@ def convert(config_path, source, destination, centerline_only=False):
             triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]
         )
         flat = np.abs(cross[:, 1]) > np.linalg.norm(cross, axis=1) * 0.6
-        if sid is not None and flat.any():
+        if sid is not None and flat.any() and not matches(name, config.get("decals", [])):
             collision.append(triangles[flat])
             ids.append(np.full(flat.sum(), sid, dtype="u1"))
         if matches(name, config["wall"]):
@@ -314,10 +431,21 @@ def convert(config_path, source, destination, centerline_only=False):
             surfaces = np.r_[surfaces, np.zeros(len(patches), dtype="u1")]
         print(f"infilled {len(patches)} hidden road triangles", flush=True)
     walls = (
-        walls_from(np.concatenate(wall_parts), points)
+        walls_from(
+            np.concatenate(wall_parts), points,
+            config.get("wall_min_face_height", 0.4),
+            config.get("wall_probe_height", 0.2),
+        )
         if wall_parts
         else np.empty((0, 4))
     )
+    if config.get("widths_from_walls"):
+        widths = widths_inside_walls(points, widths, walls)
+        metadata["half_width"] = np.round(widths, 3).tolist()
+    patches = bridge_road_seams(road, config.get("collision_seams", []))
+    if len(patches):
+        triangles = np.concatenate([triangles, patches])
+        surfaces = np.r_[surfaces, np.zeros(len(patches), dtype="u1")]
     meshes = []
     for (m, x, z), parts in sorted(buckets.items()):
         offsets = np.cumsum([0] + [len(part[0]) for part in parts[:-1]])
@@ -351,6 +479,7 @@ def convert(config_path, source, destination, centerline_only=False):
         ),
         "collision_triangles": len(triangles),
         "walls": len(walls),
+        "seam_triangles": len(patches),
         "length": round(length, 2),
         "reference_length": config["length"],
         "minimum_half_width": round(float(widths.min()), 2),

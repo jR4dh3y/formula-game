@@ -179,6 +179,19 @@ fn visual_ready(
             return;
         }
     }
+    // Painted rubber/marking overlays receive shadows but must not cast them
+    // onto the road a few millimetres below. The converter marks only audited
+    // track decals; bridges, barriers, cars and the Spa scene keep their shadows.
+    if cars.get(event.entity).is_err() {
+        for entity in children.iter_descendants(event.entity) {
+            if material_names
+                .get(entity)
+                .is_ok_and(|name| name.0.trim_start_matches("ground:").starts_with("decal:"))
+            {
+                commands.entity(entity).insert(bevy::light::NotShadowCaster);
+            }
+        }
+    }
     commands.entity(event.entity).insert(VisualReady);
 }
 
@@ -201,7 +214,7 @@ pub fn check_loading(
             menu.error = Some(format!("Could not load the scene: {error}"));
             session.screen = crate::menu::Screen::Main;
             session.paused = true;
-            if menu.draft.frames.is_some() {
+            if menu.draft.frames.is_some() || menu.draft.benchmark.is_some() {
                 exit.write(AppExit::error());
             }
             return;
@@ -220,7 +233,7 @@ pub fn check_loading(
         menu.error = Some("Scene loading timed out. Choose another circuit and try again.".into());
         session.screen = crate::menu::Screen::Main;
         session.paused = true;
-        if menu.draft.frames.is_some() {
+        if menu.draft.frames.is_some() || menu.draft.benchmark.is_some() {
             exit.write(AppExit::error());
         }
     }

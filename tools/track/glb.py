@@ -17,6 +17,8 @@ class GlbMaterial:
     base_color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     image: Image.Image | None = None
     alpha_mask: bool = False
+    alpha_blend: bool = False
+    alpha_cutoff: float = 0.5
     roughness: float = 0.8
     metallic: float = 0.0
     emissive: tuple[float, float, float] = (0.0, 0.0, 0.0)
@@ -107,7 +109,9 @@ def write_glb(
             }
         if material.alpha_mask:
             entry["alphaMode"] = "MASK"
-            entry["alphaCutoff"] = 0.5
+            entry["alphaCutoff"] = material.alpha_cutoff
+        elif material.alpha_blend:
+            entry["alphaMode"] = "BLEND"
         gltf["materials"].append(entry)
 
     def accessor(array: np.ndarray, kind: str, component: int, target: int, bounds=False) -> int:

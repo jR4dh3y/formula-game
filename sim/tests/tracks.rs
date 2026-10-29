@@ -3,13 +3,15 @@
 //! cannot conceal errors in the road, widths, walls or centreline.
 
 use racecraft_sim::{
-    Assists, CarGeometry, CarSpec, DriverProfile, EntrantConfig, Phase, Race, Setup, Surface,
-    Track, PHYSICS_RATE,
+    Assists, Car, CarGeometry, CarInput, CarSpec, DriverProfile, EntrantConfig, Phase, Race, Setup,
+    Surface, Track, PHYSICS_RATE,
 };
 use std::{path::PathBuf, sync::Arc};
 
 fn drive(name: &str, reference_length: f64) {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets");
+    let root = std::env::var_os("F1_TEST_ASSETS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets"));
     let path = root.join("tracks").join(name);
     if !path.join("track.json").is_file() {
         eprintln!("skipping {name}: run tools/build_assets.sh {name}");
@@ -25,9 +27,113 @@ fn drive(name: &str, reference_length: f64) {
         CarSpec::rb22_with(&CarGeometry::load(root.join("cars/rb22/car.json")).expect("rb22")),
         CarSpec::rb6_with(&CarGeometry::load(root.join("cars/rb6/car.json")).expect("rb6")),
     ];
+    inspect_route(name, track.clone(), Arc::new(models[0].clone()));
     for spec in models {
         drive_lap(name, track.clone(), Arc::new(spec));
     }
+}
+
+fn inspect_route(name: &str, track: Arc<Track>, spec: Arc<CarSpec>) {
+    let mut missing = 0;
+    let mut non_racing = 0;
+    let mut worst_height_error = 0.0_f64;
+    for station in &track.stations {
+        match track.collision.ground(station.position) {
+            Some(hit) => {
+                non_racing += usize::from(!matches!(
+                    hit.surface,
+                    Surface::Asphalt | Surface::Kerb | Surface::Concrete
+                ));
+                worst_height_error =
+                    worst_height_error.max((hit.height - station.position.y).abs());
+            }
+            None => {
+                missing += 1;
+                println!(
+                    "{name}: missing ground s={:.1} at {:?}",
+                    station.s, station.position
+                );
+            }
+        }
+    }
+    assert_eq!(
+        missing, 0,
+        "{name}: every route station needs physical ground"
+    );
+    assert_eq!(
+        non_racing, 0,
+        "{name}: route stations must stay on racing surfaces"
+    );
+    for slot in 0..16 {
+        let (position, yaw) = track.grid_slot(slot);
+        let car = Car::new(
+            spec.clone(),
+            Setup::default(),
+            Assists::default(),
+            &track,
+            position,
+            yaw,
+        );
+        assert!(
+            matches!(
+                track.collision.ground(car.position).map(|hit| hit.surface),
+                Some(Surface::Asphalt | Surface::Kerb | Surface::Concrete)
+            ),
+            "{name}: grid slot {slot} has no racing surface"
+        );
+        assert!(
+            car.forward()
+                .dot(track.frame_at(car.track_position.s).tangent)
+                > 0.99
+        );
+    }
+    // Exercise the real safe-pose recovery path on straights, bends and hills.
+    let mut recoveries = 0;
+    for station in track.stations.iter().step_by(100) {
+        let entrant = EntrantConfig {
+            name: "Recovery probe".into(),
+            spec: spec.clone(),
+            setup: Setup::default(),
+            assists: Assists::default(),
+            ai: None,
+            human_slot: 0,
+            livery: [1.; 3],
+        };
+        let mut race = Race::new(track.clone(), vec![entrant], 1, 5);
+        race.phase = Phase::Racing;
+        let yaw = station.tangent.x.atan2(station.tangent.y);
+        race.entrants[0].car = Car::new(
+            spec.clone(),
+            Setup::default(),
+            Assists::default(),
+            &track,
+            station.position,
+            yaw,
+        );
+        race.entrants[0].car.velocity = station.tangent * 12.;
+        race.step(&[CarInput::default()]);
+        let safe = race.entrants[0].car.position;
+        race.entrants[0].car.position += glam::DVec3::new(80., 20., 80.);
+        race.recover(0);
+        let car = &race.entrants[0].car;
+        assert!(
+            car.position.distance(safe) < 1.,
+            "{name}: recovery moved away from safe pose at s={}",
+            station.s
+        );
+        assert!(car.speed() < 0.1);
+        assert!(car.forward().dot(station.tangent) > 0.99);
+        assert!(
+            matches!(
+                track.collision.ground(car.position).map(|hit| hit.surface),
+                Some(Surface::Asphalt | Surface::Kerb | Surface::Concrete)
+            ),
+            "{name}: recovery has no road at s={}",
+            station.s
+        );
+        recoveries += 1;
+    }
+    println!("{name}: {} route probes, {missing} missing ground, {non_racing} non-racing, maximum route/ground height difference {worst_height_error:.3} m, {recoveries} recovery probes", track.stations.len());
 }
 
 fn drive_lap(name: &str, track: Arc<Track>, spec: Arc<CarSpec>) {

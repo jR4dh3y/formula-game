@@ -2,6 +2,7 @@
 
 mod assets;
 mod audio;
+mod benchmark;
 mod camera;
 mod canvas;
 mod controls;
@@ -17,6 +18,8 @@ mod sky;
 #[cfg(test)]
 mod tests;
 mod textures;
+#[cfg(test)]
+mod track_probe;
 
 use bevy::{
     app::AppExit,
@@ -98,7 +101,14 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .assets
         .canonicalize()
         .map_err(|error| format!("asset directory {}: {error}", options.assets.display()))?;
-    let race = assets::load_race(&options)?;
+    let mut race = assets::load_race(&options)?;
+    let benchmark = if options.benchmark.is_some() {
+        let (planned_race, run) = benchmark::Run::plan(&options, &race)?;
+        race = planned_race;
+        Some(run)
+    } else {
+        None
+    };
     let player = options.grid_slot - 1;
     let title = format!("F1 Racecraft - {}", race.track.name);
     let quick_race = options.quick_race || options.frames.is_some();
@@ -127,14 +137,14 @@ fn build_app(mut options: Options) -> Result<App, String> {
             menu::Screen::Main
         },
     };
-    let capture_run = options.frames.is_some();
+    let capture_run = options.frames.is_some() || options.benchmark.is_some();
     let mut app = App::new();
     let plugins = DefaultPlugins
         .set(bevy::render::RenderPlugin {
             // Capture runs exit early and must not race background pipeline compilation
             // during driver teardown. Interactive play compiles in the background:
             // blocking a frame on a new shader stalls the race and then lurches it forward.
-            synchronous_pipeline_compilation: cfg!(test) || options.frames.is_some(),
+            synchronous_pipeline_compilation: cfg!(test) || capture_run,
             ..default()
         })
         .set(AssetPlugin {
@@ -153,7 +163,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
     let plugins = plugins.set(bevy::winit::WinitPlugin {
         run_on_any_thread: true,
     });
-    if capture_run && std::env::var_os("F1_DETERMINISTIC").is_some() {
+    if capture_run && options.benchmark.is_none() && std::env::var_os("F1_DETERMINISTIC").is_some()
+    {
         // Every frame advances exactly 1/60 s, so the same frame shows the same
         // race state in any build: captures can be compared pixel by pixel.
         app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
@@ -170,6 +181,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
         });
     }
     let profile = std::env::var_os("F1_PROFILE").is_some();
+    if let Some(run) = benchmark {
+        app.insert_resource(run);
+    }
     app.add_plugins(plugins)
         .add_audio_source::<audio::EngineSound>()
         .add_plugins(EguiPlugin::default())
@@ -196,6 +210,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 textures::prepare,
                 materials::prepare,
                 assets::check_loading,
+                benchmark::advance,
                 assets::sync_cars,
                 camera::update,
                 audio::update,
@@ -225,14 +240,21 @@ fn pause_on_focus_loss(
     mut session: ResMut<Session>,
 ) {
     for event in focus.read() {
-        if !event.focused && options.frames.is_none() && session.screen == menu::Screen::Racing {
+        if !event.focused
+            && options.frames.is_none()
+            && options.benchmark.is_none()
+            && session.screen == menu::Screen::Racing
+        {
             session.screen = menu::Screen::Paused;
             session.paused = true;
         }
     }
 }
 
-fn step_race(mut session: ResMut<Session>) {
+fn step_race(mut session: ResMut<Session>, benchmark: Option<Res<benchmark::Run>>) {
+    if benchmark.is_some() {
+        return;
+    }
     let Session { poses, race, .. } = &mut *session;
     poses.record(race);
     if session.paused || !session.ready {
@@ -260,12 +282,7 @@ fn step_race(mut session: ResMut<Session>) {
 struct Capture {
     frames: u64,
     requested: bool,
-    /// Real time when the benchmark window opened, after scene warm-up.
-    benchmark_start: Option<f64>,
 }
-
-/// Capture runs report the average frame rate after this many frames.
-const BENCHMARK_WARMUP: u64 = 300;
 
 fn capture(
     mut commands: Commands,
@@ -273,7 +290,6 @@ fn capture(
     session: Res<Session>,
     mut state: ResMut<Capture>,
     mut exit: MessageWriter<AppExit>,
-    time: Res<Time<Real>>,
     mut frame_count: ResMut<bevy::diagnostic::FrameCount>,
 ) {
     if !session.ready || state.requested {
@@ -285,20 +301,8 @@ fn capture(
         // variable number of frames, so restart it with the race.
         frame_count.0 = 0;
     }
-    if state.frames == BENCHMARK_WARMUP {
-        state.benchmark_start = Some(time.elapsed_secs_f64());
-    }
     if options.frames.is_some_and(|limit| state.frames >= limit) {
         state.requested = true;
-        if let Some(start) = state.benchmark_start {
-            let frames = state.frames - BENCHMARK_WARMUP;
-            let seconds = time.elapsed_secs_f64() - start;
-            info!(
-                "Benchmark: {:.1} fps over {frames} frames ({:.2} ms/frame)",
-                frames as f64 / seconds,
-                seconds * 1000.0 / frames as f64
-            );
-        }
         if let Some(path) = options.capture.clone() {
             commands.spawn(Screenshot::primary_window()).observe(
                 move |event: On<ScreenshotCaptured>, mut exit: MessageWriter<AppExit>| {

@@ -150,5 +150,60 @@
       ],
       "tolerance": 0.05
     }
-  ]
+  ],
+  "material_alpha": {
+    "MASK": [
+      "pitwall_fence",
+      "Material__7405",
+      "brdg01tr",
+      "fnce01",
+      "fence01",
+      "texl_grandstand_carpark_f_02",
+      "handrail03",
+      "ilya_rails_silver",
+      "struts01",
+      "ilya_tents_alpha",
+      "ilya_rails_white",
+      "ilya_cota_seats",
+      "tex_horizon",
+      "tex_grandstand_carpark_f_03",
+      "struts02",
+      "seats",
+      "ubs_decal",
+      "brdgus01",
+      "roadlinewhite",
+      "ilya_tents"
+    ],
+    "BLEND": [
+      "skidmark",
+      "roadline",
+      "decal02",
+      "tower_glass",
+      "ilya_glass_rails"
+    ]
+  },
+  "decals": [
+    "skidmark",
+    "roadline",
+    "decal02"
+  ],
+  "material_base_color_texture": {
+    "roada": "Roada-new",
+    "roada_drs": "Roadadrs-new",
+    "roadpitlane": "tex_pitlane_d",
+    "roadpit": "tex_roada",
+    "fillred": "roadfillredt-new",
+    "roadpitwhite": "bldgwht",
+    "roadlinewhite": "tex_whiteline_a_01_d",
+    "offtracka": "texoftrack-new",
+    "offtrackb_pirelli": "pirelli_board_b",
+    "roadpitb": "gulfair",
+    "offtracka_blue": "blue_2",
+    "grassc": "grass",
+    "grassa": "grass",
+    "sanda_red": "re_write1",
+    "rmblx": "roadfillredt-new",
+    "decal03": "gulfair",
+    "grassd": "grass"
+  }
 }

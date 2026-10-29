@@ -158,5 +158,58 @@
         500
       ]
     ]
-  ]
+  ],
+  "material_alpha": {
+    "MASK": [
+      "fences1.*",
+      "structures.*",
+      "trees.001",
+      "HotelLogo.001",
+      "Hotel.001",
+      "box1.001",
+      "miscalpha.001",
+      "grass_NM.001"
+    ],
+    "BLEND": [
+      "groove*.001",
+      "Transparent.*",
+      "NewBridge.glasses.001",
+      "Hotel.glasses.001",
+      "Hotel.balcony.glasses.001",
+      "glass_transp.001",
+      "glass.001"
+    ]
+  },
+  "material_base_color_texture": {
+    "barriers1.*": "barriers1",
+    "metals1.*": "metals1",
+    "walls2.001": "walls2b",
+    "box1_multimap.001": "box1",
+    "tile1.001": "tile1",
+    "tile1B.001": "tile1B"
+  },
+  "material_pbr": {
+    "grass.001": {
+      "baseColorFactor": [
+        0.135,
+        0.145,
+        0.068,
+        1.0
+      ]
+    },
+    "top2*.001": {
+      "baseColorFactor": [
+        0.349,
+        0.334,
+        0.203,
+        1.0
+      ]
+    }
+  },
+  "decals": [
+    "groove*.001"
+  ],
+  "wall_min_face_height": 0.2,
+  "wall_probe_height": 0.45,
+  "widths_from_walls": true
 }

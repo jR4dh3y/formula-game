@@ -1,5 +1,4 @@
-//! Race setup and pause menus. Inherits the HUD's Titillium type and its
-//! instrument look: charcoal housings, black inset controls and a red accent.
+//! Race setup and pause menus. Racing keeps controls on keyboard/gamepad.
 //! Setup stays editable; only Start replaces a race.
 
 use crate::{
@@ -34,6 +33,7 @@ pub(crate) enum Tab {
     Aids,
     Controls,
     Graphics,
+    Hud,
 }
 
 pub struct Circuit {
@@ -139,6 +139,7 @@ pub struct Frontend {
     pub show_racing_line: bool,
     pub graphics: crate::graphics::Quality,
     pub vsync: bool,
+    pub display: hud::Settings,
     pub views: std::collections::BTreeMap<String, crate::camera::Tuning>,
     store: crate::preferences::Store,
     pub pending: bool,
@@ -162,6 +163,7 @@ impl Frontend {
             show_racing_line: prefs.racing_line,
             graphics: prefs.graphics,
             vsync: prefs.vsync,
+            display: prefs.display,
             views: prefs.views,
             store,
             pending: false,
@@ -209,6 +211,7 @@ pub fn apply(
         views: frontend.views.clone(),
         graphics: frontend.graphics,
         vsync: frontend.vsync,
+        display: frontend.display,
     };
     if let Err(error) = frontend.store.save(prefs) {
         frontend.error = Some(error);
@@ -393,38 +396,6 @@ pub fn ui(
     );
     if session.screen == Screen::Racing {
         frontend.draft.camera = session.camera.mode;
-        let scale = hud::scale(context.viewport_rect().size());
-        // Match the timing tower's header, entrant rows and three timing rows.
-        let below_timing =
-            (24. + 45. + session.race.entrants.len() as f32 * 30. + 10. + 90. + 10.) * scale;
-        egui::Area::new(egui::Id::new("race-controls"))
-            .anchor(
-                egui::Align2::LEFT_TOP,
-                egui::vec2(24. * scale, below_timing),
-            )
-            .show(&viewport, |ui| {
-                housing()
-                    .fill(HOUSING.gamma_multiply(0.92))
-                    .inner_margin(6)
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(format!("{}  C", session.camera.mode.label()))
-                                .clicked()
-                            {
-                                session.camera.cycle();
-                            }
-                            if ui.button("Adjust  F4").clicked() {
-                                session.screen = Screen::CameraEditor;
-                                session.paused = true;
-                            }
-                            if ui.button("Menu  Esc").clicked() {
-                                session.screen = Screen::Paused;
-                                session.paused = true;
-                            }
-                        });
-                    });
-            });
         return Ok(());
     }
     if session.screen == Screen::CameraEditor {
@@ -483,12 +454,13 @@ pub fn ui(
             });
             ui.label(RichText::new("Choose your circuit, car and driving aids.").color(DIM));
             ui.add_space(10.);
-            housing().inner_margin(6).corner_radius(10).show(ui, |ui| ui.horizontal(|ui| {
+            housing().inner_margin(6).corner_radius(10).show(ui, |ui| ui.horizontal_wrapped(|ui| {
                 for (tab, label) in [
                     (Tab::Race, "Race setup"),
                     (Tab::Aids, "Driving aids"),
                     (Tab::Controls, "Cameras & controls"),
                     (Tab::Graphics, "Graphics"),
+                    (Tab::Hud, "HUD & map"),
                 ] {
                     let selected = frontend.tab == tab;
                     let _response = ui.add(
@@ -530,6 +502,7 @@ pub fn ui(
                     }
                     Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
                     Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
+                    Tab::Hud => display_panel(ui, &mut frontend),
                 });
             });
             ui.add_space(14.);
@@ -895,8 +868,8 @@ fn warm_fonts(context: &egui::Context) {
         egui::FontFamily::Name("bold".into()),
     ] {
         for size in [
-            12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 34., 36., 40., 44., 48., 52.,
-            56., 64., 68., 72., 80., 96.,
+            10., 11., 12., 13., 14., 15., 16., 18., 20., 22., 24., 26., 28., 30., 32., 36., 40.,
+            43., 44.,
         ] {
             fonts.push(egui::FontId::new(size * scale, family.clone()));
         }
@@ -921,6 +894,61 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
     ui.checkbox(&mut frontend.vsync, "Vertical sync")
         .on_hover_text("Off renders as fast as the GPU allows, with possible tearing.");
     ui.checkbox(&mut session.show_performance, "Show frame rate  F3");
+}
+
+fn display_panel(ui: &mut egui::Ui, frontend: &mut Frontend) {
+    ui.label("Changes apply immediately and are saved for your next race.");
+    ui.add_space(12.);
+    let column_count = if ui.available_width() >= 720. { 2 } else { 1 };
+    ui.columns(column_count, |columns| {
+    let ui = &mut columns[0];
+    section(ui, "In-race instruments");
+    ui.add_space(6.);
+    for (layout, label, description, _key) in [
+        (
+            hud::Layout::Segments,
+                "Digital cockpit",
+                "Illuminated segment readouts in a race dash, with separate tyre and aero instruments.",
+            "hud-segments",
+        ),
+        (
+            hud::Layout::Gauges,
+                "Analog telemetry",
+                "Separate RPM, speed and pedal needle gauges with metal bezels and a G-force instrument.",
+            "hud-gauges",
+        ),
+    ] {
+        let _response = ui.radio_value(&mut frontend.display.layout, layout, label);
+        #[cfg(test)]
+        frontend.widgets.insert(_key, _response.rect);
+        ui.label(RichText::new(description).size(15.).color(DIM));
+        ui.add_space(8.);
+    }
+    let ui = &mut columns[column_count - 1];
+    if column_count == 1 { ui.add_space(16.); }
+    section(ui, "Minimap");
+    ui.add_space(6.);
+    for (mode, label, description, _key) in [
+        (
+            hud::MapMode::FullCircuit,
+            "Full circuit",
+            "The complete track and the whole field.",
+            "map-full",
+        ),
+        (
+            hud::MapMode::Nearby,
+            "Nearby track",
+            "A close view of the next bends and nearby cars. Your car points up.",
+            "map-nearby",
+        ),
+    ] {
+        let _response = ui.radio_value(&mut frontend.display.map, mode, label);
+        #[cfg(test)]
+        frontend.widgets.insert(_key, _response.rect);
+        ui.label(RichText::new(description).size(15.).color(DIM));
+        ui.add_space(8.);
+    }
+    });
 }
 
 fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session) {

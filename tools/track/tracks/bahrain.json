@@ -138,5 +138,81 @@
         450
       ]
     ]
-  ]
+  ],
+  "material_alpha": {
+    "OPAQUE": [
+      "Bahrainv3001791Mtl_5",
+      "Bahrainv3001791Mtl_8",
+      "Bahrainv3001791Mtl_63",
+      "Bahrainv3001791Mtl_84",
+      "Bahrainv3001791Mtl_85",
+      "Bahrainv3001791Mtl_94",
+      "Bahrainv3001791Mtl_6",
+      "Bahrainv3001791Mtl_7",
+      "Bahrainv3001791Mtl_10",
+      "Bahrainv3001791Mtl_17",
+      "Bahrainv3001791Mtl_27",
+      "Bahrainv3001791Mtl_42",
+      "Bahrainv3001791Mtl_52",
+      "Bahrainv3001791Mtl_78",
+      "Bahrainv3001791Mtl_79",
+      "Bahrainv3001791Mtl_80",
+      "Bahrainv3001791Mtl_83"
+    ],
+    "MASK": [
+      "Material_1.001",
+      "Material_42.001",
+      "Material_116.001",
+      "Material_35.003",
+      "Bahrainv3001791Mtl_1",
+      "Bahrainv3001791Mtl_2",
+      "Bahrainv3001791Mtl_3",
+      "Bahrainv3001791Mtl_4",
+      "Bahrainv3001791Mtl_9",
+      "Bahrainv3001791Mtl_11",
+      "Bahrainv3001791Mtl_12",
+      "Bahrainv3001791Mtl_14",
+      "Bahrainv3001791Mtl_16",
+      "Bahrainv3001791Mtl_25",
+      "Bahrainv3001791Mtl_35",
+      "Bahrainv3001791Mtl_54",
+      "Bahrainv3001791Mtl_55",
+      "Bahrainv3001791Mtl_59",
+      "Bahrainv3001791Mtl_64",
+      "Bahrainv3001791Mtl_69",
+      "Bahrainv3001791Mtl_70"
+    ]
+  },
+  "decals": [
+    "Bahrainv3001791Mtl_75",
+    "Bahrainv3001791Mtl_88",
+    "Bahrainv3001791Mtl_90",
+    "Bahrainv3001791Mtl_87",
+    "Bahrainv3001791Mtl_89"
+  ],
+  "collision_seams": [
+    {
+      "bounds": [
+        [
+          350,
+          460
+        ],
+        [
+          364,
+          485
+        ]
+      ],
+      "max_gap": 0.5
+    }
+  ],
+  "material_pbr": {
+    "Bahrainv3001791Mtl_73": {
+      "metallicFactor": 0,
+      "roughnessFactor": 0.9
+    },
+    "Bahrainv3001791Mtl_77": {
+      "metallicFactor": 0,
+      "roughnessFactor": 0.85
+    }
+  }
 }

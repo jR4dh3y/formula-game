@@ -19,6 +19,9 @@ pub struct Options {
     pub height: u32,
     pub frames: Option<u64>,
     pub capture: Option<PathBuf>,
+    pub benchmark: Option<PathBuf>,
+    pub benchmark_seed: u64,
+    pub benchmark_start: f64,
     pub mute: bool,
     pub quick_race: bool,
     pub camera: Mode,
@@ -51,7 +54,10 @@ impl Options {
   --graphics low|medium|high|ultra   graphics preset (default: high)
   --no-vsync          render as fast as the GPU allows
   --size WxH          window size (default: 1600x900)
-  --frames N --capture FILE   render N frames, save the last one, exit";
+  --frames N --capture FILE   render N frames, save the last one, exit
+  --benchmark DIR     20-second moving-start, two-AI benchmark + sampled PNGs
+  --benchmark-seed N  deterministic drive and screenshot seed (default: 24301)
+  --benchmark-start M start distance along circuit in metres (default: 0)";
 
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut options = Self {
@@ -68,6 +74,9 @@ impl Options {
             height: 900,
             frames: None,
             capture: None,
+            benchmark: None,
+            benchmark_seed: 0x5EED,
+            benchmark_start: 0.,
             mute: false,
             quick_race: false,
             camera: Mode::Chase,
@@ -180,9 +189,30 @@ impl Options {
                     options.frames = Some(frames);
                 }
                 "--capture" => options.capture = Some(PathBuf::from(value()?)),
+                "--benchmark" => options.benchmark = Some(PathBuf::from(value()?)),
+                "--benchmark-seed" => {
+                    options.benchmark_seed = value()?
+                        .parse()
+                        .map_err(|_| "benchmark seed must be an unsigned integer")?
+                }
+                "--benchmark-start" => {
+                    options.benchmark_start = number(value()?)?;
+                    if options.benchmark_start < 0. {
+                        return Err("benchmark start must be nonnegative".into());
+                    }
+                }
                 "--help" | "-h" => return Err("help".to_string()),
                 other => return Err(format!("unknown option {other}")),
             }
+        }
+        if options.benchmark.is_some() {
+            if options.frames.is_some() || options.capture.is_some() {
+                return Err("--benchmark cannot be combined with --frames or --capture".into());
+            }
+            options.opponents = 1;
+            options.grid_slot = 1;
+            options.quick_race = true;
+            options.vsync = false;
         }
         options.setup = options.setup.clamped();
         options.grid_slot = options.grid_slot.min(options.opponents + 1);
@@ -209,6 +239,27 @@ mod tests {
 
     fn parse(args: &[&str]) -> Result<Options, String> {
         Options::parse(args.iter().map(|arg| (*arg).to_owned()))
+    }
+
+    #[test]
+    fn benchmark_has_two_computer_slots_and_rejects_conflicting_capture_modes() {
+        for args in [
+            vec!["--benchmark", "out", "--opponents", "12", "--grid", "8"],
+            vec!["--opponents", "12", "--grid", "8", "--benchmark", "out"],
+        ] {
+            let options = parse(&args).unwrap();
+            assert_eq!(options.opponents, 1);
+            assert_eq!(options.grid_slot, 1);
+            assert!(options.quick_race && !options.vsync);
+        }
+        for args in [
+            vec!["--benchmark", "out", "--frames", "100"],
+            vec!["--benchmark", "out", "--capture", "out.png"],
+            vec!["--benchmark", "out", "--benchmark-start", "-1"],
+            vec!["--benchmark", "out", "--benchmark-seed", "-1"],
+        ] {
+            assert!(parse(&args).is_err());
+        }
     }
 
     #[test]

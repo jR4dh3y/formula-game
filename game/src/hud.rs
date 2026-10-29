@@ -1,15 +1,38 @@
 //! Race HUD drawn through egui in Bevy.
 
-use crate::canvas::{rgba, Align, Hud};
+mod instruments;
+
+use crate::canvas::{rgba, Align, Finish, Hud};
 use crate::Session;
 use bevy::prelude::*;
 use bevy_egui::{
     egui::{self, Color32 as Color, FontFamily},
     EguiContexts,
 };
-use racecraft_sim::car::powertrain::ShiftRefusal;
 use racecraft_sim::race::{Phase, RaceEvent};
 use racecraft_sim::Track;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Layout {
+    #[default]
+    Segments,
+    Gauges,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MapMode {
+    #[default]
+    FullCircuit,
+    Nearby,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Settings {
+    pub layout: Layout,
+    pub map: MapMode,
+}
 
 #[derive(Resource)]
 pub struct HudStyle {
@@ -26,13 +49,8 @@ const AMBER: Color = Color::from_rgb(255, 184, 38);
 const BLUE: Color = Color::from_rgb(77, 153, 255);
 const TYRE_YELLOW: Color = Color::from_rgb(255, 220, 0);
 
-// Instrument surfaces: a charcoal housing holding near-black inset readouts.
-const HOUSING: Color = Color::from_rgba_premultiplied(37, 38, 42, 232);
-const HOUSING_EDGE: Color = Color::from_rgb(74, 76, 83);
 const WELL: Color = Color::from_rgb(9, 10, 12);
 const WELL_RIM: Color = Color::from_rgb(56, 58, 64);
-const UNLIT: Color = Color::from_rgb(46, 47, 50);
-const LABEL: Color = Color::from_rgb(120, 125, 136);
 
 /// Thermal state of a tyre relative to its compound's working window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,19 +103,67 @@ pub fn scale(size: egui::Vec2) -> f32 {
 
 /// Raised charcoal housing that groups related instruments.
 fn housing(hud: &Hud, x: f32, y: f32, w: f32, h: f32, scale: f32) {
-    hud.fill_round(x, y, w, h, 12.0 * scale, HOUSING);
-    hud.stroke_round(x, y, w, h, 12.0 * scale, 1.5 * scale, HOUSING_EDGE);
+    let colors = hud.finish.colors();
+    let cut = match hud.finish {
+        Finish::Digital => 6.,
+        Finish::Analog => 12.,
+    };
+    hud.plate(
+        egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(w, h)),
+        cut * scale,
+        colors.top,
+        colors.bottom,
+        colors.edge,
+    );
 }
 
 /// Recessed black readout window.
 fn well(hud: &Hud, x: f32, y: f32, w: f32, h: f32, scale: f32) {
-    hud.fill_round(x, y, w, h, 6.0 * scale, WELL);
-    hud.stroke_round(x, y, w, h, 6.0 * scale, 1.0 * scale, WELL_RIM);
+    let colors = hud.finish.colors();
+    hud.plate(
+        egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(w, h)),
+        3. * scale,
+        Color::from_rgb(3, 7, 8),
+        Color::from_rgb(10, 17, 19),
+        colors.edge.gamma_multiply(0.7),
+    );
 }
 
 /// Small caption printed on a housing or inside a readout.
 fn caption(hud: &Hud, style: &HudStyle, size: f32, at: (f32, f32), align: Align, text: &str) {
-    hud.text(&style.bold, size, at, align, LABEL, text);
+    hud.text(
+        &style.bold,
+        size,
+        at,
+        align,
+        hud.finish.colors().muted,
+        text,
+    );
+}
+
+fn readout(
+    hud: &Hud,
+    style: &HudStyle,
+    height: f32,
+    at: (f32, f32),
+    align: Align,
+    color: Color,
+    text: &str,
+) {
+    // The LCD theme carries every number on screen; words and the analog
+    // binnacle stay typographic.
+    if matches!(hud.finish, Finish::Digital) && Hud::can_segment(text) {
+        hud.segments(height, at, align, color, text);
+        return;
+    }
+    hud.text(
+        &style.regular,
+        height * 1.3,
+        (at.0, at.1 - height * 0.2),
+        align,
+        color,
+        text,
+    );
 }
 
 pub fn setup(mut commands: Commands) {
@@ -114,6 +180,7 @@ pub fn update(
     time: Res<Time>,
     diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
     mut initialized: Local<bool>,
+    frontend: Res<crate::menu::Frontend>,
 ) -> Result {
     let context = contexts.ctx_mut()?;
     if !*initialized {
@@ -152,6 +219,10 @@ pub fn update(
             egui::Id::new("race-hud"),
         )),
         size: context.content_rect().size(),
+        finish: match frontend.display.layout {
+            Layout::Segments => Finish::Digital,
+            Layout::Gauges => Finish::Analog,
+        },
     };
     if session.ready
         && matches!(
@@ -159,7 +230,13 @@ pub fn update(
             crate::menu::Screen::Racing | crate::menu::Screen::CameraEditor
         )
     {
-        draw(&mut hud, &style, &mut session, time.delta_secs());
+        draw(
+            &mut hud,
+            &style,
+            &mut session,
+            frontend.display,
+            time.delta_secs(),
+        );
     } else if !session.ready {
         hud.text(
             &style.bold,
@@ -223,7 +300,7 @@ impl Minimap {
         minimap.points = track
             .stations
             .iter()
-            .step_by(6)
+            .step_by(2)
             .map(|station| minimap.project(station.position.x, station.position.z))
             .collect();
         minimap
@@ -235,6 +312,83 @@ impl Minimap {
             ((z - self.origin.1) / self.span + self.margin.1) as f32,
         )
     }
+
+    /// A 600 m car-relative window with more space ahead than behind.
+    fn nearby(&self, point: (f32, f32), player: (f32, f32), yaw: f64) -> (f32, f32) {
+        let dx = (point.0 - player.0) as f64 * self.span;
+        let dz = (point.1 - player.1) as f64 * self.span;
+        let left = dx * yaw.cos() - dz * yaw.sin();
+        let ahead = dx * yaw.sin() + dz * yaw.cos();
+        ((0.5 - left / 600.) as f32, (0.72 - ahead / 600.) as f32)
+    }
+}
+
+fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scale: f32) {
+    let size = 240. * scale;
+    let mx = hud.width() - size - 24. * scale;
+    let my = 24. * scale;
+    let inset = 24. * scale;
+    let rect = egui::Rect::from_min_max(
+        egui::pos2(mx + inset, my + inset),
+        egui::pos2(mx + size - inset, my + size - 16. * scale),
+    );
+    let clipped = Hud {
+        painter: hud.painter.with_clip_rect(rect),
+        size: hud.size,
+        finish: hud.finish,
+    };
+    let car = &session.race.entrants[session.player].car;
+    let player = session.minimap.project(car.position.x, car.position.z);
+    let map = |point| {
+        let point = match mode {
+            MapMode::FullCircuit => point,
+            MapMode::Nearby => session.minimap.nearby(point, player, car.yaw),
+        };
+        (
+            rect.left() + point.0 * rect.width(),
+            rect.top() + point.1 * rect.height(),
+        )
+    };
+    let points = &session.minimap.points;
+    for index in 0..points.len() {
+        let a = map(points[index]);
+        let b = map(points[(index + 1) % points.len()]);
+        if rect.intersects(
+            egui::Rect::from_two_pos(egui::pos2(a.0, a.1), egui::pos2(b.0, b.1)).expand(3. * scale),
+        ) {
+            clipped.line(a, b, 6. * scale, Color::from_black_alpha(150));
+            clipped.line(a, b, 3. * scale, hud.finish.colors().ink);
+        }
+    }
+    let start = map(points[0]);
+    for row in 0..3 {
+        for column in 0..3 {
+            clipped.fill_rect(
+                start.0 + (column as f32 - 1.5) * 3. * scale,
+                start.1 + (row as f32 - 1.5) * 3. * scale,
+                3. * scale,
+                3. * scale,
+                if (row + column) % 2 == 0 {
+                    WHITE
+                } else {
+                    PURPLE
+                },
+            );
+        }
+    }
+    for (index, entrant) in session.race.entrants.iter().enumerate() {
+        if index == session.player {
+            continue;
+        }
+        let point = map(session
+            .minimap
+            .project(entrant.car.position.x, entrant.car.position.z));
+        clipped.circle(point, 4.5 * scale, WELL);
+        clipped.circle(point, 3. * scale, WHITE);
+    }
+    let me = map(player);
+    clipped.circle(me, 7. * scale, WELL);
+    clipped.circle(me, 5.5 * scale, ACCENT);
 }
 
 /// Short-lived banner messages.
@@ -369,8 +523,8 @@ fn follow_events(session: &mut Session) {
     }
 }
 
-pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
-    if hud.width() == 0.0 {
+pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Settings, dt: f32) {
+    if hud.width() <= 0.0 || hud.height() <= 0.0 {
         return;
     }
     follow_events(session);
@@ -384,81 +538,102 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     session.messages.active.retain(|message| message.2 > 0.0);
 
     let scale = scale(hud.size);
+    let colors = hud.finish.colors();
+    let ink = colors.ink;
+    let dim = colors.muted;
+    let accent = colors.accent;
     let width = hud.width();
     let height = hud.height();
     let race = &session.race;
     let player = &race.entrants[session.player];
     let car = &player.car;
     let lap = (player.timing.laps_completed + 1).min(race.laps);
-    let position = race.position_of(session.player);
     let current = if matches!(race.phase, Phase::Countdown { .. }) {
         0.0
     } else {
         race.time - player.timing.lap_start
     };
 
-    // ---- Timing tower (top left). Its row heights are mirrored by the
-    // race-controls strip placed underneath it in menu.rs.
+    // Broadcast timing strip; instrument chrome belongs to the physical dials.
     let tower_x = 24.0 * scale;
-    let tower_w = 300.0 * scale;
+    let tower_w = 278.0 * scale;
     let mut y = 24.0 * scale;
-    let row = 30.0 * scale;
-    let tower_h = row * 1.5 + race.entrants.len() as f32 * row;
-    housing(hud, tower_x, y, tower_w, tower_h, scale);
-    hud.fill_round(
-        tower_x + 10.0 * scale,
-        y + 12.0 * scale,
-        4.0 * scale,
-        row * 1.5 - 22.0 * scale,
-        2.0 * scale,
-        ACCENT,
-    );
+    let row = 28.0 * scale;
+    // The LCD tower is opaque so unlit segments read as glass, not scenery.
+    let smoke = |alpha: u8| match hud.finish {
+        Finish::Digital => Color::from_rgb(6, 10, 11),
+        Finish::Analog => Color::from_black_alpha(alpha),
+    };
+    hud.fill_rect(tower_x, y, tower_w, 35. * scale, smoke(210));
     caption(
         hud,
         style,
-        18.0 * scale,
-        (tower_x + 22.0 * scale, y + 10.0 * scale),
+        16. * scale,
+        (tower_x + 12. * scale, y + 7. * scale),
         Align::Left,
-        "STANDINGS",
+        "LAP",
     );
-    hud.text(
-        &style.bold,
-        22.0 * scale,
-        (tower_x + tower_w - 12.0 * scale, y + 7.0 * scale),
+    readout(
+        hud,
+        style,
+        16. * scale,
+        (tower_x + 50. * scale, y + 10. * scale),
+        Align::Left,
+        ink,
+        &format!("{lap}/{}", race.laps),
+    );
+    readout(
+        hud,
+        style,
+        14. * scale,
+        (tower_x + tower_w - 12. * scale, y + 11. * scale),
         Align::Right,
-        WHITE,
-        &format!("LAP {lap}/{}", race.laps),
+        dim,
+        &format!("P{}", race.position_of(session.player)),
     );
-    y += row * 1.5;
+    y += 38. * scale;
     let leader_distance = race.entrants[race.order()[0]].timing.distance;
     for (rank, &index) in race.order().iter().enumerate() {
         let entrant = &race.entrants[index];
         let mine = index == session.player;
-        if mine {
-            hud.fill_round(
-                tower_x + 6.0 * scale,
-                y + 2.0 * scale,
-                tower_w - 12.0 * scale,
-                row - 4.0 * scale,
-                4.0 * scale,
-                WELL,
-            );
-            hud.stroke_round(
-                tower_x + 6.0 * scale,
-                y + 2.0 * scale,
-                tower_w - 12.0 * scale,
-                row - 4.0 * scale,
-                4.0 * scale,
-                1.0 * scale,
-                ACCENT,
-            );
+        // Unlit segments would ghost on a light row, so the LCD marks the
+        // player with a lit stripe instead of inverting the row.
+        let digital = matches!(hud.finish, Finish::Digital);
+        let inverted = mine && !digital;
+        hud.fill_rect(
+            tower_x,
+            y,
+            tower_w,
+            row - scale,
+            if inverted {
+                Color::from_rgb(218, 222, 213)
+            } else if mine {
+                Color::from_rgb(30, 36, 34)
+            } else {
+                smoke(185)
+            },
+        );
+        if mine && digital {
+            hud.fill_rect(tower_x, y, 3. * scale, row - scale, accent);
         }
-        hud.text(
-            &style.bold,
-            20.0 * scale,
-            (tower_x + 34.0 * scale, y + 3.0 * scale),
+        let mine = inverted;
+        let ink = if mine {
+            Color::from_rgb(14, 17, 19)
+        } else {
+            ink
+        };
+        let dim = if mine {
+            Color::from_rgb(25, 28, 30)
+        } else {
+            Color::from_rgb(224, 225, 216)
+        };
+        readout(
+            hud,
+            style,
+            16.0 * scale,
+            (tower_x + 34.0 * scale, y + 7.0 * scale),
             Align::Right,
-            if mine { WHITE } else { DIM },
+            if mine { ink } else { dim },
             &(rank + 1).to_string(),
         );
         let team = if entrant.car.spec.name == "RB22" {
@@ -479,7 +654,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             20.0 * scale,
             (tower_x + 54.0 * scale, y + 3.0 * scale),
             Align::Left,
-            if mine { WHITE } else { DIM },
+            if mine { ink } else { dim },
             &entrant.name.to_uppercase(),
         );
         let gap = if rank == 0 {
@@ -502,21 +677,28 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 format!("+{:.1}", metres / entrant.car.speed().max(30.0))
             }
         };
-        hud.text(
-            &style.regular,
-            18.0 * scale,
-            (tower_x + tower_w - 14.0 * scale, y + 4.0 * scale),
+        readout(
+            hud,
+            style,
+            15.0 * scale,
+            (tower_x + tower_w - 14.0 * scale, y + 7.0 * scale),
             Align::Right,
-            DIM,
+            dim,
             &gap,
         );
         y += row;
     }
-    // Lap times under the tower.
-    y += 10.0 * scale;
-    housing(hud, tower_x, y, tower_w, row * 3.0, scale);
+    // Lap timer and split memory share one smoked timing strip.
+    y += 6.0 * scale;
+    hud.fill_rect(tower_x, y, tower_w, 94. * scale, smoke(200));
+    hud.line(
+        (tower_x + 14. * scale, y - 5. * scale),
+        (tower_x + tower_w - 14. * scale, y - 5. * scale),
+        scale,
+        colors.edge,
+    );
     let lines = [
-        ("TIME", format_time(current.max(0.0)), WHITE),
+        ("TIME", format_time(current.max(0.0)), ink),
         (
             "LAST",
             player
@@ -524,7 +706,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 .last_lap
                 .map(format_time)
                 .unwrap_or_else(|| "-:--.---".into()),
-            DIM,
+            dim,
         ),
         (
             "BEST",
@@ -545,10 +727,11 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             Align::Left,
             label,
         );
-        hud.text(
-            &style.bold,
-            22.0 * scale,
-            (tower_x + tower_w - 14.0 * scale, y + 2.0 * scale),
+        readout(
+            hud,
+            style,
+            18.0 * scale,
+            (tower_x + tower_w - 14.0 * scale, y + 6.0 * scale),
             Align::Right,
             color,
             &value,
@@ -585,12 +768,22 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     }
     if let Some(corner) = race.track.corner_near(car.track_position.s) {
         if !matches!(race.phase, Phase::Countdown { .. }) {
+            let header_width =
+                hud.text_width(&style.bold, 24. * scale, &corner.name.to_uppercase()) + 64. * scale;
+            housing(
+                hud,
+                width * 0.5 - header_width * 0.5,
+                24. * scale,
+                header_width,
+                46. * scale,
+                scale,
+            );
             hud.text(
-                &style.regular,
+                &style.bold,
                 24.0 * scale,
-                (width * 0.5, 30.0 * scale),
+                (width * 0.5, 29.0 * scale),
                 Align::Center,
-                rgba(1.0, 1.0, 1.0, 0.85),
+                ink,
                 &corner.name.to_uppercase(),
             );
         }
@@ -600,20 +793,21 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         let box_w = 150.0 * scale;
         let box_x = width * 0.5 - box_w * 0.5;
         let color = if delta <= 0.0 { GREEN } else { ACCENT };
-        hud.fill_round(box_x, 62.0 * scale, box_w, 40.0 * scale, 6.0 * scale, WELL);
+        hud.fill_round(box_x, 82.0 * scale, box_w, 40.0 * scale, 6.0 * scale, WELL);
         hud.stroke_round(
             box_x,
-            62.0 * scale,
+            82.0 * scale,
             box_w,
             40.0 * scale,
             6.0 * scale,
             2.0 * scale,
             color,
         );
-        hud.text(
-            &style.bold,
-            30.0 * scale,
-            (width * 0.5, 63.0 * scale),
+        readout(
+            hud,
+            style,
+            26.0 * scale,
+            (width * 0.5, 89.0 * scale),
             Align::Center,
             color,
             &text,
@@ -626,13 +820,15 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         let text_width = hud.text_width(&style.bold, 40.0 * scale, text);
         let banner_x = width * 0.5 - text_width * 0.5 - 24.0 * scale;
         let banner_w = text_width + 48.0 * scale;
-        hud.fill_round(
-            banner_x,
-            banner_y,
-            banner_w,
-            56.0 * scale,
-            8.0 * scale,
-            HOUSING.gamma_multiply(fade),
+        hud.plate(
+            egui::Rect::from_min_size(
+                egui::pos2(banner_x, banner_y),
+                egui::vec2(banner_w, 56. * scale),
+            ),
+            8. * scale,
+            colors.top.gamma_multiply(fade),
+            colors.bottom.gamma_multiply(fade),
+            colors.edge.gamma_multiply(fade),
         );
         hud.fill_round(
             banner_x,
@@ -653,562 +849,18 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         banner_y += 64.0 * scale;
     }
 
-    // ---- Dash (bottom right): RPM LEDs, lap / gear / speed, lap time and
-    // position, then pedal traces.
-    let pad = 14.0 * scale;
-    let gap = 10.0 * scale;
-    let dash_w = 508.0 * scale;
-    let led_h = 34.0 * scale;
-    let main_h = 78.0 * scale;
-    let lower_h = 46.0 * scale;
-    let dash_h = pad + led_h + gap + main_h + gap + lower_h + 40.0 * scale;
-    let px = width - dash_w - 24.0 * scale;
-    let py = height - dash_h - 24.0 * scale;
-    housing(hud, px, py, dash_w, dash_h, scale);
-    let inner_x = px + pad;
-    let inner_w = dash_w - pad * 2.0;
+    instruments::draw(hud, style, session, display.layout, scale);
 
-    let engine = &car.spec.engine;
-    let rpm_fraction = ((car.powertrain.rpm - engine.idle_rpm)
-        / (engine.rev_limit - engine.idle_rpm))
-        .clamp(0.0, 1.0) as f32;
-    // Shift lights: green, red, then blue at the optimum change point.
-    let led_y = py + pad;
-    hud.fill_round(inner_x, led_y, inner_w, led_h, led_h * 0.5, WELL);
-    hud.stroke_round(
-        inner_x,
-        led_y,
-        inner_w,
-        led_h,
-        led_h * 0.5,
-        1.0 * scale,
-        WELL_RIM,
-    );
-    let lights = 15;
-    let led_pitch = (inner_w - led_h) / (lights - 1) as f32;
-    let flash = car.powertrain.limiter && (race.time * 12.0).sin() > 0.0;
-    for light in 0..lights {
-        let threshold = 0.55 + 0.45 * light as f32 / lights as f32;
-        let lit = rpm_fraction >= threshold;
-        let color = if light < 5 {
-            GREEN
-        } else if light < 10 {
-            ACCENT
-        } else {
-            BLUE
-        };
-        let color = if flash {
-            BLUE
-        } else if lit {
-            color
-        } else {
-            UNLIT
-        };
-        let centre = (
-            inner_x + led_h * 0.5 + light as f32 * led_pitch,
-            led_y + led_h * 0.5,
-        );
-        hud.circle(centre, 11.0 * scale, color);
-        // Lens highlight.
-        hud.circle(
-            (centre.0 - 3.0 * scale, centre.1 - 3.5 * scale),
-            3.0 * scale,
-            rgba(1.0, 1.0, 1.0, if flash || lit { 0.45 } else { 0.08 }),
-        );
-    }
+    instruments::tyres(hud, style, session, display.layout, scale);
 
-    let main_y = led_y + led_h + gap;
-    let gear_w = 92.0 * scale;
-    let side_w = (inner_w - gear_w - gap * 2.0) * 0.5;
-    let gear_x = inner_x + side_w + gap;
-    let speed_x = gear_x + gear_w + gap;
-    // Lap / laps.
-    well(hud, inner_x, main_y, side_w, main_h, scale);
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (inner_x + 10.0 * scale, main_y + 5.0 * scale),
-        Align::Left,
-        "LAP",
-    );
-    let value_y = main_y + 14.0 * scale;
-    let value_size = 52.0 * scale;
-    hud.text(
-        &style.bold,
-        value_size,
-        (inner_x + side_w - 12.0 * scale, value_y),
-        Align::Right,
-        WHITE,
-        &format!("{lap}/{}", race.laps),
-    );
-    // Gear, framed by a red bezel (amber while a shift is being refused).
-    let refusal = car.powertrain.last_refusal.map(|refusal| match refusal {
-        ShiftRefusal::OverRev => "OVER-REV",
-        ShiftRefusal::TooFast => "TOO FAST",
-    });
-    let bezel = if refusal.is_some() { AMBER } else { ACCENT };
-    hud.fill_round(gear_x, main_y, gear_w, main_h, 8.0 * scale, WELL);
-    hud.stroke_round(
-        gear_x,
-        main_y,
-        gear_w,
-        main_h,
-        8.0 * scale,
-        4.0 * scale,
-        bezel,
-    );
-    let gear = match car.powertrain.gear {
-        -1 => "R".to_string(),
-        0 => "N".to_string(),
-        gear => gear.to_string(),
-    };
-    let gear_size = 76.0 * scale;
-    let gear_y = main_y - 10.0 * scale;
-    hud.text(
-        &style.bold,
-        gear_size,
-        (gear_x + gear_w * 0.5, gear_y),
-        Align::Center,
-        WHITE,
-        &gear,
-    );
-    // Speed, with engine speed as its caption.
-    well(hud, speed_x, main_y, side_w, main_h, scale);
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (speed_x + 10.0 * scale, main_y + 5.0 * scale),
-        Align::Left,
-        "KM/H",
-    );
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (speed_x + side_w - 10.0 * scale, main_y + 5.0 * scale),
-        Align::Right,
-        &format!("{:.0} RPM", car.powertrain.rpm),
-    );
-    let kmh = (car.speed() * 3.6).round() as i32;
-    hud.text(
-        &style.bold,
-        value_size,
-        (speed_x + side_w - 12.0 * scale, value_y),
-        Align::Right,
-        WHITE,
-        &kmh.to_string(),
-    );
-
-    // Lower row: current lap time where a fuel readout would sit, position
-    // under the speed window.
-    let lower_y = main_y + main_h + gap;
-    let time_w = speed_x - gap - inner_x;
-    well(hud, inner_x, lower_y, time_w, lower_h, scale);
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (inner_x + 10.0 * scale, lower_y + 14.0 * scale),
-        Align::Left,
-        "LAP TIME",
-    );
-    let lower_size = 32.0 * scale;
-    let lower_value_y = lower_y + 1.0 * scale;
-    hud.text(
-        &style.bold,
-        lower_size,
-        (inner_x + time_w - 12.0 * scale, lower_value_y),
-        Align::Right,
-        WHITE,
-        &format_time(current.max(0.0)),
-    );
-    well(hud, speed_x, lower_y, side_w, lower_h, scale);
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (speed_x + 10.0 * scale, lower_y + 14.0 * scale),
-        Align::Left,
-        "POS",
-    );
-    hud.text(
-        &style.bold,
-        lower_size,
-        (speed_x + side_w - 12.0 * scale, lower_value_y),
-        Align::Right,
-        WHITE,
-        &format!("{position}/{}", race.entrants.len()),
-    );
-    if let Some(text) = refusal {
-        let tag_w = hud.text_width(&style.bold, 20.0 * scale, text) + 24.0 * scale;
-        let tag_x = gear_x + gear_w * 0.5 - tag_w * 0.5;
-        hud.fill_round(
-            tag_x,
-            py - 38.0 * scale,
-            tag_w,
-            30.0 * scale,
-            6.0 * scale,
-            WELL,
-        );
-        hud.stroke_round(
-            tag_x,
-            py - 38.0 * scale,
-            tag_w,
-            30.0 * scale,
-            6.0 * scale,
-            2.0 * scale,
-            AMBER,
-        );
-        hud.text(
-            &style.bold,
-            20.0 * scale,
-            (gear_x + gear_w * 0.5, py - 36.0 * scale),
-            Align::Center,
-            AMBER,
-            text,
-        );
-    }
-
-    // Pedals and steering.
-    let steer_y = lower_y + lower_h + 10.0 * scale;
-    let bar_y = steer_y + 14.0 * scale;
-    let bar_w = (inner_w - gap) * 0.5;
-    let centre = inner_x + inner_w * 0.5;
-    hud.fill_round(
-        inner_x,
-        steer_y + 4.0 * scale,
-        inner_w,
-        2.0 * scale,
-        1.0 * scale,
-        WELL_RIM,
-    );
-    hud.fill_rect(
-        centre - 1.0 * scale,
-        steer_y,
-        2.0 * scale,
-        10.0 * scale,
-        LABEL,
-    );
-    let steer = session.guidance.activity.input.steer as f32;
-    hud.fill_round(
-        centre - steer * inner_w * 0.5 - 4.0 * scale,
-        steer_y,
-        8.0 * scale,
-        10.0 * scale,
-        2.0 * scale,
-        WHITE,
-    );
-    let brake = session.guidance.activity.input.brake as f32;
-    let throttle = session.guidance.activity.input.throttle as f32;
-    hud.fill_round(inner_x, bar_y, bar_w, 8.0 * scale, 4.0 * scale, WELL);
-    hud.fill_round(
-        inner_x + bar_w * (1.0 - brake),
-        bar_y,
-        bar_w * brake,
-        8.0 * scale,
-        4.0 * scale,
-        ACCENT,
-    );
-    hud.fill_round(
-        inner_x + bar_w + gap,
-        bar_y,
-        bar_w,
-        8.0 * scale,
-        4.0 * scale,
-        WELL,
-    );
-    hud.fill_round(
-        inner_x + bar_w + gap,
-        bar_y,
-        bar_w * throttle,
-        8.0 * scale,
-        4.0 * scale,
-        GREEN,
-    );
-
-    // ---- Car state (bottom left): aids strip, then tyres and aero.
-    let cx = 24.0 * scale;
-    let car_w = 392.0 * scale;
-    let car_h = 214.0 * scale;
-    let cy = height - car_h - 24.0 * scale;
-    housing(hud, cx, cy - 76.0 * scale, car_w, 66.0 * scale, scale);
-    if session.corner_braking > 0. {
-        caption(
-            hud,
-            style,
-            15.0 * scale,
-            (cx + 14.0 * scale, cy - 68.0 * scale),
-            Align::Left,
-            &format!(
-                "CORNER TARGET  {:.0} KM/H",
-                session.guidance.activity.target_speed * 3.6
-            ),
-        );
-    }
-    for (index, label, configured, active) in [
-        (
-            0,
-            "STEER",
-            car.assists.steering > 0.,
-            session.guidance.activity.steering,
-        ),
-        (
-            1,
-            "BRAKE",
-            session.corner_braking > 0.,
-            session.guidance.activity.braking,
-        ),
-        (
-            2,
-            "AUTO",
-            car.assists.automatic_gears,
-            car.assists.automatic_gears,
-        ),
-    ] {
-        let tag_w = 112.0 * scale;
-        let tag_x = cx + 14.0 * scale + index as f32 * (tag_w + 9.0 * scale);
-        let tag_y = cy - 44.0 * scale;
-        let color = if active {
-            GREEN
-        } else if configured {
-            DIM
-        } else {
-            Color::from_rgb(70, 74, 82)
-        };
-        hud.fill_round(tag_x, tag_y, tag_w, 26.0 * scale, 5.0 * scale, WELL);
-        hud.stroke_round(
-            tag_x,
-            tag_y,
-            tag_w,
-            26.0 * scale,
-            5.0 * scale,
-            1.0 * scale,
-            if active { GREEN } else { WELL_RIM },
-        );
-        hud.text(
-            &style.bold,
-            16.0 * scale,
-            (tag_x + tag_w * 0.5, tag_y + 1.0 * scale),
-            Align::Center,
-            color,
-            label,
-        );
-    }
-    housing(hud, cx, cy, car_w, car_h, scale);
-    let compound = car.setup.compound;
-    caption(
-        hud,
-        style,
-        18.0 * scale,
-        (cx + 14.0 * scale, cy + 10.0 * scale),
-        Align::Left,
-        "TYRES",
-    );
-    hud.text(
-        &style.bold,
-        20.0 * scale,
-        (cx + 76.0 * scale, cy + 8.0 * scale),
-        Align::Left,
-        WHITE,
-        compound.label(),
-    );
-    caption(
-        hud,
-        style,
-        14.0 * scale,
-        (cx + car_w - 14.0 * scale, cy + 13.0 * scale),
-        Align::Right,
-        "WEAR",
-    );
-    let tyre_w = car_w - 28.0 * scale;
-    well(
-        hud,
-        cx + 14.0 * scale,
-        cy + 40.0 * scale,
-        tyre_w,
-        74.0 * scale,
-        scale,
-    );
-    for (axle, label) in ["FRONT", "REAR"].iter().enumerate() {
-        let tyre = car.tyres[axle];
-        let band = TyreBand::of(tyre.temperature, compound);
-        let color = band.color();
-        let row_y = cy + 45.0 * scale + axle as f32 * 34.0 * scale;
-        caption(
-            hud,
-            style,
-            15.0 * scale,
-            (cx + 26.0 * scale, row_y + 6.0 * scale),
-            Align::Left,
-            label,
-        );
-        let wheels = if axle == 0 { [0, 1] } else { [2, 3] };
-        for (side, &wheel) in wheels.iter().enumerate() {
-            let slide = car.wheels[wheel].sliding as f32;
-            let box_x = cx + 86.0 * scale + side as f32 * 30.0 * scale;
-            hud.fill_round(
-                box_x,
-                row_y + 3.0 * scale,
-                22.0 * scale,
-                26.0 * scale,
-                5.0 * scale,
-                color,
-            );
-            if car.wheels[wheel].locked || slide > 0.3 {
-                hud.stroke_round(
-                    box_x,
-                    row_y + 3.0 * scale,
-                    22.0 * scale,
-                    26.0 * scale,
-                    5.0 * scale,
-                    3.0 * scale,
-                    WHITE,
-                );
-            }
-        }
-        hud.text(
-            &style.bold,
-            22.0 * scale,
-            (cx + 202.0 * scale, row_y),
-            Align::Right,
-            color,
-            &format!("{:.0}°C", tyre.temperature),
-        );
-        hud.text(
-            &style.bold,
-            15.0 * scale,
-            (cx + 212.0 * scale, row_y + 6.0 * scale),
-            Align::Left,
-            color,
-            band.label(),
-        );
-        hud.text(
-            &style.regular,
-            20.0 * scale,
-            (cx + car_w - 26.0 * scale, row_y + 1.0 * scale),
-            Align::Right,
-            DIM,
-            &format!("{:.0}%", tyre.wear * 100.0),
-        );
-    }
-    let meter = |hud: &mut Hud, label: &str, value: f64, max: f64, y: f32, color: Color| {
-        caption(
-            hud,
-            style,
-            15.0 * scale,
-            (cx + 14.0 * scale, y),
-            Align::Left,
-            label,
-        );
-        let bar_x = cx + 130.0 * scale;
-        let bar_w = car_w - 144.0 * scale;
-        hud.fill_round(
-            bar_x,
-            y + 6.0 * scale,
-            bar_w,
-            8.0 * scale,
-            4.0 * scale,
-            WELL,
-        );
-        hud.fill_round(
-            bar_x,
-            y + 6.0 * scale,
-            bar_w * (value / max).clamp(0.0, 1.0) as f32,
-            8.0 * scale,
-            4.0 * scale,
-            color,
-        );
-    };
-    meter(
-        hud,
-        "SLIPSTREAM",
-        car.aero.slipstream(),
-        0.24,
-        cy + 124.0 * scale,
-        BLUE,
-    );
-    meter(
-        hud,
-        "DIRTY AIR",
-        car.aero.dirty_air(),
-        0.24,
-        cy + 148.0 * scale,
-        AMBER,
-    );
-    caption(
-        hud,
-        style,
-        15.0 * scale,
-        (cx + 14.0 * scale, cy + 180.0 * scale),
-        Align::Left,
-        &format!(
-            "WINGS F{:.0} R{:.0}   {}   {}",
-            car.setup.front_wing,
-            car.setup.rear_wing,
-            if car.assists.automatic_gears {
-                "AUTO"
-            } else {
-                "MANUAL"
-            },
-            session.camera.mode.label().to_uppercase()
-        ),
-    );
-
-    // ---- Minimap (top right)
-    let size = 240.0 * scale;
-    let mx = width - size - 24.0 * scale;
-    let my = 24.0 * scale;
-    housing(hud, mx, my, size, size, scale);
-    well(
-        hud,
-        mx + 8.0 * scale,
-        my + 8.0 * scale,
-        size - 16.0 * scale,
-        size - 16.0 * scale,
-        scale,
-    );
-    let inset = 20.0 * scale;
-    let map = |point: (f32, f32)| {
-        (
-            mx + inset + point.0 * (size - inset * 2.0),
-            my + inset + point.1 * (size - inset * 2.0),
-        )
-    };
-    let points = &session.minimap.points;
-    for index in 0..points.len() {
-        let a = map(points[index]);
-        let b = map(points[(index + 1) % points.len()]);
-        hud.line(a, b, 3.0 * scale, rgba(0.8, 0.82, 0.86, 0.9));
-    }
-    let start = map(points[0]);
-    hud.fill_rect(
-        start.0 - 2.0 * scale,
-        start.1 - 6.0 * scale,
-        4.0 * scale,
-        12.0 * scale,
-        WHITE,
-    );
-    for (index, entrant) in race.entrants.iter().enumerate() {
-        if index == session.player {
-            continue;
-        }
-        let point = map(session
-            .minimap
-            .project(entrant.car.position.x, entrant.car.position.z));
-        hud.circle(point, 5.0 * scale, DIM);
-    }
-    let me = map(session.minimap.project(car.position.x, car.position.z));
-    hud.circle(me, 8.0 * scale, WELL);
-    hud.circle(me, 6.0 * scale, ACCENT);
+    draw_map(hud, style, session, display.map, scale);
 
     // ---- Results
     if race.phase == Phase::Finished {
         let panel_w = 560.0 * scale;
         // Clear the timing tower, its control strip and the minimap.
         let left = (width * 0.5 - panel_w * 0.5).max(tower_x + tower_w + 16.0 * scale);
-        let top = (height * 0.18).max(my + size + 16.0 * scale);
+        let top = (height * 0.18).max(280.0 * scale);
         let rows = race.entrants.len() as f32;
         housing(hud, left, top, panel_w, (96.0 + rows * 34.0) * scale, scale);
         hud.fill_round(
@@ -1217,14 +869,14 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             4.0 * scale,
             32.0 * scale,
             2.0 * scale,
-            ACCENT,
+            accent,
         );
         hud.text(
             &style.bold,
             36.0 * scale,
             (left + 38.0 * scale, top + 12.0 * scale),
             Align::Left,
-            WHITE,
+            ink,
             "RESULTS",
         );
         caption(
@@ -1254,10 +906,10 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                     4.0 * scale,
                     30.0 * scale,
                     2.0 * scale,
-                    ACCENT,
+                    accent,
                 );
             }
-            let color = if mine { WHITE } else { DIM };
+            let color = if mine { ink } else { dim };
             hud.text(
                 &style.bold,
                 24.0 * scale,
@@ -1279,10 +931,11 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 .best_lap
                 .map(format_time)
                 .unwrap_or_else(|| "-:--.---".into());
-            hud.text(
-                &style.regular,
-                22.0 * scale,
-                (left + panel_w - 28.0 * scale, row_y + 2.0 * scale),
+            readout(
+                hud,
+                style,
+                20.0 * scale,
+                (left + panel_w - 28.0 * scale, row_y + 6.0 * scale),
                 Align::Right,
                 color,
                 &best,
@@ -1294,6 +947,30 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nearby_map_keeps_the_car_fixed_and_rotates_the_road_ahead_up() {
+        let session = crate::tests::session();
+        let map = &session.minimap;
+        let x = session.race.entrants[0].car.position.x;
+        let z = session.race.entrants[0].car.position.z;
+        let player = map.project(x, z);
+        for yaw in [
+            0.,
+            std::f64::consts::FRAC_PI_2,
+            std::f64::consts::PI,
+            -std::f64::consts::FRAC_PI_2,
+        ] {
+            let center = map.nearby(player, player, yaw);
+            assert!((center.0 - 0.5).abs() < 1e-5 && (center.1 - 0.72).abs() < 1e-5);
+            let ahead = map.project(x + yaw.sin() * 300., z + yaw.cos() * 300.);
+            let ahead = map.nearby(ahead, player, yaw);
+            assert!((ahead.0 - 0.5).abs() < 1e-4 && (ahead.1 - 0.22).abs() < 1e-4);
+            let left = map.project(x + yaw.cos() * 300., z - yaw.sin() * 300.);
+            let left = map.nearby(left, player, yaw);
+            assert!(left.0.abs() < 1e-4 && (left.1 - 0.72).abs() < 1e-4);
+        }
+    }
     use racecraft_sim::car::spec::Compound;
 
     #[test]

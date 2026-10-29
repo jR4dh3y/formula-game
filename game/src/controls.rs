@@ -37,7 +37,12 @@ pub fn update(
     pads: Query<&Gamepad>,
     time: Res<Time>,
     mut session: ResMut<Session>,
+    benchmark: Option<Res<crate::benchmark::Run>>,
 ) {
+    if benchmark.is_some() {
+        session.controls = Controls::default();
+        return;
+    }
     let actions = session
         .controls
         .update(&keys, pads.iter().next(), time.delta_secs());

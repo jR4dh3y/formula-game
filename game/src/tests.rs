@@ -354,6 +354,25 @@ const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
     ("spa", "rb6", camera::Mode::Cockpit),
 ];
 
+const HUD_CASES: [hud::Settings; 4] = [
+    hud::Settings {
+        layout: hud::Layout::Segments,
+        map: hud::MapMode::FullCircuit,
+    },
+    hud::Settings {
+        layout: hud::Layout::Gauges,
+        map: hud::MapMode::Nearby,
+    },
+    hud::Settings {
+        layout: hud::Layout::Segments,
+        map: hud::MapMode::Nearby,
+    },
+    hud::Settings {
+        layout: hud::Layout::Gauges,
+        map: hud::MapMode::FullCircuit,
+    },
+];
+
 fn choose_menu_case(frontend: &mut menu::Frontend, index: usize) {
     let (track, car, camera) = MENU_CASES[index];
     frontend.draft.track = track.into();
@@ -487,6 +506,41 @@ fn menu_probe(
         3 if probe.ticks > 12 => {
             assert!(frontend.tab == menu::Tab::Race);
             choose_menu_case(&mut frontend, probe.case);
+            menu_click(&mut probe, &mut inputs, &frontend, "HUD & map");
+            probe.stage = 14;
+            probe.ticks = 0;
+        }
+        14 if probe.ticks > 12 => {
+            assert!(frontend.tab == menu::Tab::Hud);
+            let key = match HUD_CASES[probe.case].layout {
+                hud::Layout::Segments => "hud-segments",
+                hud::Layout::Gauges => "hud-gauges",
+            };
+            menu_click(&mut probe, &mut inputs, &frontend, key);
+            probe.stage = 15;
+            probe.ticks = 0;
+        }
+        15 if probe.ticks > 12 => {
+            assert_eq!(frontend.display.layout, HUD_CASES[probe.case].layout);
+            let key = match HUD_CASES[probe.case].map {
+                hud::MapMode::FullCircuit => "map-full",
+                hud::MapMode::Nearby => "map-nearby",
+            };
+            menu_click(&mut probe, &mut inputs, &frontend, key);
+            probe.stage = 16;
+            probe.ticks = 0;
+        }
+        16 if probe.ticks > 12 => {
+            assert_eq!(frontend.display, HUD_CASES[probe.case]);
+            if probe.case == 0 {
+                menu_snapshot(&mut commands, &mut probe, "hud-settings");
+            }
+            menu_click(&mut probe, &mut inputs, &frontend, "Race setup");
+            probe.stage = 17;
+            probe.ticks = 0;
+        }
+        17 if probe.ticks > 12 => {
+            assert!(frontend.tab == menu::Tab::Race);
             probe.stage = 4;
             probe.ticks = 0;
         }
@@ -501,6 +555,7 @@ fn menu_probe(
         {
             let (track, car, mode) = MENU_CASES[probe.case];
             assert_eq!(options.track, track);
+            assert_eq!(frontend.display, HUD_CASES[probe.case]);
             assert_eq!(
                 session.race.entrants[session.player]
                     .car
@@ -577,8 +632,7 @@ fn menu_probe(
             assert_eq!(session.screen, menu::Screen::Paused);
             assert!(frontend.tab == menu::Tab::Race);
             probe.case += 1;
-            choose_menu_case(&mut frontend, probe.case);
-            probe.stage = 4;
+            probe.stage = 3;
             probe.ticks = 0;
         }
         12 if probe.captures.load(std::sync::atomic::Ordering::SeqCst) == probe.requested => {
@@ -586,7 +640,7 @@ fn menu_probe(
                 .completed
                 .store(true, std::sync::atomic::Ordering::SeqCst);
             info!(
-                "Menu probe: pointer controls, live assists and all four map/car switches passed"
+                "Menu probe: pointer controls, live assists, all HUD/map choices and all four map/car switches passed"
             );
             exit.write(AppExit::Success);
         }
@@ -599,12 +653,13 @@ fn menu_probe(
 #[ignore = "requires a Vulkan display and F1_TEST_ASSETS"]
 fn rendered_game_flows() {
     let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS to generated assets");
+    let size = std::env::var("F1_TEST_SIZE").unwrap_or_else(|_| "1280x720".into());
     let options = Options::parse(
         [
             "--assets",
             &root,
             "--size",
-            "1280x720",
+            &size,
             "--auto-gears",
             "--quick-race",
             // Injected controls must keep running when the compositor has no seat focus.
@@ -680,8 +735,16 @@ fn probe_assertions(
     images: Res<Assets<Image>>,
     surfaces: Query<(), With<materials::SurfaceReady>>,
     fixed: Res<Time<Fixed>>,
+    mut frontend: ResMut<menu::Frontend>,
 ) {
     let frame = probe.frame;
+    match frame {
+        300 => frontend.display = HUD_CASES[1],
+        360 => frontend.display = HUD_CASES[2],
+        420 => frontend.display = HUD_CASES[3],
+        480 => frontend.display = HUD_CASES[0],
+        _ => {}
+    }
     if frame == 540 {
         let pose = session
             .poses
@@ -759,11 +822,11 @@ fn probe_assertions(
         }
         // Force the presentation state to exercise the results HUD separately from the sim's race-completion tests.
         740 => session.race.phase = racecraft_sim::Phase::Finished,
-        780..=899 if probe.captures == 9 => {
+        780..=899 if probe.captures == 12 => {
             probe
                 .completed
                 .store(true, std::sync::atomic::Ordering::SeqCst);
-            info!("Render probe: recovery, camera editor and all nine screenshots passed");
+            info!("Render probe: recovery, camera editor, both HUDs, both maps and all twelve screenshots passed");
         }
         900 => panic!("screenshots did not complete"),
         _ => {}
@@ -773,6 +836,9 @@ fn probe_assertions(
         80 => "cockpit",
         110 => "onboard",
         200 => "paused",
+        330 => "gauges-nearby-driving",
+        390 => "segments-nearby-driving",
+        450 => "gauges-full-driving",
         540 => "moving-cockpit",
         610 => "moving-tv",
         685 => "camera-editor",

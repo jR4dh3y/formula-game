@@ -103,6 +103,7 @@ pub enum RaceEvent {
     },
 }
 
+#[derive(Clone)]
 pub struct Race {
     pub track: Arc<Track>,
     pub entrants: Vec<Entrant>,
