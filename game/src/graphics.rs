@@ -73,16 +73,31 @@ impl Quality {
 pub fn apply(
     mut commands: Commands,
     frontend: Res<crate::menu::Frontend>,
-    mut applied: Local<Option<Quality>>,
+    mut applied: Local<Option<(Quality, bool)>>,
+    mut windows: Query<&mut Window>,
     cameras: Query<Entity, With<Camera3d>>,
     mut lights: Query<(Entity, &mut DirectionalLight)>,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
 ) {
     let quality = frontend.graphics;
-    if *applied == Some(quality) || cameras.is_empty() {
+    if *applied == Some((quality, frontend.vsync)) || cameras.is_empty() {
         return;
     }
-    *applied = Some(quality);
+    let present_mode = if frontend.vsync {
+        bevy::window::PresentMode::AutoVsync
+    } else {
+        bevy::window::PresentMode::AutoNoVsync
+    };
+    for mut window in &mut windows {
+        if window.present_mode != present_mode {
+            window.present_mode = present_mode;
+        }
+    }
+    if applied.is_some_and(|(previous, _)| previous == quality) {
+        *applied = Some((quality, frontend.vsync));
+        return;
+    }
+    *applied = Some((quality, frontend.vsync));
     shadow_map.size = quality.shadow_map();
     for (entity, mut light) in &mut lights {
         light.contact_shadows_enabled = quality >= Quality::High;

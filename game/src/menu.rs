@@ -137,6 +137,7 @@ pub struct Frontend {
     pub corner_braking: f64,
     pub show_racing_line: bool,
     pub graphics: crate::graphics::Quality,
+    pub vsync: bool,
     pub views: std::collections::BTreeMap<String, crate::camera::Tuning>,
     store: crate::preferences::Store,
     pub pending: bool,
@@ -159,6 +160,7 @@ impl Frontend {
             corner_braking: prefs.corner_braking,
             show_racing_line: prefs.racing_line,
             graphics: prefs.graphics,
+            vsync: prefs.vsync,
             views: prefs.views,
             store,
             pending: false,
@@ -205,6 +207,7 @@ pub fn apply(
         camera: frontend.draft.camera,
         views: frontend.views.clone(),
         graphics: frontend.graphics,
+        vsync: frontend.vsync,
     };
     if let Err(error) = frontend.store.save(prefs) {
         frontend.error = Some(error);
@@ -447,7 +450,7 @@ pub fn ui(
                         }
                     }
                     Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
-                    Tab::Graphics => graphics_panel(ui, &mut frontend.graphics, &mut session),
+                    Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
                 });
             ui.add_space(12.);
             ui.separator();
@@ -819,11 +822,8 @@ fn warm_fonts(context: &egui::Context) {
     });
 }
 
-fn graphics_panel(
-    ui: &mut egui::Ui,
-    selected: &mut crate::graphics::Quality,
-    session: &mut Session,
-) {
+fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Session) {
+    let selected = &mut frontend.graphics;
     ui.heading("Graphics preset");
     ui.label("Changes apply immediately.");
     ui.add_space(6.);
@@ -832,6 +832,8 @@ fn graphics_panel(
         ui.label(RichText::new(quality.description()).size(15.).color(DIM));
     }
     ui.add_space(8.);
+    ui.checkbox(&mut frontend.vsync, "Vertical sync")
+        .on_hover_text("Off renders as fast as the GPU allows, with possible tearing.");
     ui.checkbox(&mut session.show_performance, "Show frame rate  F3");
 }
 

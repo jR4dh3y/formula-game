@@ -130,6 +130,9 @@ pub struct Car {
     /// Visual body attitude, rad (pitch positive nose-up, roll positive left-side-up).
     pub pitch: f64,
     pub roll: f64,
+    /// Visual height of the model origin, following the ground through the suspension.
+    pub body_height: f64,
+    suspension: [Suspension; 3],
     /// Road wheel angle, rad, positive left.
     pub steer_angle: f64,
     pub powertrain: Powertrain,
@@ -145,6 +148,35 @@ pub struct Car {
     vertical_acceleration: f64,
     /// Strongest impact this tick (N·s), for camera shake and damage later.
     pub impact: f64,
+}
+
+/// Visual suspension: an alpha-beta tracker that follows steady slopes without
+/// lag but filters the facet-to-facet noise of the collision mesh, which would
+/// otherwise rock the body (and the camera with it) at ~15 Hz.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct Suspension {
+    value: f64,
+    rate: f64,
+}
+
+impl Suspension {
+    /// Natural frequency (rad/s) and damping ratio of the body motion.
+    const FREQUENCY: f64 = 20.0;
+    const DAMPING: f64 = 0.75;
+
+    fn at(value: f64) -> Self {
+        Self { value, rate: 0.0 }
+    }
+
+    fn track(&mut self, target: f64, dt: f64) -> f64 {
+        let alpha = (2.0 * Self::DAMPING * Self::FREQUENCY * dt).min(1.0);
+        let beta = (Self::FREQUENCY * dt).powi(2).min(1.0);
+        let predicted = self.value + self.rate * dt;
+        let residual = target - predicted;
+        self.value = predicted + alpha * residual;
+        self.rate += beta * residual / dt;
+        self.value
+    }
 }
 
 impl Car {
@@ -168,6 +200,12 @@ impl Car {
             velocity: DVec2::ZERO,
             pitch: 0.0,
             roll: 0.0,
+            body_height: position.y,
+            suspension: [
+                Suspension::at(position.y),
+                Suspension::at(0.0),
+                Suspension::at(0.0),
+            ],
             steer_angle: 0.0,
             tyres: [AxleTyres::default(); 2],
             wheels: [WheelState {
@@ -208,7 +246,7 @@ impl Car {
         let left = self.left();
         let along = local.z - self.spec.cg_z();
         let flat = DVec2::new(self.position.x, self.position.z) + forward * along + left * local.x;
-        DVec3::new(flat.x, self.position.y + local.y, flat.y)
+        DVec3::new(flat.x, self.body_height + local.y, flat.y)
     }
 
     /// Model origin in world space, for rendering.
@@ -525,10 +563,18 @@ impl Car {
         let rear_height = (heights[2] + heights[3]) * 0.5;
         let left_height = (heights[0] + heights[2]) * 0.5;
         let right_height = (heights[1] + heights[3]) * 0.5;
-        self.pitch =
-            ((front_height - rear_height) / wheelbase).atan() + self.acceleration.x * 0.0016;
-        self.roll = ((left_height - right_height) / ((front_track + rear_track) * 0.5)).atan()
-            + self.acceleration.y * 0.0022;
+        let [height, pitch, roll] = &mut self.suspension;
+        self.body_height = height.track(ground, dt);
+        // Dive, squat and body roll go through the same suspension.
+        self.pitch = pitch.track(
+            ((front_height - rear_height) / wheelbase).atan() + self.acceleration.x * 0.0016,
+            dt,
+        );
+        self.roll = roll.track(
+            ((left_height - right_height) / ((front_track + rear_track) * 0.5)).atan()
+                + self.acceleration.y * 0.0022,
+            dt,
+        );
 
         // Tyre temperature and wear per axle.
         for axle in 0..2 {

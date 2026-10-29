@@ -28,6 +28,7 @@ pub struct Options {
     pub camera_explicit: bool,
     pub graphics: crate::graphics::Quality,
     pub graphics_explicit: bool,
+    pub vsync: bool,
 }
 
 impl Options {
@@ -48,6 +49,7 @@ impl Options {
   --camera cockpit|tv|chase   starting view (default: chase)
   --assists 0-1       driving aid strength (default: 1.0, automatic gears)
   --graphics low|medium|high|ultra   graphics preset (default: high)
+  --no-vsync          render as fast as the GPU allows
   --size WxH          window size (default: 1600x900)
   --frames N --capture FILE   render N frames, save the last one, exit";
 
@@ -75,6 +77,7 @@ impl Options {
             camera_explicit: false,
             graphics: crate::graphics::Quality::High,
             graphics_explicit: false,
+            vsync: true,
         };
         while let Some(flag) = args.next() {
             let mut value = || args.next().ok_or(format!("{flag} needs a value"));
@@ -130,6 +133,7 @@ impl Options {
                     options.aids_explicit = true;
                 }
                 "--mute" => options.mute = true,
+                "--no-vsync" => options.vsync = false,
                 "--quick-race" => options.quick_race = true,
                 "--camera" => {
                     options.camera_explicit = true;

@@ -16,6 +16,12 @@ pub struct Preferences {
     pub views: BTreeMap<String, Tuning>,
     #[serde(default)]
     pub graphics: crate::graphics::Quality,
+    #[serde(default = "vsync_default")]
+    pub vsync: bool,
+}
+
+fn vsync_default() -> bool {
+    true
 }
 
 impl Preferences {
@@ -29,6 +35,7 @@ impl Preferences {
                 .map(|id| (id.into(), Tuning::for_car(id)))
                 .into(),
             graphics: options.graphics,
+            vsync: options.vsync,
         }
     }
     pub fn sanitize(&mut self) {
@@ -87,6 +94,9 @@ impl Store {
         }
         if options.graphics_explicit {
             prefs.graphics = options.graphics;
+        }
+        if !options.vsync {
+            prefs.vsync = false;
         }
         if options.aids_explicit {
             prefs.aids = options.player_assists();
