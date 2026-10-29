@@ -3,10 +3,10 @@
 
 use crate::options::Options;
 use dhool_pro::input::{GamepadButton, Key};
-use dhool_pro::math::Color;
+use dhool_pro::math::{Color, Vec3};
 use dhool_pro::{
     run_live_game, Align, AppExit, FontId, GameEngine, Hud, HudFont, InputState, LiveOptions,
-    ProjectSettings, SceneBuilder, SystemContext,
+    Material, Mesh, ProjectSettings, SceneBuilder, SystemContext,
 };
 use racecraft_sim::{Compound, Setup};
 use serde::Deserialize;
@@ -191,6 +191,41 @@ impl Menu {
             }
             hud.text(self.font, 22.0, (x + 8.0, y), Align::Left, white, label);
         }
+        if w >= 1200.0 {
+            let column = w * 0.58;
+            hud.text(
+                self.font,
+                18.0,
+                (column, top + 95.0 + step),
+                Align::Left,
+                accent,
+                "AVAILABLE TRACKS",
+            );
+            for (i, track) in self.tracks.iter().enumerate() {
+                let y = top + 130.0 + step + i as f32 * 52.0;
+                let color = if i == self.track { white } else { dim };
+                hud.text(
+                    self.font,
+                    20.0,
+                    (column, y),
+                    Align::Left,
+                    color,
+                    &track.metadata.name,
+                );
+                hud.text(
+                    self.font,
+                    15.0,
+                    (column, y + 24.0),
+                    Align::Left,
+                    dim,
+                    &format!(
+                        "{:.3} km   /   {} corners",
+                        track.metadata.length / 1000.0,
+                        track.metadata.corners.len()
+                    ),
+                );
+            }
+        }
         hud.text(
             self.font,
             18.0,
@@ -218,7 +253,7 @@ impl Menu {
 
 /// Returns true when discovery or the menu handled this launch completely.
 pub fn handle_launch(options: &Options) -> Result<bool, String> {
-    if options.track_selected && !options.list_tracks {
+    if options.track.is_some() && !options.list_tracks {
         return Ok(false);
     }
     let tracks = discover(&options.assets)?;
@@ -252,7 +287,15 @@ pub fn handle_launch(options: &Options) -> Result<bool, String> {
         font,
         result: result.clone(),
     };
-    let scene = SceneBuilder::new().build().map_err(|e| e.to_string())?;
+    // The renderer requires nonempty geometry buffers. This backdrop keeps
+    // the menu independent of car/track assets; the HUD covers the scene.
+    let mut builder = SceneBuilder::new();
+    let backdrop = builder.add_material(Material::standard(
+        "menu-backdrop",
+        Color::rgb(0.02, 0.025, 0.035),
+    ));
+    builder.add_mesh(Mesh::cuboid("menu-backdrop", Vec3::ONE), backdrop);
+    let scene = builder.build().map_err(|e| e.to_string())?;
     let game = GameEngine::builder(ProjectSettings::default())
         .scene(scene)
         .resource(hud)

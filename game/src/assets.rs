@@ -62,7 +62,8 @@ pub fn load(options: &Options) -> Result<Loaded, String> {
             root.display()
         ));
     }
-    let track_dir = root.join("tracks").join(&options.track);
+    let track_name = options.track.as_deref().ok_or("no track selected")?;
+    let track_dir = root.join("tracks").join(track_name);
     println!("loading track {}", track_dir.display());
     let track = Arc::new(Track::load(&track_dir)?);
 
@@ -183,12 +184,7 @@ fn load_track_visual(builder: &mut SceneBuilder, path: &Path) -> Result<(), Stri
     for mut mesh in meshes {
         let alpha_tested = cutout[mesh.material_index];
         let material = ids[mesh.material_index];
-        let name = mesh.name.to_ascii_lowercase();
-        let ground = [
-            "asph", "grass", "gravel", "curb", "concrete", "sand", "road", "start",
-        ]
-        .iter()
-        .any(|key| name.starts_with(&format!("spa-{key}")) || name.starts_with(key));
+        let ground = mesh.name.starts_with("ground:");
         mesh.is_floor_or_ground = ground;
         mesh.prepass_eligible = !alpha_tested;
         if ground {

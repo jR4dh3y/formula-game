@@ -200,6 +200,7 @@ def main() -> None:
     ac = read_ac(os.path.join(source, "ardennen-spa.ac"))
     print(f"read {len(ac.objects)} polygon objects")
 
+    ground_textures = {obj.texture for obj in ac.objects if prefix(obj.name) in DRIVABLE_PREFIXES}
     texture_cache: dict[str, Image.Image | None] = {}
     materials: list[GlbMaterial] = []
     material_index: dict[str, int] = {}
@@ -220,7 +221,7 @@ def main() -> None:
             name = os.path.splitext(key)[0]
             materials.append(
                 GlbMaterial(
-                    name=name,
+                    name=("ground:" if obj.texture in ground_textures else "") + name,
                     base_color=color,
                     image=image,
                     alpha_mask=image is not None and image.mode == "RGBA",

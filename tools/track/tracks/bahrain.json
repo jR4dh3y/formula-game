@@ -1,0 +1,142 @@
+{
+  "name": "Bahrain International Circuit",
+  "archive": "bahrain-international-circuit.zip",
+  "model": "source/bahrain.glb",
+  "length": 5412,
+  "road": [
+    "Bahrainv3001791Mtl_73"
+  ],
+  "asphalt": [
+    "Bahrainv3001791Mtl_73",
+    "Bahrainv3001791Mtl_90",
+    "Bahrainv3001791Mtl_92",
+    "Bahrainv3001791Mtl_93"
+  ],
+  "kerb": [
+    "Bahrainv3001791Mtl_5",
+    "Bahrainv3001791Mtl_8",
+    "Bahrainv3001791Mtl_84",
+    "Bahrainv3001791Mtl_85",
+    "Bahrainv3001791Mtl_94",
+    "Material_17.003"
+  ],
+  "grass": [
+    "Bahrainv3001791Mtl_80",
+    "Bahrainv3001791Mtl_81",
+    "Material_24.002"
+  ],
+  "gravel": [
+    "Bahrainv3001791Mtl_7",
+    "Bahrainv3001791Mtl_74",
+    "Bahrainv3001791Mtl_6"
+  ],
+  "concrete": [],
+  "wall": [
+    "Bahrainv3001791Mtl_17",
+    "Bahrainv3001791Mtl_19",
+    "Bahrainv3001791Mtl_28",
+    "Bahrainv3001791Mtl_29",
+    "Bahrainv3001791Mtl_30",
+    "Bahrainv3001791Mtl_31",
+    "Bahrainv3001791Mtl_48"
+  ],
+  "source": "User-supplied Sketchfab/Assetto-style visual model; see upstream archive license",
+  "sun_direction": [
+    -0.35,
+    -0.78,
+    -0.52
+  ],
+  "scale": 1,
+  "max_triangles": 950000,
+  "max_texture": 1024,
+  "start": [
+    384,
+    -100
+  ],
+  "direction": [
+    0,
+    -1
+  ],
+  "corners": [
+    [
+      "Turn 1",
+      540
+    ],
+    [
+      "Turn 2",
+      650
+    ],
+    [
+      "Turn 3",
+      800
+    ],
+    [
+      "Turn 4",
+      1230
+    ],
+    [
+      "Turn 5",
+      1520
+    ],
+    [
+      "Turn 6",
+      1630
+    ],
+    [
+      "Turn 7",
+      1740
+    ],
+    [
+      "Turn 8",
+      1960
+    ],
+    [
+      "Turn 9",
+      2200
+    ],
+    [
+      "Turn 10",
+      2310
+    ],
+    [
+      "Turn 11",
+      2990
+    ],
+    [
+      "Turn 12",
+      3380
+    ],
+    [
+      "Turn 13",
+      3700
+    ],
+    [
+      "Turn 14",
+      4870
+    ],
+    [
+      "Turn 15",
+      5010
+    ]
+  ],
+  "exclude": [
+    [
+      [
+        340,
+        -430
+      ],
+      [
+        383,
+        -430
+      ],
+      [
+        356,
+        450
+      ],
+      [
+        320,
+        450
+      ]
+    ]
+  ]
+}

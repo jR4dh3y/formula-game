@@ -5,8 +5,7 @@ use std::path::PathBuf;
 
 pub struct Options {
     pub assets: PathBuf,
-    pub track: String,
-    pub track_selected: bool,
+    pub track: Option<String>,
     pub list_tracks: bool,
     pub laps: u32,
     pub opponents: usize,
@@ -41,8 +40,7 @@ impl Options {
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut options = Self {
             assets: PathBuf::from("assets"),
-            track: "spa".to_string(),
-            track_selected: false,
+            track: None,
             list_tracks: false,
             laps: 3,
             opponents: 7,
@@ -65,8 +63,7 @@ impl Options {
             match flag.as_str() {
                 "--assets" => options.assets = PathBuf::from(value()?),
                 "--track" => {
-                    options.track = value()?;
-                    options.track_selected = true;
+                    options.track = Some(value()?);
                 }
                 "--list-tracks" => options.list_tracks = true,
                 "--laps" => options.laps = number(value()?)?.max(1.0) as u32,
