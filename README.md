@@ -35,6 +35,16 @@ Driving aids has Beginner, Balanced and Unassisted presets. Beginner is the defa
 
 Aids and per-car camera positions persist in `$XDG_CONFIG_HOME/f1-racecraft/preferences.json` (or `~/.config/f1-racecraft/preferences.json`). `F1_SETTINGS` overrides the file. Explicit CLI aid settings override saved aids; `--quick-race` and capture runs use their CLI configuration without reading or writing preferences. Start new race replaces the current session; Resume race keeps it.
 
+## Portable Linux build
+
+`CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py` builds a single
+`dist/F1-Racecraft-0.1.0-linux-x86_64.AppImage` containing the game, both cars,
+all four playable tracks, sound, fonts and runtime libraries. Send that file;
+players do not need Rust, the repository, separate assets or FUSE installed.
+They need an x86-64 Linux desktop (kernel 6.1+) and a working Vulkan GPU driver. The image
+automatically extracts and runs when mounting is unavailable. See
+[packaging notes](tools/package/README.md) for controls, rebuilding and provenance.
+
 ## Controls
 
 | Action | Keyboard | Gamepad |

@@ -328,8 +328,15 @@ pub fn ui(
     );
     if session.screen == Screen::Racing {
         frontend.draft.camera = session.camera.mode;
+        let scale = context.viewport_rect().height() / 1080.;
+        // Match the timing tower's header, entrant rows and three timing rows.
+        let below_timing =
+            (24. + 45. + session.race.entrants.len() as f32 * 30. + 10. + 90. + 10.) * scale;
         egui::Area::new(egui::Id::new("race-controls"))
-            .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-16., 200.))
+            .anchor(
+                egui::Align2::LEFT_TOP,
+                egui::vec2(24. * scale, below_timing),
+            )
             .show(&viewport, |ui| {
                 egui::Frame::new()
                     .fill(Color32::from_black_alpha(200))

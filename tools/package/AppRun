@@ -1,0 +1,12 @@
+#!/bin/sh
+# The runtime supplies APPDIR after mounting or extracting the single file.
+set -eu
+appdir=${APPDIR:-${0%/*}}
+export ALSA_CONFIG_DIR="$appdir/usr/share/alsa"
+export ALSA_CONFIG_PATH="$appdir/usr/share/alsa/alsa.conf"
+export ALSA_PLUGIN_DIR="$appdir/usr/lib"
+export XKB_CONFIG_ROOT="$appdir/usr/share/X11/xkb"
+# Run with the matching bundled loader/libc; host GPU drivers remain discoverable.
+exec "$appdir/usr/lib/ld-linux-x86-64.so.2" \
+    --library-path "$appdir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    "$appdir/usr/bin/f1-the-game" --assets "$appdir/usr/share/f1-racecraft/assets" "$@"
