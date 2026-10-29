@@ -264,14 +264,14 @@ fn screen_space_occlusion(pixel: vec2<u32>, world_position: vec3<f32>, normal: v
         let delta = sample_world - world_position;
         let distance_to_sample = length(delta);
         if distance_to_sample > 0.025 && distance_to_sample < 1.85 {
-            let horizon = max(dot(normal, delta / distance_to_sample), 0.0);
+            // Coplanar neighbours are not occluders; reject the receiver plane.
+            let horizon = max(dot(normal, delta / distance_to_sample) - 0.08, 0.0);
             let near_contact = 1.0 - smoothstep(0.018, 0.34, distance_to_sample);
             let broad_contact = 1.0 - smoothstep(0.08, 1.65, distance_to_sample);
-            let floor_contact = smoothstep(0.36, 0.96, normal.y) * (1.0 - smoothstep(0.02, 0.48, abs(delta.y)));
-            occlusion += horizon * (near_contact * 1.72 + broad_contact * 0.70 + floor_contact * near_contact * 0.58);
+            occlusion += horizon * (near_contact * 1.72 + broad_contact * 0.70);
         }
     }
-    return clamp(1.0 - occlusion * 0.46, 0.08, 1.0);
+    return clamp(1.0 - occlusion * (1.5 / 12.0), 0.5, 1.0);
 }
 
 fn screen_space_contact_shadow(
@@ -360,12 +360,12 @@ fn shadow_visibility(world_position: vec3<f32>, normal: vec3<f32>, light_directi
     }
     let texel = 1.0 / vec2<f32>(textureDimensions(shadow_map));
     let ndotl = max(dot(normal, light_direction), 0.0);
-    let bias = max(0.00055, (1.0 - ndotl) * 0.0024);
-    let filter_radius = 7.25 + (1.0 - ndotl) * 5.25;
+    let bias = max(0.00008, (1.0 - ndotl) * 0.00025);
+    let filter_radius = 1.5;
     var visibility = 0.0;
     var total_weight = 0.0;
-    for (var y = -3; y <= 3; y += 1) {
-        for (var x = -3; x <= 3; x += 1) {
+    for (var y = -1; y <= 1; y += 1) {
+        for (var x = -1; x <= 1; x += 1) {
             let offset = vec2<f32>(f32(x), f32(y));
             let weight = 1.0 / (1.0 + dot(offset, offset) * 0.24);
             visibility += textureSampleCompare(

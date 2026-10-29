@@ -1,0 +1,162 @@
+{
+  "name": "Silverstone",
+  "archive": "silverstone-circuit-2024-layout.zip",
+  "model": "source/silverstone.glb",
+  "length": 5891,
+  "road": [
+    "asphalt.001"
+  ],
+  "asphalt": [
+    "asphalt.001",
+    "asph_pitlane.001",
+    "top2.001",
+    "top2_NM.001"
+  ],
+  "kerb": [
+    "curb.001",
+    "Curb_new.001"
+  ],
+  "grass": [
+    "grass.001",
+    "grass_NM.001"
+  ],
+  "gravel": [
+    "sand-bordini.001",
+    "sand_new.001"
+  ],
+  "concrete": [],
+  "wall": [
+    "barriers1.*",
+    "tyreswall.*",
+    "jersey.*",
+    "walls2.*"
+  ],
+  "source": "User-supplied Sketchfab/Assetto-style visual model; see upstream archive license",
+  "sun_direction": [
+    -0.35,
+    -0.78,
+    -0.52
+  ],
+  "scale": 1,
+  "max_triangles": 950000,
+  "max_texture": 1024,
+  "route": [
+    "groove.001"
+  ],
+  "start": [
+    -330,
+    170
+  ],
+  "direction": [
+    0.6,
+    -0.8
+  ],
+  "corners": [],
+  "corner_positions": [
+    [
+      "Abbey",
+      [
+        -220,
+        0
+      ]
+    ],
+    [
+      "Farm",
+      [
+        0,
+        -10
+      ]
+    ],
+    [
+      "Village",
+      [
+        210,
+        -140
+      ]
+    ],
+    [
+      "The Loop",
+      [
+        295,
+        -35
+      ]
+    ],
+    [
+      "Aintree",
+      [
+        330,
+        -180
+      ]
+    ],
+    [
+      "Brooklands",
+      [
+        -200,
+        -640
+      ]
+    ],
+    [
+      "Luffield",
+      [
+        -330,
+        -520
+      ]
+    ],
+    [
+      "Woodcote",
+      [
+        -430,
+        -700
+      ]
+    ],
+    [
+      "Copse",
+      [
+        300,
+        -850
+      ]
+    ],
+    [
+      "Maggotts",
+      [
+        440,
+        -400
+      ]
+    ],
+    [
+      "Becketts",
+      [
+        480,
+        -250
+      ]
+    ],
+    [
+      "Chapel",
+      [
+        460,
+        -100
+      ]
+    ],
+    [
+      "Stowe",
+      [
+        -50,
+        840
+      ]
+    ],
+    [
+      "Vale",
+      [
+        -350,
+        550
+      ]
+    ],
+    [
+      "Club",
+      [
+        -470,
+        500
+      ]
+    ]
+  ]
+}

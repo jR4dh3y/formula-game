@@ -1,0 +1,154 @@
+{
+  "name": "Circuit of the Americas",
+  "archive": "austin-circuit-of-the-americas-2012-layout.zip",
+  "model": "source/Untitled_compressed.glb",
+  "length": 5513,
+  "road": [
+    "roada",
+    "roada_drs"
+  ],
+  "asphalt": [
+    "roada",
+    "roada_drs",
+    "roadpit*",
+    "offtrack*",
+    "fillred",
+    "roadlinewhite",
+    "roadline",
+    "whiteline"
+  ],
+  "kerb": [
+    "curb",
+    "rmbl*"
+  ],
+  "grass": [
+    "grass?"
+  ],
+  "gravel": [
+    "sanda*",
+    "gravela"
+  ],
+  "concrete": [
+    "concrete"
+  ],
+  "wall": [
+    "twall*",
+    "grdr_*",
+    "pitwall01"
+  ],
+  "source": "User-supplied Sketchfab/Assetto-style visual model; see upstream archive license",
+  "sun_direction": [
+    -0.35,
+    -0.78,
+    -0.52
+  ],
+  "scale": 1,
+  "max_triangles": 950000,
+  "max_texture": 1024,
+  "start": [
+    -610,
+    750
+  ],
+  "direction": [
+    -1,
+    -0.7
+  ],
+  "corners": [
+    [
+      "Turn 1",
+      370
+    ],
+    [
+      "Turn 2",
+      700
+    ],
+    [
+      "Turn 3",
+      1030
+    ],
+    [
+      "Turn 4",
+      1150
+    ],
+    [
+      "Turn 5",
+      1250
+    ],
+    [
+      "Turn 6",
+      1360
+    ],
+    [
+      "Turn 7",
+      1450
+    ],
+    [
+      "Turn 8",
+      1540
+    ],
+    [
+      "Turn 9",
+      1640
+    ],
+    [
+      "Turn 10",
+      1820
+    ],
+    [
+      "Turn 11",
+      2070
+    ],
+    [
+      "Turn 12",
+      3190
+    ],
+    [
+      "Turn 13",
+      3380
+    ],
+    [
+      "Turn 14",
+      3490
+    ],
+    [
+      "Turn 15",
+      3650
+    ],
+    [
+      "Turn 16",
+      3960
+    ],
+    [
+      "Turn 17",
+      4100
+    ],
+    [
+      "Turn 18",
+      4260
+    ],
+    [
+      "Turn 19",
+      4580
+    ],
+    [
+      "Turn 20",
+      5160
+    ]
+  ],
+  "omit": [
+    "shadow",
+    "tempwall",
+    "cmwldhl"
+  ],
+  "omit_boxes": [
+    {
+      "material": "grassc",
+      "dimensions": [
+        1.416,
+        1.029,
+        1.407
+      ],
+      "tolerance": 0.05
+    }
+  ]
+}

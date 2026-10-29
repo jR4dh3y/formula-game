@@ -64,18 +64,7 @@ pub struct AiDriver {
 
 impl AiDriver {
     pub fn new(profile: DriverProfile, car: &Car, track: &Track, seed: u64) -> Self {
-        let spec = &car.spec;
-        let envelope = PerformanceEnvelope {
-            mass: spec.mass,
-            // Load transfer, temperature and tyre load sensitivity take a share
-            // of the nominal friction in practice.
-            grip: spec.tyre_friction * 0.84 * profile.pace,
-            lift_area: car.setup.front_lift_area(&spec.aero) + car.setup.rear_lift_area(&spec.aero),
-            drag_area: car.setup.drag_area(&spec.aero),
-            power: spec.engine.max_power * 0.92,
-            brake_fraction: 0.9 * profile.pace,
-        };
-        let speed_profile = track.racing_line.speed_profile(&envelope);
+        let speed_profile = speed_profile(profile, car, track);
         let corners = find_corners(track, &speed_profile);
         Self {
             profile,
@@ -223,6 +212,8 @@ impl AiDriver {
     }
 
     fn replan(&mut self, car: &Car, track: &Track, rivals: &[Rival], corner: Option<CornerPlan>) {
+        self.speed_profile = speed_profile(self.profile, car, track);
+        self.corners = find_corners(track, &self.speed_profile);
         let s = car.track_position.s;
         // Forget a plan once its corner is behind us.
         match self.intent {
@@ -319,6 +310,26 @@ impl AiDriver {
     }
 }
 
+/// Match the braking plan to the tyre compound, temperature and wear used by
+/// the physical car, rather than assuming optimal tyres for the whole race.
+fn speed_profile(profile: DriverProfile, car: &Car, track: &Track) -> Vec<f64> {
+    let spec = &car.spec;
+    let tyre_grip = car
+        .tyres
+        .iter()
+        .map(|tyre| tyre.grip(car.setup.compound))
+        .fold(f64::INFINITY, f64::min);
+    track.racing_line.speed_profile(&PerformanceEnvelope {
+        mass: spec.mass,
+        grip: spec.tyre_friction * 0.84 * profile.pace * tyre_grip,
+        lift_area: car.setup.front_lift_area(&spec.aero) + car.setup.rear_lift_area(&spec.aero),
+        drag_area: car.setup.drag_area(&spec.aero),
+        power: spec.engine.max_power * 0.92,
+        // Leave headroom for axle brake bias, ABS trimming and turn-in loads.
+        brake_fraction: 0.76 * profile.pace,
+    })
+}
+
 /// Finds braking zones and apexes from the speed profile's local minima.
 fn find_corners(track: &Track, speed: &[f64]) -> Vec<CornerPlan> {
     let count = speed.len();
@@ -399,6 +410,27 @@ mod tests {
         let (driver, _) = driver_and_car(&track);
         assert_eq!(driver.corners.len(), 2, "{:?}", driver.corners);
         assert!(driver.corners.iter().all(|corner| corner.apex_speed > 20.0));
+    }
+
+    #[test]
+    fn replanning_brakes_for_the_current_tyre_grip() {
+        let track = oval_track();
+        let (mut driver, mut car) = driver_and_car(&track);
+        for tyre in &mut car.tyres {
+            tyre.temperature = 100.0;
+        }
+        driver.replan(&car, &track, &[], None);
+        let warm = driver.target_speed(&track, 250.0);
+        for tyre in &mut car.tyres {
+            tyre.temperature = 35.0;
+            tyre.wear = 0.6;
+        }
+        driver.replan(&car, &track, &[], None);
+        let cold_worn = driver.target_speed(&track, 250.0);
+        assert!(
+            cold_worn < warm * 0.95,
+            "warm {warm}, cold/worn {cold_worn}"
+        );
     }
 
     #[test]

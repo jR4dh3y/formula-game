@@ -30,7 +30,7 @@ struct VertexInput {
 };
 
 struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
+    @invariant @builtin(position) clip_position: vec4<f32>,
     @location(0) world_position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
@@ -77,7 +77,12 @@ fn fs_main(input: VertexOutput) -> GBufferOutput {
     let sampled_normal = textureSample(normal_texture, base_color_sampler, input.uv).xyz * 2.0 - 1.0;
     let sampled_pbr = textureSample(pbr_texture, base_color_sampler, input.uv);
     let geometric_normal = normalize(input.normal);
-    let tangent = normalize(input.tangent.xyz - geometric_normal * dot(input.tangent.xyz, geometric_normal));
+    // Imported meshes may omit tangents. The importer's default X tangent is
+    // parallel to X-facing walls; normalize(0) poisons the whole lighting path.
+    let projected_tangent = input.tangent.xyz - geometric_normal * dot(input.tangent.xyz, geometric_normal);
+    let reference = select(vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(0.0, 1.0, 0.0), abs(geometric_normal.x) > 0.9);
+    let fallback_tangent = normalize(cross(reference, geometric_normal));
+    let tangent = select(fallback_tangent, projected_tangent / max(length(projected_tangent), 0.000001), length(projected_tangent) > 0.000001);
     let bitangent = normalize(cross(geometric_normal, tangent)) * input.tangent.w;
     let mapped_normal = normalize(mat3x3<f32>(tangent, bitangent, geometric_normal) * sampled_normal);
     let base = material.base_color * input.color * sampled;
