@@ -637,8 +637,8 @@ pub struct Camera {
 
 impl Camera {
     pub fn view_projection(self, aspect: f32) -> Mat4 {
-        Mat4::look_at_rh(self.position, self.target, self.up)
-            * Mat4::perspective_reverse_rh(self.vertical_fov_radians, aspect, self.near, self.far)
+        Mat4::perspective_reverse_rh(self.vertical_fov_radians, aspect, self.near, self.far)
+            * Mat4::look_at_rh(self.position, self.target, self.up)
     }
 }
 

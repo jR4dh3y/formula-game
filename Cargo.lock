@@ -441,6 +441,7 @@ name = "f1-the-game"
 version = "0.1.0"
 dependencies = [
  "dhool-pro",
+ "glam",
  "racecraft-sim",
 ]
 

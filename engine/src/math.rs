@@ -349,14 +349,13 @@ impl Mat4 {
 
 impl Mul for Mat4 {
     type Output = Self;
+    /// Standard composition: `(a * b)` applies `b` first, then `a`.
+    /// Storage is column-major (`m[column][row]`).
     fn mul(self, rhs: Self) -> Self::Output {
         let mut out = [[0.0; 4]; 4];
-        for (row, out_row) in out.iter_mut().enumerate() {
-            for (col, value) in out_row.iter_mut().enumerate() {
-                *value = self.m[row][0] * rhs.m[0][col]
-                    + self.m[row][1] * rhs.m[1][col]
-                    + self.m[row][2] * rhs.m[2][col]
-                    + self.m[row][3] * rhs.m[3][col];
+        for (column, out_column) in out.iter_mut().enumerate() {
+            for (row, value) in out_column.iter_mut().enumerate() {
+                *value = (0..4).map(|k| self.m[k][row] * rhs.m[column][k]).sum();
             }
         }
         Self { m: out }
@@ -484,4 +483,18 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
 
 pub fn lerp3(a: Vec3, b: Vec3, t: f32) -> Vec3 {
     a + (b - a) * t
+}
+
+#[cfg(test)]
+mod mat4_tests {
+    use super::*;
+
+    #[test]
+    fn composition_applies_the_right_hand_matrix_first() {
+        let turn_then_move = Mat4::translation(Vec3::new(10.0, 0.0, 0.0))
+            * Mat4::rotation_y(std::f32::consts::FRAC_PI_2);
+        let point = turn_then_move.mul_vec4(Vec4::new(0.0, 0.0, 1.0, 1.0));
+        assert!((point.x - 11.0).abs() < 1e-5, "{point:?}");
+        assert!(point.z.abs() < 1e-5, "{point:?}");
+    }
 }

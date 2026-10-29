@@ -7,3 +7,4 @@ publish = false
 [dependencies]
 dhool-pro = { path = "../engine" }
 racecraft-sim = { path = "../sim" }
+glam = "0.33"
