@@ -593,6 +593,29 @@ pub enum LightKind {
     },
 }
 
+impl LightKind {
+    /// The same light placed at `position`; directional lights have no position.
+    pub fn at_position(self, position: Vec3) -> Self {
+        match self {
+            Self::Directional { direction } => Self::Directional { direction },
+            Self::Local { radius, .. } => Self::Local { position, radius },
+            Self::Spot {
+                direction,
+                radius,
+                inner_angle_radians,
+                outer_angle_radians,
+                ..
+            } => Self::Spot {
+                position,
+                direction,
+                radius,
+                inner_angle_radians,
+                outer_angle_radians,
+            },
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Light {
     pub name: String,

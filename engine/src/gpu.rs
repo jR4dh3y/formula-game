@@ -1,7 +1,10 @@
 use crate::cloth::{ClothColliderSnapshot, ClothState};
-use crate::game::{FrameInput, GameEngine, InputState};
+use crate::game::{AppExit, FrameInput, GameEngine, InputState};
+use crate::hud::Hud;
+use crate::input::{GamepadButton, GamepadButtons, GamepadState, Key, KeySet};
 use crate::math::{Vec2, Vec3, Vec4};
 use crate::scene::{EnvironmentMap, LightKind, Material, RenderScene, TextureImage};
+use crate::world::{EntityId, RenderInstance, World};
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Quat, Vec3 as GpuVec3};
 use half::f16;
@@ -105,6 +108,9 @@ pub struct LiveOptions {
     pub display_brightness: f32,
     pub profile_gpu: bool,
     pub static_camera: bool,
+    /// Half-extent in metres of the directional shadow map that follows a game camera.
+    pub shadow_distance: f32,
+    pub title: String,
 }
 
 impl Default for LiveOptions {
@@ -124,6 +130,8 @@ impl Default for LiveOptions {
             display_brightness: 1.0,
             profile_gpu: false,
             static_camera: false,
+            shadow_distance: 60.0,
+            title: "Dhool Pro".to_string(),
         }
     }
 }
@@ -190,6 +198,9 @@ enum LiveContent {
 #[derive(Default)]
 struct LiveGameInput {
     keys: CameraKeys,
+    held: KeySet,
+    pressed: KeySet,
+    gamepad: GamepadState,
     look_delta: Vec2,
     primary_action: bool,
     secondary_action: bool,
@@ -207,14 +218,171 @@ impl LiveGameInput {
             look_delta: self.look_delta,
             primary_action: self.primary_action,
             secondary_action: self.secondary_action,
+            keys: self.held,
+            keys_pressed: self.pressed,
+            gamepad: self.gamepad,
         }
+    }
+
+    fn set_key(&mut self, key: Key, pressed: bool, repeat: bool) {
+        if pressed {
+            if !repeat && !self.held.contains(key) {
+                self.pressed.insert(key);
+            }
+            self.held.insert(key);
+        } else {
+            self.held.remove(key);
+        }
+    }
+
+    fn poll_gamepad(&mut self, gilrs: &mut gilrs::Gilrs) {
+        let mut pressed = GamepadButtons::default();
+        while let Some(event) = gilrs.next_event() {
+            if let gilrs::EventType::ButtonPressed(button, _) = event.event {
+                if let Some(button) = map_gamepad_button(button) {
+                    pressed.insert(button);
+                }
+            }
+        }
+        let Some((_, pad)) = gilrs.gamepads().find(|(_, pad)| pad.is_connected()) else {
+            self.gamepad = GamepadState::default();
+            return;
+        };
+        let axis = |axis| pad.axis_data(axis).map(|data| data.value()).unwrap_or(0.0);
+        let trigger = |button| {
+            pad.button_data(button)
+                .map(|data| data.value())
+                .unwrap_or(0.0)
+        };
+        let mut held = GamepadButtons::default();
+        for (source, button) in GAMEPAD_BUTTONS {
+            if pad.is_pressed(source) {
+                held.insert(button);
+            }
+        }
+        self.gamepad = GamepadState {
+            connected: true,
+            left_stick: Vec2::new(axis(gilrs::Axis::LeftStickX), axis(gilrs::Axis::LeftStickY)),
+            right_stick: Vec2::new(
+                axis(gilrs::Axis::RightStickX),
+                axis(gilrs::Axis::RightStickY),
+            ),
+            left_trigger: trigger(gilrs::Button::LeftTrigger2),
+            right_trigger: trigger(gilrs::Button::RightTrigger2),
+            held,
+            pressed,
+        };
     }
 
     fn finish_frame(&mut self) {
         self.look_delta = Vec2::ZERO;
         self.primary_action = false;
         self.secondary_action = false;
+        self.pressed.clear();
+        self.gamepad.pressed.clear();
     }
+}
+
+const GAMEPAD_BUTTONS: [(gilrs::Button, GamepadButton); 14] = [
+    (gilrs::Button::South, GamepadButton::South),
+    (gilrs::Button::East, GamepadButton::East),
+    (gilrs::Button::North, GamepadButton::North),
+    (gilrs::Button::West, GamepadButton::West),
+    (gilrs::Button::LeftTrigger, GamepadButton::LeftBumper),
+    (gilrs::Button::RightTrigger, GamepadButton::RightBumper),
+    (gilrs::Button::Select, GamepadButton::Select),
+    (gilrs::Button::Start, GamepadButton::Start),
+    (gilrs::Button::LeftThumb, GamepadButton::LeftStick),
+    (gilrs::Button::RightThumb, GamepadButton::RightStick),
+    (gilrs::Button::DPadUp, GamepadButton::DPadUp),
+    (gilrs::Button::DPadDown, GamepadButton::DPadDown),
+    (gilrs::Button::DPadLeft, GamepadButton::DPadLeft),
+    (gilrs::Button::DPadRight, GamepadButton::DPadRight),
+];
+
+fn map_gamepad_button(button: gilrs::Button) -> Option<GamepadButton> {
+    GAMEPAD_BUTTONS
+        .iter()
+        .find(|(source, _)| *source == button)
+        .map(|(_, button)| *button)
+}
+
+fn map_key(code: KeyCode) -> Option<Key> {
+    Some(match code {
+        KeyCode::KeyA => Key::A,
+        KeyCode::KeyB => Key::B,
+        KeyCode::KeyC => Key::C,
+        KeyCode::KeyD => Key::D,
+        KeyCode::KeyE => Key::E,
+        KeyCode::KeyF => Key::F,
+        KeyCode::KeyG => Key::G,
+        KeyCode::KeyH => Key::H,
+        KeyCode::KeyI => Key::I,
+        KeyCode::KeyJ => Key::J,
+        KeyCode::KeyK => Key::K,
+        KeyCode::KeyL => Key::L,
+        KeyCode::KeyM => Key::M,
+        KeyCode::KeyN => Key::N,
+        KeyCode::KeyO => Key::O,
+        KeyCode::KeyP => Key::P,
+        KeyCode::KeyQ => Key::Q,
+        KeyCode::KeyR => Key::R,
+        KeyCode::KeyS => Key::S,
+        KeyCode::KeyT => Key::T,
+        KeyCode::KeyU => Key::U,
+        KeyCode::KeyV => Key::V,
+        KeyCode::KeyW => Key::W,
+        KeyCode::KeyX => Key::X,
+        KeyCode::KeyY => Key::Y,
+        KeyCode::KeyZ => Key::Z,
+        KeyCode::Digit0 => Key::Digit0,
+        KeyCode::Digit1 => Key::Digit1,
+        KeyCode::Digit2 => Key::Digit2,
+        KeyCode::Digit3 => Key::Digit3,
+        KeyCode::Digit4 => Key::Digit4,
+        KeyCode::Digit5 => Key::Digit5,
+        KeyCode::Digit6 => Key::Digit6,
+        KeyCode::Digit7 => Key::Digit7,
+        KeyCode::Digit8 => Key::Digit8,
+        KeyCode::Digit9 => Key::Digit9,
+        KeyCode::F1 => Key::F1,
+        KeyCode::F2 => Key::F2,
+        KeyCode::F3 => Key::F3,
+        KeyCode::F4 => Key::F4,
+        KeyCode::F5 => Key::F5,
+        KeyCode::F6 => Key::F6,
+        KeyCode::F7 => Key::F7,
+        KeyCode::F8 => Key::F8,
+        KeyCode::F9 => Key::F9,
+        KeyCode::F10 => Key::F10,
+        KeyCode::F11 => Key::F11,
+        KeyCode::F12 => Key::F12,
+        KeyCode::ArrowUp => Key::ArrowUp,
+        KeyCode::ArrowDown => Key::ArrowDown,
+        KeyCode::ArrowLeft => Key::ArrowLeft,
+        KeyCode::ArrowRight => Key::ArrowRight,
+        KeyCode::Space => Key::Space,
+        KeyCode::Enter | KeyCode::NumpadEnter => Key::Enter,
+        KeyCode::Escape => Key::Escape,
+        KeyCode::Tab => Key::Tab,
+        KeyCode::Backspace => Key::Backspace,
+        KeyCode::ShiftLeft => Key::ShiftLeft,
+        KeyCode::ShiftRight => Key::ShiftRight,
+        KeyCode::ControlLeft => Key::ControlLeft,
+        KeyCode::ControlRight => Key::ControlRight,
+        KeyCode::AltLeft => Key::AltLeft,
+        KeyCode::AltRight => Key::AltRight,
+        KeyCode::Comma => Key::Comma,
+        KeyCode::Period => Key::Period,
+        KeyCode::Minus => Key::Minus,
+        KeyCode::Equal => Key::Equal,
+        KeyCode::BracketLeft => Key::BracketLeft,
+        KeyCode::BracketRight => Key::BracketRight,
+        KeyCode::Semicolon => Key::Semicolon,
+        KeyCode::Quote => Key::Quote,
+        KeyCode::Slash => Key::Slash,
+        _ => return None,
+    })
 }
 
 struct LiveApplication {
@@ -228,6 +396,7 @@ struct LiveApplication {
     title_frames: u32,
     game_input: LiveGameInput,
     game_clock: Instant,
+    gilrs: Option<gilrs::Gilrs>,
 }
 
 impl LiveApplication {
@@ -251,6 +420,7 @@ impl LiveApplication {
             title_frames: 0,
             game_input: LiveGameInput::default(),
             game_clock: Instant::now(),
+            gilrs: None,
         }
     }
 
@@ -268,7 +438,7 @@ impl ApplicationHandler for LiveApplication {
             return;
         }
         let attributes = Window::default_attributes()
-            .with_title("Dhool Pro | GPU renderer starting")
+            .with_title(format!("{} | GPU renderer starting", self.options.title))
             .with_inner_size(PhysicalSize::new(self.options.width, self.options.height));
         let window = match event_loop.create_window(attributes) {
             Ok(window) => Arc::new(window),
@@ -278,6 +448,10 @@ impl ApplicationHandler for LiveApplication {
             }
         };
         let dynamic_game = matches!(self.content, LiveContent::Game(_));
+        if dynamic_game {
+            // Controllers are optional; a missing backend only disables them.
+            self.gilrs = gilrs::Gilrs::new().ok();
+        }
         let scene = match &mut self.content {
             LiveContent::Scene(scene) => *scene.take().expect("scene is consumed once"),
             LiveContent::Game(game) => game.world.build_render_scene(),
@@ -303,8 +477,8 @@ impl ApplicationHandler for LiveApplication {
             "live pipeline: alpha-aware cached shadows -> 2x MSAA selective prepass/PBR+motion G-buffer + coverage resolve -> R32 depth/Hi-Z/fog -> SSR-first temporal reflections -> D32S8 light volumes + material-profile HDR lighting/rain -> velocity compensation + Gaussian bloom/GT resolve -> coverage-assisted SMAA T2x -> separate UI/gamma presentation"
         );
         window.set_title(&format!(
-            "Dhool Pro | {} | vendor-agnostic compute",
-            renderer.adapter.name
+            "{} | {}",
+            self.options.title, renderer.adapter.name
         ));
         window.request_redraw();
         self.window = Some(window);
@@ -337,13 +511,17 @@ impl ApplicationHandler for LiveApplication {
                 };
                 let pressed = event.state == ElementState::Pressed;
                 match event.physical_key {
-                    PhysicalKey::Code(KeyCode::Escape) if pressed => event_loop.exit(),
+                    // Games decide what Escape means and leave through `AppExit`.
                     PhysicalKey::Code(code) if matches!(self.content, LiveContent::Game(_)) => {
                         if code == KeyCode::Space && pressed && !event.repeat {
                             self.game_input.primary_action = true;
                         }
                         set_camera_key(&mut self.game_input.keys, code, pressed);
+                        if let Some(key) = map_key(code) {
+                            self.game_input.set_key(key, pressed, event.repeat);
+                        }
                     }
+                    PhysicalKey::Code(KeyCode::Escape) if pressed => event_loop.exit(),
                     PhysicalKey::Code(KeyCode::Space) if pressed && !event.repeat => {
                         renderer.toggle_auto_orbit();
                     }
@@ -383,6 +561,12 @@ impl ApplicationHandler for LiveApplication {
                         .as_secs_f32()
                         .clamp(0.0, 0.25);
                     self.game_clock = now;
+                    if let Some(gilrs) = self.gilrs.as_mut() {
+                        self.game_input.poll_gamepad(gilrs);
+                    }
+                    if let Some(hud) = game.resources.get_mut::<Hud>() {
+                        hud.resize(renderer.config.width, renderer.config.height);
+                    }
                     if let Err(error) = game.advance(FrameInput {
                         delta_seconds,
                         input: self.game_input.state(),
@@ -390,12 +574,18 @@ impl ApplicationHandler for LiveApplication {
                         self.fail(event_loop, LiveError::Engine(error.to_string()));
                         return;
                     }
-                    let scene = game.world.build_render_scene();
-                    if let Err(error) = renderer.update_scene(&scene) {
+                    if let Err(error) = renderer.update_world(&game.world) {
                         self.fail(event_loop, LiveError::Scene(error));
                         return;
                     }
+                    if let Some(hud) = game.resources.get::<Hud>() {
+                        renderer.upload_hud(hud);
+                    }
                     self.game_input.finish_frame();
+                    if !game.events.read::<AppExit>().is_empty() {
+                        event_loop.exit();
+                        return;
+                    }
                 }
                 if let Err(message) = renderer.update() {
                     self.fail(event_loop, LiveError::Scene(message));
@@ -419,8 +609,8 @@ impl ApplicationHandler for LiveApplication {
                     let fps = self.title_frames as f64 / elapsed.as_secs_f64();
                     println!("live FPS: {fps:.1}");
                     window.set_title(&format!(
-                        "Dhool Pro | {} | {:.0} FPS | compute RT + HDR bloom + 3D rain + SMAA T2x",
-                        renderer.adapter.name, fps
+                        "{} | {} | {:.0} FPS",
+                        self.options.title, renderer.adapter.name, fps
                     ));
                     self.title_clock = Instant::now();
                     self.title_frames = 0;
@@ -598,6 +788,7 @@ struct LiveRendererConfig {
     display: DisplayUniform,
     profile_gpu: bool,
     static_camera: bool,
+    shadow_distance: f32,
 }
 
 impl LiveRendererConfig {
@@ -627,6 +818,7 @@ impl LiveRendererConfig {
             },
             profile_gpu: options.profile_gpu,
             static_camera: options.static_camera,
+            shadow_distance: options.shadow_distance.max(4.0),
         }
     }
 }
@@ -981,6 +1173,7 @@ struct GBuffer {
     _aa_history_b: wgpu::Texture,
     _aa_presented: wgpu::Texture,
     _ui_overlay: wgpu::Texture,
+    hud_texture: wgpu::Texture,
     albedo: wgpu::TextureView,
     normal: wgpu::TextureView,
     pbr: wgpu::TextureView,
@@ -1053,8 +1246,10 @@ struct GpuRenderer {
     adapter: wgpu::AdapterInfo,
     vertex_buffer: wgpu::Buffer,
     previous_position_buffer: wgpu::Buffer,
-    dynamic_vertices: Vec<GpuVertex>,
-    dynamic_indices: Vec<u32>,
+    dynamic_instances: Vec<DynamicInstance>,
+    dynamic_layout: Vec<(EntityId, u64)>,
+    dynamic_shadow_camera: CameraUniform,
+    shadow_distance: f32,
     dynamic_material_signatures: Vec<u64>,
     dynamic_environment_map: EnvironmentMap,
     dynamic_light_layout: Vec<(u8, bool)>,
@@ -1152,10 +1347,21 @@ struct GpuRenderer {
     environment_sampler: wgpu::Sampler,
     display_fps: f32,
     show_ui: bool,
+    /// Revision of the HUD canvas currently in `gbuffer.hud_texture`.
+    hud_revision: Option<u64>,
     frame_capture: Option<FrameCapture>,
     gpu_profiler: Option<GpuTimestampProfiler>,
     cloths: Vec<LiveCloth>,
     cloth_accumulator: f32,
+}
+
+/// A world entity's slice of the live vertex buffer.
+struct DynamicInstance {
+    vertex_range: Range<u32>,
+    transform: crate::math::Mat4,
+    moved_last_frame: bool,
+    casts_shadow: bool,
+    local_bounds: Option<(GpuVec3, GpuVec3)>,
 }
 
 struct LiveCloth {
@@ -1208,6 +1414,7 @@ impl GpuRenderer {
             display,
             profile_gpu,
             static_camera,
+            shadow_distance,
         } = renderer_config;
         for mesh in &mut scene.meshes {
             if mesh.cloth.is_some() {
@@ -1339,7 +1546,7 @@ impl GpuRenderer {
             previous_positions,
             indices,
             batches,
-            cloth_vertex_ranges,
+            vertex_ranges,
         } = flatten_scene(&scene, !dynamic_game);
         let cloths = if dynamic_game {
             Vec::new()
@@ -1347,10 +1554,9 @@ impl GpuRenderer {
             scene
                 .meshes
                 .iter()
-                .zip(cloth_vertex_ranges)
+                .zip(vertex_ranges)
                 .filter_map(|(mesh, vertex_range)| {
                     let definition = mesh.cloth.as_ref()?;
-                    let vertex_range = vertex_range?;
                     Some(
                         ClothState::new(&mesh.vertices, &mesh.indices, definition).map(|state| {
                             LiveCloth {
@@ -1364,8 +1570,6 @@ impl GpuRenderer {
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| LiveError::Scene(error.to_string()))?
         };
-        let dynamic_vertices = vertices.clone();
-        let dynamic_indices = indices.clone();
         let dynamic_material_signatures = scene
             .materials
             .iter()
@@ -1619,8 +1823,12 @@ impl GpuRenderer {
             adapter: adapter_info,
             vertex_buffer,
             previous_position_buffer,
-            dynamic_vertices,
-            dynamic_indices,
+            // Games stream their world on the first update; the startup upload
+            // only has to be valid until then.
+            dynamic_instances: Vec::new(),
+            dynamic_layout: Vec::new(),
+            dynamic_shadow_camera: shadow_camera,
+            shadow_distance,
             dynamic_material_signatures,
             dynamic_environment_map,
             dynamic_light_layout,
@@ -1718,6 +1926,7 @@ impl GpuRenderer {
             environment_sampler,
             display_fps: 0.0,
             show_ui: capture_path.is_none(),
+            hud_revision: None,
             frame_capture: capture_path.map(|path| FrameCapture {
                 path,
                 written: false,
@@ -1736,6 +1945,7 @@ impl GpuRenderer {
         self.config.width = size.width;
         self.config.height = size.height;
         self.surface.configure(&self.device, &self.config);
+        self.hud_revision = None;
         self.gbuffer = GBuffer::new(
             &self.device,
             size.width,
@@ -1778,16 +1988,12 @@ impl GpuRenderer {
         );
     }
 
-    fn update_scene(&mut self, scene: &RenderScene) -> Result<(), String> {
-        validate_live_scene(scene).map_err(|error| error.to_string())?;
-        let material_signatures: Vec<_> = scene
-            .materials
-            .iter()
-            .map(material_runtime_signature)
-            .collect();
-        if material_signatures != self.dynamic_material_signatures {
-            return Err("live games cannot change the material table after startup".to_string());
-        }
+    /// Streams a game world into the GPU buffers. Static geometry is uploaded once;
+    /// afterwards only entities whose transform changed (or that deform) are
+    /// re-transformed and written back into their slice of the vertex buffer.
+    fn update_world(&mut self, world: &World) -> Result<(), String> {
+        let scene = world.build_lighting_scene();
+        validate_live_scene(&scene).map_err(|error| error.to_string())?;
         let same_environment = Arc::ptr_eq(
             &scene.environment_map.panorama,
             &self.dynamic_environment_map.panorama,
@@ -1800,69 +2006,56 @@ impl GpuRenderer {
         if !same_environment {
             return Err("live games cannot replace the environment map after startup".to_string());
         }
-        if light_runtime_layout(scene) != self.dynamic_light_layout {
+        if light_runtime_layout(&scene) != self.dynamic_light_layout {
             return Err("live games cannot change light topology after startup".to_string());
         }
-        if local_shadow_kinds(scene) != self.dynamic_local_shadow_kinds {
+        if local_shadow_kinds(&scene) != self.dynamic_local_shadow_kinds {
             return Err(
                 "live games cannot move local shadow-casting lights after startup".to_string(),
             );
         }
 
-        let flattened = flatten_scene(scene, false);
-        let topology_changed = flattened.indices != self.dynamic_indices;
-        let previous_positions =
-            if topology_changed || flattened.vertices.len() != self.dynamic_vertices.len() {
-                flattened.previous_positions.clone()
-            } else {
-                self.dynamic_vertices
-                    .iter()
-                    .map(|vertex| GpuPreviousPosition {
-                        position: vertex.position,
-                    })
-                    .collect()
-            };
-
-        if topology_changed {
-            self.index_buffer = self
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("dynamic-scene-indices"),
-                    contents: bytemuck::cast_slice(&flattened.indices),
-                    usage: wgpu::BufferUsages::INDEX,
-                });
-        }
-        if topology_changed || flattened.vertices.len() != self.dynamic_vertices.len() {
-            self.vertex_buffer =
-                self.device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("dynamic-scene-vertices"),
-                        contents: bytemuck::cast_slice(&flattened.vertices),
-                        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    });
-            self.previous_position_buffer =
-                self.device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("dynamic-scene-previous-positions"),
-                        contents: bytemuck::cast_slice(&previous_positions),
-                        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    });
+        let instances = world.render_instances();
+        let layout: Vec<_> = instances
+            .iter()
+            .map(|instance| (instance.entity, instance.revision))
+            .collect();
+        let mut shadow_casters_moved = false;
+        if layout != self.dynamic_layout {
+            let material_signatures: Vec<_> = world
+                .materials
+                .iter()
+                .map(material_runtime_signature)
+                .collect();
+            if material_signatures != self.dynamic_material_signatures {
+                return Err("live games cannot change the material table after startup".to_string());
+            }
+            self.rebuild_dynamic_geometry(&instances, &world.materials);
+            self.dynamic_layout = layout;
+            shadow_casters_moved = true;
         } else {
-            self.queue.write_buffer(
-                &self.vertex_buffer,
-                0,
-                bytemuck::cast_slice(&flattened.vertices),
-            );
-            self.queue.write_buffer(
-                &self.previous_position_buffer,
-                0,
-                bytemuck::cast_slice(&previous_positions),
-            );
+            shadow_casters_moved |= self.stream_moved_instances(&instances);
         }
 
-        self.dynamic_vertices = flattened.vertices;
-        self.dynamic_indices = flattened.indices;
-        self.batches = flattened.batches;
+        let proxies =
+            instances
+                .iter()
+                .zip(&self.dynamic_instances)
+                .filter_map(|(instance, cached)| {
+                    let material = world.materials.get(instance.mesh.material_index)?;
+                    if !instance.reflection_proxy && !material.flags.emissive {
+                        return None;
+                    }
+                    let (min, max) = cached.local_bounds?;
+                    let (min, max) = transform_bounds(min, max, &instance.transform);
+                    Some((min, max, material))
+                });
+        self.queue.write_buffer(
+            &self.reflection_proxy_buffer,
+            0,
+            bytemuck::bytes_of(&reflection_proxy_uniform_from(proxies)),
+        );
+
         self.camera_origin = GpuVec3::new(
             scene.camera.position.x,
             scene.camera.position.y,
@@ -1876,24 +2069,162 @@ impl GpuRenderer {
         self.camera_fov_y = scene.camera.vertical_fov_radians;
         self.camera_near = scene.camera.near;
         self.camera_far = scene.camera.far;
-        self.base_light_uniform = LightUniform::from_scene(scene);
+        self.base_light_uniform = LightUniform::from_scene(&scene);
         self.local_light_count = self.base_light_uniform.directional_direction_count[3]
             .clamp(0.0, MAX_GPU_POINT_LIGHTS as f32) as u32;
+
+        let view_direction = (self.camera_target - self.camera_origin).normalize_or_zero();
+        let focus = self.camera_origin + view_direction * (self.shadow_distance * 0.6);
         let shadow_camera =
-            shadow_camera_for_scene(self.base_light_uniform, scene, &self.dynamic_vertices);
-        self.queue.write_buffer(
-            &self.shadow_camera_buffer,
-            0,
-            bytemuck::bytes_of(&shadow_camera),
-        );
-        self.queue.write_buffer(
-            &self.reflection_proxy_buffer,
-            0,
-            bytemuck::bytes_of(&reflection_proxy_uniform(scene)),
-        );
-        self.shadow_cache_ready = false;
-        self.local_shadow_cache_ready.fill(false);
+            shadow_camera_around(self.base_light_uniform, focus, self.shadow_distance);
+        if bytemuck::bytes_of(&shadow_camera) != bytemuck::bytes_of(&self.dynamic_shadow_camera) {
+            self.queue.write_buffer(
+                &self.shadow_camera_buffer,
+                0,
+                bytemuck::bytes_of(&shadow_camera),
+            );
+            self.dynamic_shadow_camera = shadow_camera;
+            self.shadow_cache_ready = false;
+        }
+        if shadow_casters_moved {
+            self.shadow_cache_ready = false;
+            self.local_shadow_cache_ready.fill(false);
+        }
         Ok(())
+    }
+
+    fn rebuild_dynamic_geometry(
+        &mut self,
+        instances: &[RenderInstance<'_>],
+        materials: &[Material],
+    ) {
+        let items: Vec<_> = instances
+            .iter()
+            .map(|instance| FlattenItem {
+                mesh: instance.mesh,
+                transform: instance.transform,
+                prepass_eligible: instance.prepass_eligible,
+            })
+            .collect();
+        let flattened = flatten_items(&items, materials, None);
+        self.index_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("dynamic-scene-indices"),
+                contents: bytemuck::cast_slice(&flattened.indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+        self.vertex_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("dynamic-scene-vertices"),
+                contents: bytemuck::cast_slice(&flattened.vertices),
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            });
+        self.previous_position_buffer =
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("dynamic-scene-previous-positions"),
+                    contents: bytemuck::cast_slice(&flattened.previous_positions),
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                });
+        self.batches = flattened.batches;
+        self.dynamic_instances = items
+            .iter()
+            .zip(flattened.vertex_ranges)
+            .map(|(item, vertex_range)| DynamicInstance {
+                vertex_range,
+                transform: item.transform,
+                moved_last_frame: false,
+                casts_shadow: item.casts_shadow(),
+                local_bounds: local_bounds(&item.mesh.vertices),
+            })
+            .collect();
+    }
+
+    /// Re-transforms entities that moved this frame or last frame (so their
+    /// motion vectors settle). Returns whether any shadow caster changed.
+    fn stream_moved_instances(&mut self, instances: &[RenderInstance<'_>]) -> bool {
+        let vertex_stride = std::mem::size_of::<GpuVertex>() as u64;
+        let previous_stride = std::mem::size_of::<GpuPreviousPosition>() as u64;
+        let mut shadow_casters_moved = false;
+        for (instance, cached) in instances.iter().zip(&mut self.dynamic_instances) {
+            let moved = instance.deforming || instance.transform != cached.transform;
+            if !moved && !cached.moved_last_frame {
+                continue;
+            }
+            let vertices: Vec<_> = instance
+                .mesh
+                .vertices
+                .iter()
+                .map(|vertex| gpu_vertex(&instance.transform, vertex))
+                .collect();
+            let previous_positions: Vec<_> = if instance.deforming {
+                instance
+                    .mesh
+                    .vertices
+                    .iter()
+                    .map(|vertex| gpu_previous_position(&instance.transform, vertex))
+                    .collect()
+            } else if moved {
+                instance
+                    .mesh
+                    .vertices
+                    .iter()
+                    .map(|vertex| gpu_position(&cached.transform, vertex.position))
+                    .collect()
+            } else {
+                vertices
+                    .iter()
+                    .map(|vertex| GpuPreviousPosition {
+                        position: vertex.position,
+                    })
+                    .collect()
+            };
+            let start = cached.vertex_range.start as u64;
+            self.queue.write_buffer(
+                &self.vertex_buffer,
+                start * vertex_stride,
+                bytemuck::cast_slice(&vertices),
+            );
+            self.queue.write_buffer(
+                &self.previous_position_buffer,
+                start * previous_stride,
+                bytemuck::cast_slice(&previous_positions),
+            );
+            cached.transform = instance.transform;
+            cached.moved_last_frame = moved;
+            shadow_casters_moved |= cached.casts_shadow;
+        }
+        shadow_casters_moved
+    }
+
+    fn upload_hud(&mut self, hud: &Hud) {
+        if (hud.width(), hud.height()) != (self.config.width, self.config.height)
+            || self.hud_revision == Some(hud.revision())
+        {
+            return;
+        }
+        self.queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.gbuffer.hud_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            bytemuck::cast_slice(hud.pixels()),
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(hud.width() * 4),
+                rows_per_image: Some(hud.height()),
+            },
+            wgpu::Extent3d {
+                width: hud.width(),
+                height: hud.height(),
+                depth_or_array_layers: 1,
+            },
+        );
+        self.hud_revision = Some(hud.revision());
     }
 
     fn toggle_auto_orbit(&mut self) {
@@ -2070,13 +2401,13 @@ impl GpuRenderer {
                 .mesh
                 .vertices
                 .iter()
-                .map(|vertex| gpu_vertex(&cloth.mesh, vertex))
+                .map(|vertex| gpu_vertex(&cloth.mesh.transform, vertex))
                 .collect();
             let previous_positions: Vec<_> = cloth
                 .mesh
                 .vertices
                 .iter()
-                .map(|vertex| gpu_previous_position(&cloth.mesh, vertex))
+                .map(|vertex| gpu_previous_position(&cloth.mesh.transform, vertex))
                 .collect();
             self.queue.write_buffer(
                 &self.vertex_buffer,
@@ -3304,6 +3635,21 @@ impl GBuffer {
             height,
             UI_FORMAT,
         );
+        let hud_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("game-hud-canvas"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let hud_view = hud_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let reflection_width = ((width * 7) / 10).max(1);
         let reflection_height = ((height * 7) / 10).max(1);
         let reflection_texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -3733,10 +4079,7 @@ impl GBuffer {
         let ui_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("separate-ui-overlay-bind-group"),
             layout: ui_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: aa_buffer.as_entire_binding(),
-            }],
+            entries: &[texture_entry(0, &hud_view)],
         });
         let present_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("gamma-correct-ui-composite-bind-group"),
@@ -3783,6 +4126,7 @@ impl GBuffer {
             _aa_history_b: history_texture_b,
             _aa_presented: aa_presented_texture,
             _ui_overlay: ui_overlay_texture,
+            hud_texture,
             albedo,
             normal,
             pbr,
@@ -3884,58 +4228,88 @@ struct FlattenedScene {
     previous_positions: Vec<GpuPreviousPosition>,
     indices: Vec<u32>,
     batches: Vec<DrawBatch>,
-    cloth_vertex_ranges: Vec<Option<Range<u32>>>,
+    /// Vertex range of every input item, in input order.
+    vertex_ranges: Vec<Range<u32>>,
+}
+
+struct FlattenItem<'a> {
+    mesh: &'a crate::scene::Mesh,
+    transform: crate::math::Mat4,
+    prepass_eligible: bool,
+}
+
+impl<'a> FlattenItem<'a> {
+    fn from_mesh(mesh: &'a crate::scene::Mesh) -> Self {
+        Self {
+            mesh,
+            transform: mesh.transform,
+            prepass_eligible: mesh.prepass_eligible,
+        }
+    }
+
+    fn casts_shadow(&self) -> bool {
+        !self.mesh.is_floor_or_ground
+            && self.mesh.shadow_class != crate::asset::ShadowCasterClass::None
+    }
 }
 
 fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedScene {
-    let mut vertices = Vec::new();
-    let mut previous_positions = Vec::new();
-    let mut indices = Vec::new();
-    let mut batches = Vec::new();
-    let mut cloth_vertex_ranges = vec![None; scene.meshes.len()];
-    let mut meshes: Vec<_> = scene.meshes.iter().enumerate().collect();
+    let items: Vec<_> = scene.meshes.iter().map(FlattenItem::from_mesh).collect();
     let camera_position = GpuVec3::new(
         scene.camera.position.x,
         scene.camera.position.y,
         scene.camera.position.z,
     );
-    if sort_for_static_scene {
-        meshes.sort_by(|(_, left), (_, right)| {
-            let classify = |mesh: &crate::scene::Mesh| {
-                let material = &scene.materials[mesh.material_index];
-                let alpha_tested = material.flags.alpha_tested;
-                let prepass_eligible = mesh.prepass_eligible && !alpha_tested;
-                (!alpha_tested, prepass_eligible)
-            };
-            let distance_squared = |mesh: &crate::scene::Mesh| {
-                if mesh.vertices.is_empty() {
-                    return f32::INFINITY;
-                }
-                let sum = mesh.vertices.iter().fold(GpuVec3::ZERO, |sum, vertex| {
-                    let transformed = mesh.transform.mul_vec4(Vec4::new(
-                        vertex.position.x,
-                        vertex.position.y,
-                        vertex.position.z,
-                        1.0,
-                    ));
-                    sum + GpuVec3::new(transformed.x, transformed.y, transformed.z)
-                });
-                let center = sum / mesh.vertices.len() as f32;
-                center.distance_squared(camera_position)
-            };
+    flatten_items(
+        &items,
+        &scene.materials,
+        sort_for_static_scene.then_some(camera_position),
+    )
+}
+
+/// Bakes items into one world-space vertex stream, batching consecutive draws
+/// that share material and pass eligibility. Static scenes may sort items
+/// front-to-back from `sort_from` to help the depth prepass.
+fn flatten_items(
+    items: &[FlattenItem<'_>],
+    materials: &[Material],
+    sort_from: Option<GpuVec3>,
+) -> FlattenedScene {
+    let mut vertices = Vec::new();
+    let mut previous_positions = Vec::new();
+    let mut indices = Vec::new();
+    let mut batches = Vec::new();
+    let mut vertex_ranges = vec![0..0; items.len()];
+    let mut order: Vec<usize> = (0..items.len()).collect();
+    if let Some(camera_position) = sort_from {
+        let classify = |item: &FlattenItem<'_>| {
+            let alpha_tested = materials[item.mesh.material_index].flags.alpha_tested;
+            (!alpha_tested, item.prepass_eligible && !alpha_tested)
+        };
+        let distance_squared = |item: &FlattenItem<'_>| {
+            local_bounds(&item.mesh.vertices)
+                .map(|(min, max)| {
+                    let (min, max) = transform_bounds(min, max, &item.transform);
+                    ((min + max) * 0.5).distance_squared(camera_position)
+                })
+                .unwrap_or(f32::INFINITY)
+        };
+        order.sort_by(|&left, &right| {
+            let (left, right) = (&items[left], &items[right]);
             classify(left)
                 .cmp(&classify(right))
                 .then_with(|| distance_squared(left).total_cmp(&distance_squared(right)))
-                .then_with(|| left.material_index.cmp(&right.material_index))
+                .then_with(|| left.mesh.material_index.cmp(&right.mesh.material_index))
         });
     }
     let mut active_batch: Option<(usize, bool, bool, bool, u32)> = None;
-    for (scene_mesh_index, mesh) in meshes {
-        let material = &scene.materials[mesh.material_index];
+    for index in order {
+        let item = &items[index];
+        let mesh = item.mesh;
+        let material = &materials[mesh.material_index];
         let alpha_tested = material.flags.alpha_tested;
-        let prepass_eligible = mesh.prepass_eligible && !material.flags.alpha_tested;
-        let casts_shadow =
-            !mesh.is_floor_or_ground && mesh.shadow_class != crate::asset::ShadowCasterClass::None;
+        let prepass_eligible = item.prepass_eligible && !alpha_tested;
+        let casts_shadow = item.casts_shadow();
         let batch_key = (
             mesh.material_index,
             prepass_eligible,
@@ -3943,20 +4317,10 @@ fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedS
             casts_shadow,
         );
 
-        if active_batch
-            .as_ref()
-            .is_some_and(|(material_index, prepass, alpha, shadow, _)| {
-                (*material_index, *prepass, *alpha, *shadow) != batch_key
-            })
+        if let Some((material_index, prepass_eligible, alpha_tested, casts_shadow, first_index)) =
+            active_batch
         {
-            if let Some((
-                material_index,
-                prepass_eligible,
-                alpha_tested,
-                casts_shadow,
-                first_index,
-            )) = active_batch.take()
-            {
+            if (material_index, prepass_eligible, alpha_tested, casts_shadow) != batch_key {
                 batches.push(DrawBatch {
                     indices: first_index..indices.len() as u32,
                     material_index,
@@ -3964,6 +4328,7 @@ fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedS
                     alpha_tested,
                     casts_shadow,
                 });
+                active_batch = None;
             }
         }
         if active_batch.is_none() {
@@ -3978,8 +4343,8 @@ fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedS
 
         let base_vertex = vertices.len() as u32;
         for vertex in &mesh.vertices {
-            vertices.push(gpu_vertex(mesh, vertex));
-            previous_positions.push(gpu_previous_position(mesh, vertex));
+            vertices.push(gpu_vertex(&item.transform, vertex));
+            previous_positions.push(gpu_previous_position(&item.transform, vertex));
         }
         for triangle in &mesh.indices {
             indices.extend([
@@ -3988,9 +4353,7 @@ fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedS
                 triangle[2] + base_vertex,
             ]);
         }
-        if mesh.cloth.is_some() {
-            cloth_vertex_ranges[scene_mesh_index] = Some(base_vertex..vertices.len() as u32);
-        }
+        vertex_ranges[index] = base_vertex..vertices.len() as u32;
     }
     if let Some((material_index, prepass_eligible, alpha_tested, casts_shadow, first_index)) =
         active_batch
@@ -4008,25 +4371,32 @@ fn flatten_scene(scene: &RenderScene, sort_for_static_scene: bool) -> FlattenedS
         previous_positions,
         indices,
         batches,
-        cloth_vertex_ranges,
+        vertex_ranges,
     }
 }
 
-fn gpu_vertex(mesh: &crate::scene::Mesh, vertex: &crate::scene::Vertex) -> GpuVertex {
-    let position = mesh.transform.mul_vec4(Vec4::new(
+fn gpu_position(transform: &crate::math::Mat4, position: Vec3) -> GpuPreviousPosition {
+    let position = transform.mul_vec4(Vec4::new(position.x, position.y, position.z, 1.0));
+    GpuPreviousPosition {
+        position: [position.x, position.y, position.z],
+    }
+}
+
+fn gpu_vertex(transform: &crate::math::Mat4, vertex: &crate::scene::Vertex) -> GpuVertex {
+    let position = transform.mul_vec4(Vec4::new(
         vertex.position.x,
         vertex.position.y,
         vertex.position.z,
         1.0,
     ));
-    let normal = mesh.transform.mul_vec4(Vec4::new(
+    let normal = transform.mul_vec4(Vec4::new(
         vertex.normal.x,
         vertex.normal.y,
         vertex.normal.z,
         0.0,
     ));
     let normal = Vec3::new(normal.x, normal.y, normal.z).normalize_or_zero();
-    let tangent = mesh.transform.mul_vec4(Vec4::new(
+    let tangent = transform.mul_vec4(Vec4::new(
         vertex.tangent.x,
         vertex.tangent.y,
         vertex.tangent.z,
@@ -4048,18 +4418,44 @@ fn gpu_vertex(mesh: &crate::scene::Mesh, vertex: &crate::scene::Vertex) -> GpuVe
 }
 
 fn gpu_previous_position(
-    mesh: &crate::scene::Mesh,
+    transform: &crate::math::Mat4,
     vertex: &crate::scene::Vertex,
 ) -> GpuPreviousPosition {
-    let position = mesh.transform.mul_vec4(Vec4::new(
-        vertex.previous_position.x,
-        vertex.previous_position.y,
-        vertex.previous_position.z,
-        1.0,
-    ));
-    GpuPreviousPosition {
-        position: [position.x, position.y, position.z],
+    gpu_position(transform, vertex.previous_position)
+}
+
+fn local_bounds(vertices: &[crate::scene::Vertex]) -> Option<(GpuVec3, GpuVec3)> {
+    let mut min = GpuVec3::splat(f32::INFINITY);
+    let mut max = GpuVec3::splat(f32::NEG_INFINITY);
+    for vertex in vertices {
+        let position = GpuVec3::new(vertex.position.x, vertex.position.y, vertex.position.z);
+        min = min.min(position);
+        max = max.max(position);
     }
+    (min.is_finite() && max.is_finite()).then_some((min, max))
+}
+
+/// World-space box enclosing a transformed local box.
+fn transform_bounds(
+    min: GpuVec3,
+    max: GpuVec3,
+    transform: &crate::math::Mat4,
+) -> (GpuVec3, GpuVec3) {
+    let mut world_min = GpuVec3::splat(f32::INFINITY);
+    let mut world_max = GpuVec3::splat(f32::NEG_INFINITY);
+    for corner in 0..8 {
+        let local = Vec4::new(
+            if corner & 1 == 0 { min.x } else { max.x },
+            if corner & 2 == 0 { min.y } else { max.y },
+            if corner & 4 == 0 { min.z } else { max.z },
+            1.0,
+        );
+        let world = transform.mul_vec4(local);
+        let world = GpuVec3::new(world.x, world.y, world.z);
+        world_min = world_min.min(world);
+        world_max = world_max.max(world);
+    }
+    (world_min, world_max)
 }
 
 fn color_channel_to_unorm8(value: f32) -> u8 {
@@ -4067,38 +4463,27 @@ fn color_channel_to_unorm8(value: f32) -> u8 {
 }
 
 fn reflection_proxy_uniform(scene: &RenderScene) -> ReflectionProxyUniform {
+    reflection_proxy_uniform_from(scene.meshes.iter().filter_map(|mesh| {
+        let material = scene.materials.get(mesh.material_index)?;
+        if !mesh.reflection_proxy && !material.flags.emissive {
+            return None;
+        }
+        let (min, max) = local_bounds(&mesh.vertices)?;
+        let (min, max) = transform_bounds(min, max, &mesh.transform);
+        Some((min, max, material))
+    }))
+}
+
+fn reflection_proxy_uniform_from<'a>(
+    proxies: impl Iterator<Item = (GpuVec3, GpuVec3, &'a Material)>,
+) -> ReflectionProxyUniform {
     let mut uniform = ReflectionProxyUniform::zeroed();
     let mut count = 0_usize;
-    for mesh in &scene.meshes {
-        if count >= MAX_REFLECTION_PROXIES {
-            break;
-        }
-        let Some(material) = scene.materials.get(mesh.material_index) else {
-            continue;
-        };
-        if !mesh.reflection_proxy && !material.flags.emissive {
-            continue;
-        }
-        let mut min = GpuVec3::splat(f32::INFINITY);
-        let mut max = GpuVec3::splat(f32::NEG_INFINITY);
-        for vertex in &mesh.vertices {
-            let position = mesh.transform.mul_vec4(Vec4::new(
-                vertex.position.x,
-                vertex.position.y,
-                vertex.position.z,
-                1.0,
-            ));
-            let position = GpuVec3::new(position.x, position.y, position.z);
-            min = min.min(position);
-            max = max.max(position);
-        }
-        if !min.is_finite() || !max.is_finite() {
-            continue;
-        }
+    for (min, max, material) in proxies.take(MAX_REFLECTION_PROXIES) {
         let half_extent = ((max - min) * 0.5).max(GpuVec3::splat(0.04));
         let center = (min + max) * 0.5;
-        min = center - half_extent;
-        max = center + half_extent;
+        let min = center - half_extent;
+        let max = center + half_extent;
         let emission = material.emission;
         let has_emission = material.flags.emissive || emission.r + emission.g + emission.b > 0.0;
         let radiance = if has_emission {
@@ -4118,6 +4503,46 @@ fn reflection_proxy_uniform(scene: &RenderScene) -> ReflectionProxyUniform {
     }
     uniform.count[0] = count as u32;
     uniform
+}
+
+/// Directional shadow frustum centred on `focus`, snapped to whole shadow-map
+/// texels so a moving camera does not make shadow edges shimmer.
+fn shadow_camera_around(lights: LightUniform, focus: GpuVec3, radius: f32) -> CameraUniform {
+    let surface_to_light = lights.surface_to_directional_light();
+    let surface_to_light = if surface_to_light.length_squared() > 0.0 {
+        surface_to_light
+    } else {
+        GpuVec3::new(0.35, 0.75, 0.45).normalize()
+    };
+    let up = if surface_to_light.y.abs() > 0.99 {
+        GpuVec3::Z
+    } else {
+        GpuVec3::Y
+    };
+    let right = up.cross(surface_to_light).normalize();
+    let light_up = surface_to_light.cross(right);
+    let texel = radius * 2.0 / SHADOW_MAP_RESOLUTION as f32;
+    let snap = |value: f32| (value / texel).round() * texel;
+    let focus = right * snap(focus.dot(right))
+        + light_up * snap(focus.dot(light_up))
+        + surface_to_light * focus.dot(surface_to_light);
+    let depth = radius * 4.0;
+    let eye = focus + surface_to_light * depth;
+    let view = Mat4::look_at_rh(eye, focus, up);
+    let projection = orthographic_reverse_rh(-radius, radius, -radius, radius, 0.1, depth * 2.0);
+    let view_projection = projection * view;
+    CameraUniform {
+        view_projection: view_projection.to_cols_array_2d(),
+        inverse_view_projection: view_projection.inverse().to_cols_array_2d(),
+        position_time: [eye.x, eye.y, eye.z, 0.0],
+        viewport: [
+            SHADOW_MAP_RESOLUTION as f32,
+            SHADOW_MAP_RESOLUTION as f32,
+            1.0 / SHADOW_MAP_RESOLUTION as f32,
+            1.0 / SHADOW_MAP_RESOLUTION as f32,
+        ],
+        previous_view_projection: view_projection.to_cols_array_2d(),
+    }
 }
 
 fn shadow_camera_for_scene(
@@ -5758,7 +6183,10 @@ fn aa_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 fn ui_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("separate-ui-overlay-layout"),
-        entries: &[uniform_entry(0, wgpu::ShaderStages::FRAGMENT)],
+        entries: &[unfiltered_texture_layout_entry(
+            0,
+            wgpu::ShaderStages::FRAGMENT,
+        )],
     })
 }
 

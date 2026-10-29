@@ -1,5 +1,6 @@
 use crate::asset_pipeline::{AssetPipeline, ImportReport};
 use crate::cloth::ClothError;
+use crate::input::{GamepadState, KeySet};
 use crate::math::{Vec2, Vec3};
 use crate::profiler::{EngineProfiler, FrameReport};
 use crate::quality::QualityTier;
@@ -62,7 +63,17 @@ pub struct InputState {
     pub look_delta: Vec2,
     pub primary_action: bool,
     pub secondary_action: bool,
+    /// Keys currently held.
+    pub keys: KeySet,
+    /// Keys that went down since the previous frame. Every fixed tick of that
+    /// frame sees the same set, so act on presses in update systems.
+    pub keys_pressed: KeySet,
+    pub gamepad: GamepadState,
 }
+
+/// Send this event from any system to close the live window after the frame.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AppExit;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FrameInput {

@@ -85,6 +85,21 @@ pub struct MeshRenderer {
     pub reflection_proxy: bool,
 }
 
+/// A visible mesh as the live renderer streams it, borrowed from the world.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderInstance<'a> {
+    pub entity: EntityId,
+    pub mesh: &'a Mesh,
+    /// Mesh-local to world transform (mesh transform, then entity transform).
+    pub transform: Mat4,
+    /// Changes whenever the mesh geometry or renderer settings are replaced.
+    pub revision: u64,
+    /// Geometry deforms every tick (cloth) even when the transform is static.
+    pub deforming: bool,
+    pub prepass_eligible: bool,
+    pub reflection_proxy: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CameraRig {
     pub camera: Camera,
@@ -160,6 +175,8 @@ pub struct World {
     names: HashMap<EntityId, Name>,
     transforms: HashMap<EntityId, Transform>,
     mesh_renderers: HashMap<EntityId, MeshRenderer>,
+    mesh_revisions: HashMap<EntityId, u64>,
+    next_mesh_revision: u64,
     cameras: HashMap<EntityId, CameraRig>,
     lights: HashMap<EntityId, LightComponent>,
     rigid_bodies: HashMap<EntityId, RigidBody>,
@@ -182,6 +199,8 @@ impl Default for World {
             names: HashMap::new(),
             transforms: HashMap::new(),
             mesh_renderers: HashMap::new(),
+            mesh_revisions: HashMap::new(),
+            next_mesh_revision: 1,
             cameras: HashMap::new(),
             lights: HashMap::new(),
             rigid_bodies: HashMap::new(),
@@ -234,6 +253,7 @@ impl World {
         self.names.remove(&id);
         self.transforms.remove(&id);
         self.mesh_renderers.remove(&id);
+        self.mesh_revisions.remove(&id);
         self.cameras.remove(&id);
         self.lights.remove(&id);
         self.rigid_bodies.remove(&id);
@@ -263,7 +283,23 @@ impl World {
         renderer.mesh.prepass_eligible = renderer.prepass_eligible;
         renderer.mesh.reflection_proxy = renderer.reflection_proxy;
         self.mesh_renderers.insert(id, renderer);
+        self.bump_mesh_revision(id);
         true
+    }
+
+    /// Mutable access to a mesh renderer. The live renderer treats every call as
+    /// a geometry change, so prefer moving entities through their [`Transform`].
+    pub fn mesh_renderer_mut(&mut self, id: EntityId) -> Option<&mut MeshRenderer> {
+        if !self.is_alive(id) || !self.mesh_renderers.contains_key(&id) {
+            return None;
+        }
+        self.bump_mesh_revision(id);
+        self.mesh_renderers.get_mut(&id)
+    }
+
+    fn bump_mesh_revision(&mut self, id: EntityId) {
+        self.mesh_revisions.insert(id, self.next_mesh_revision);
+        self.next_mesh_revision += 1;
     }
 
     pub fn set_camera(&mut self, id: EntityId, camera: CameraRig) -> bool {
@@ -504,6 +540,92 @@ impl World {
         Ok(())
     }
 
+    /// Visible meshes in entity order, without copying geometry.
+    pub fn render_instances(&self) -> Vec<RenderInstance<'_>> {
+        let mut entities: Vec<_> = self
+            .mesh_renderers
+            .iter()
+            .filter(|(entity, renderer)| self.is_alive(**entity) && renderer.visible)
+            .map(|(entity, _)| *entity)
+            .collect();
+        entities.sort_unstable();
+        entities
+            .into_iter()
+            .map(|entity| {
+                let renderer = &self.mesh_renderers[&entity];
+                let transform = match self.transforms.get(&entity) {
+                    Some(transform) => transform.matrix() * renderer.mesh.transform,
+                    None => renderer.mesh.transform,
+                };
+                RenderInstance {
+                    entity,
+                    mesh: &renderer.mesh,
+                    transform,
+                    revision: self.mesh_revisions.get(&entity).copied().unwrap_or(0),
+                    deforming: self.cloths.contains_key(&entity),
+                    prepass_eligible: renderer.prepass_eligible,
+                    reflection_proxy: renderer.reflection_proxy,
+                }
+            })
+            .collect()
+    }
+
+    /// Camera, lights and environment for this frame. Meshes and materials are
+    /// left empty; use [`World::render_instances`] and [`World::materials`].
+    pub fn build_lighting_scene(&self) -> RenderScene {
+        RenderScene {
+            camera: self.render_camera(),
+            materials: Vec::new(),
+            meshes: Vec::new(),
+            lights: self.render_lights(),
+            ambient_color: self.ambient_color,
+            environment_map: self.environment_map.clone(),
+            environment: self.environment,
+        }
+    }
+
+    fn render_camera(&self) -> Camera {
+        self.cameras
+            .iter()
+            .find_map(|(id, rig)| (self.is_alive(*id) && rig.active).then_some(rig.camera))
+            .unwrap_or(Camera {
+                position: Vec3::new(0.0, 1.2, 4.0),
+                target: Vec3::ZERO,
+                up: Vec3::Y,
+                vertical_fov_radians: 55.0_f32.to_radians(),
+                near: 0.05,
+                far: 100.0,
+            })
+    }
+
+    fn render_lights(&self) -> Vec<Light> {
+        let mut light_entities: Vec<_> = self.lights.keys().copied().collect();
+        light_entities.sort_unstable();
+        light_entities
+            .into_iter()
+            .filter(|entity| self.is_alive(*entity))
+            .map(|entity| {
+                let component = &self.lights[&entity];
+                let position = self
+                    .transforms
+                    .get(&entity)
+                    .map(|transform| transform.position)
+                    .unwrap_or(Vec3::ZERO);
+                Light {
+                    name: self
+                        .names
+                        .get(&entity)
+                        .map(|name| name.0.clone())
+                        .unwrap_or_else(|| "world_light".to_string()),
+                    kind: component.kind.at_position(position),
+                    color: component.color,
+                    intensity: component.intensity,
+                    casts_shadow: component.casts_shadow,
+                }
+            })
+            .collect()
+    }
+
     pub fn validate(&self) -> Vec<WorldIssue> {
         let mut issues = Vec::new();
         if !self.cameras.values().any(|camera| camera.active) {
@@ -540,99 +662,24 @@ impl World {
     }
 
     pub fn build_render_scene(&self) -> RenderScene {
-        let camera = self
-            .cameras
-            .iter()
-            .find_map(|(id, rig)| (self.is_alive(*id) && rig.active).then_some(rig.camera))
-            .unwrap_or(Camera {
-                position: Vec3::new(0.0, 1.2, 4.0),
-                target: Vec3::ZERO,
-                up: Vec3::Y,
-                vertical_fov_radians: 55.0_f32.to_radians(),
-                near: 0.05,
-                far: 100.0,
-            });
-
-        let mut meshes = Vec::new();
-        let mut mesh_entities: Vec<_> = self.mesh_renderers.keys().copied().collect();
-        mesh_entities.sort_unstable();
-        for entity in mesh_entities {
-            let renderer = &self.mesh_renderers[&entity];
-            if !self.is_alive(entity) || !renderer.visible {
-                continue;
-            }
-            let mut mesh = renderer.mesh.clone();
-            if let Some(transform) = self.transforms.get(&entity) {
-                mesh.transform = mesh.transform * transform.matrix();
-            }
-            mesh.prepass_eligible = renderer.prepass_eligible;
-            mesh.reflection_proxy = renderer.reflection_proxy;
-            if mesh.is_floor_or_ground {
-                mesh.shadow_class = ShadowCasterClass::None;
-            }
-            meshes.push(mesh);
-        }
-
-        let mut lights = Vec::new();
-        let mut light_entities: Vec<_> = self.lights.keys().copied().collect();
-        light_entities.sort_unstable();
-        for entity in light_entities {
-            let component = &self.lights[&entity];
-            if !self.is_alive(entity) {
-                continue;
-            }
-            let kind = match component.kind {
-                LightKind::Directional { direction } => LightKind::Directional { direction },
-                LightKind::Local { radius, .. } => {
-                    let position = self
-                        .transforms
-                        .get(&entity)
-                        .map(|t| t.position)
-                        .unwrap_or(Vec3::ZERO);
-                    LightKind::Local { position, radius }
+        let meshes = self
+            .render_instances()
+            .into_iter()
+            .map(|instance| {
+                let mut mesh = instance.mesh.clone();
+                mesh.transform = instance.transform;
+                mesh.prepass_eligible = instance.prepass_eligible;
+                mesh.reflection_proxy = instance.reflection_proxy;
+                if mesh.is_floor_or_ground {
+                    mesh.shadow_class = ShadowCasterClass::None;
                 }
-                LightKind::Spot {
-                    direction,
-                    radius,
-                    inner_angle_radians,
-                    outer_angle_radians,
-                    ..
-                } => {
-                    let position = self
-                        .transforms
-                        .get(&entity)
-                        .map(|t| t.position)
-                        .unwrap_or(Vec3::ZERO);
-                    LightKind::Spot {
-                        position,
-                        direction,
-                        radius,
-                        inner_angle_radians,
-                        outer_angle_radians,
-                    }
-                }
-            };
-            lights.push(Light {
-                name: self
-                    .names
-                    .get(&entity)
-                    .map(|name| name.0.clone())
-                    .unwrap_or_else(|| "world_light".to_string()),
-                kind,
-                color: component.color,
-                intensity: component.intensity,
-                casts_shadow: component.casts_shadow,
-            });
-        }
-
+                mesh
+            })
+            .collect();
         RenderScene {
-            camera,
-            materials: self.materials.clone(),
             meshes,
-            lights,
-            ambient_color: self.ambient_color,
-            environment_map: self.environment_map.clone(),
-            environment: self.environment,
+            materials: self.materials.clone(),
+            ..self.build_lighting_scene()
         }
     }
 
@@ -675,7 +722,7 @@ impl World {
                 }
                 let mut mesh = renderer.mesh;
                 if let Some(transform) = transforms.get(&entity) {
-                    mesh.transform = mesh.transform * transform.matrix();
+                    mesh.transform = transform.matrix() * mesh.transform;
                 }
                 mesh.prepass_eligible = renderer.prepass_eligible;
                 mesh.reflection_proxy = renderer.reflection_proxy;

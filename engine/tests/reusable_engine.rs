@@ -250,3 +250,39 @@ fn world_physics_has_no_hidden_demo_floor() {
     world.fixed_update(1.0 / 60.0).expect("floor step");
     assert_eq!(world.transform(entity).expect("transform").position.y, 0.0);
 }
+
+#[test]
+fn render_instances_track_geometry_revisions_and_entity_transforms() {
+    use dhool_pro::{MeshRenderer, Transform, World};
+
+    let mut world = World::default();
+    let car = world.spawn("car", Transform::from_position(Vec3::new(5.0, 0.0, 0.0)));
+    world.set_mesh_renderer(
+        car,
+        MeshRenderer {
+            mesh: Mesh::cuboid("car", Vec3::ONE),
+            visible: true,
+            prepass_eligible: true,
+            reflection_proxy: false,
+        },
+    );
+    let first = world.render_instances()[0].revision;
+    let moved = {
+        world.transform_mut(car).unwrap().position.x = 7.0;
+        world.render_instances()[0]
+    };
+    assert_eq!(
+        moved.revision, first,
+        "moving an entity is not a geometry change"
+    );
+    let origin = moved
+        .transform
+        .mul_vec4(dhool_pro::math::Vec4::new(0.0, 0.0, 0.0, 1.0));
+    assert_eq!(origin.x, 7.0);
+
+    world.mesh_renderer_mut(car).unwrap().visible = true;
+    assert_ne!(world.render_instances()[0].revision, first);
+
+    world.mesh_renderer_mut(car).unwrap().visible = false;
+    assert!(world.render_instances().is_empty());
+}
