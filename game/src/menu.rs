@@ -1,5 +1,6 @@
-//! Race setup and pause menus. Inherits the HUD's Titillium type, dark surfaces
-//! and red race-control accent. Setup stays editable; only Start replaces a race.
+//! Race setup and pause menus. Inherits the HUD's Titillium type and its
+//! instrument look: charcoal housings, black inset controls and a red accent.
+//! Setup stays editable; only Start replaces a race.
 
 use crate::{
     assets,
@@ -291,7 +292,32 @@ pub fn apply(
 }
 
 const RED: Color32 = Color32::from_rgb(230, 35, 48);
-const DIM: Color32 = Color32::from_rgb(175, 185, 199);
+const DIM: Color32 = Color32::from_rgb(160, 166, 178);
+const LABEL: Color32 = Color32::from_rgb(120, 125, 136);
+const BACKDROP: Color32 = Color32::from_rgb(20, 21, 24);
+const HOUSING: Color32 = Color32::from_rgb(37, 38, 42);
+const HOUSING_EDGE: Color32 = Color32::from_rgb(74, 76, 83);
+const WELL: Color32 = Color32::from_rgb(9, 10, 12);
+const WELL_RIM: Color32 = Color32::from_rgb(56, 58, 64);
+
+/// Raised charcoal panel matching the race HUD's instrument housings.
+fn housing() -> egui::Frame {
+    egui::Frame::new()
+        .fill(HOUSING)
+        .stroke(egui::Stroke::new(1.5, HOUSING_EDGE))
+        .corner_radius(12)
+        .inner_margin(18)
+}
+
+/// Spaced uppercase section label, printed like a dash caption.
+fn section(ui: &mut egui::Ui, text: &str) {
+    ui.label(
+        RichText::new(text.to_uppercase())
+            .size(15.)
+            .strong()
+            .color(LABEL),
+    );
+}
 
 pub fn ui(
     mut contexts: EguiContexts,
@@ -306,11 +332,40 @@ pub fn ui(
     if !*styled {
         let mut style = (*context.style_of(egui::Theme::Dark)).clone();
         style.visuals = egui::Visuals::dark();
-        style.visuals.selection.bg_fill = RED;
-        style.visuals.widgets.active.bg_fill = RED;
-        style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(65, 72, 84);
-        style.spacing.item_spacing = egui::vec2(14., 7.);
-        style.spacing.button_padding = egui::vec2(14., 5.);
+        let visuals = &mut style.visuals;
+        visuals.panel_fill = BACKDROP;
+        visuals.window_fill = HOUSING;
+        visuals.window_stroke = egui::Stroke::new(1.5, HOUSING_EDGE);
+        visuals.extreme_bg_color = WELL;
+        visuals.faint_bg_color = HOUSING;
+        visuals.selection.bg_fill = RED;
+        visuals.selection.stroke = egui::Stroke::new(1., Color32::WHITE);
+        visuals.slider_trailing_fill = true;
+        visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1., WELL_RIM);
+        visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1., DIM);
+        // Controls read as black inset windows; hover lifts the rim and
+        // pressed or selected states light up in the race red.
+        for (widget, rim) in [
+            (&mut visuals.widgets.inactive, WELL_RIM),
+            (
+                &mut visuals.widgets.hovered,
+                Color32::from_rgb(120, 124, 134),
+            ),
+            (&mut visuals.widgets.active, RED),
+            (&mut visuals.widgets.open, HOUSING_EDGE),
+        ] {
+            widget.bg_fill = WELL;
+            widget.weak_bg_fill = WELL;
+            widget.bg_stroke = egui::Stroke::new(1., rim);
+            widget.corner_radius = egui::CornerRadius::same(6);
+            widget.expansion = 0.;
+        }
+        visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1., Color32::from_gray(225));
+        visuals.widgets.hovered.weak_bg_fill = Color32::from_rgb(22, 23, 27);
+        visuals.widgets.active.bg_fill = RED;
+        visuals.widgets.active.weak_bg_fill = RED;
+        style.spacing.item_spacing = egui::vec2(14., 8.);
+        style.spacing.button_padding = egui::vec2(14., 6.);
         style
             .text_styles
             .insert(egui::TextStyle::Body, egui::FontId::proportional(17.));
@@ -338,7 +393,7 @@ pub fn ui(
     );
     if session.screen == Screen::Racing {
         frontend.draft.camera = session.camera.mode;
-        let scale = context.viewport_rect().height() / 1080.;
+        let scale = hud::scale(context.viewport_rect().size());
         // Match the timing tower's header, entrant rows and three timing rows.
         let below_timing =
             (24. + 45. + session.race.entrants.len() as f32 * 30. + 10. + 90. + 10.) * scale;
@@ -348,8 +403,8 @@ pub fn ui(
                 egui::vec2(24. * scale, below_timing),
             )
             .show(&viewport, |ui| {
-                egui::Frame::new()
-                    .fill(Color32::from_black_alpha(200))
+                housing()
+                    .fill(HOUSING.gamma_multiply(0.92))
                     .inner_margin(6)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
@@ -378,13 +433,20 @@ pub fn ui(
     }
     if session.screen == Screen::Loading {
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(Color32::from_black_alpha(220)))
+            .frame(egui::Frame::new().fill(BACKDROP.gamma_multiply(0.9)))
             .show(&mut viewport, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.add_space(ui.available_height() * 0.4);
-                    ui.spinner();
-                    ui.heading("Loading circuit and cars");
-                    ui.label("Preparing the scene. Your race starts when every car is ready.");
+                    ui.add_space(ui.available_height() * 0.38);
+                    housing().inner_margin(28).show(ui, |ui| {
+                        ui.spinner();
+                        ui.heading("Loading circuit and cars");
+                        ui.label(
+                            RichText::new(
+                                "Preparing the scene. Your race starts when every car is ready.",
+                            )
+                            .color(DIM),
+                        );
+                    });
                 });
             });
         return Ok(());
@@ -392,16 +454,19 @@ pub fn ui(
     egui::CentralPanel::default()
         .frame(
             egui::Frame::new()
-                .fill(Color32::from_rgb(9, 13, 20))
+                .fill(BACKDROP)
                 .inner_margin(28),
         )
         .show(&mut viewport, |ui| {
             ui.horizontal(|ui| {
+                let (stripe, _) =
+                    ui.allocate_exact_size(egui::vec2(5., 38.), egui::Sense::hover());
+                ui.painter().rect_filled(stripe, 2., RED);
                 ui.label(
                     RichText::new(if session.screen == Screen::Paused {
-                        "Race paused"
+                        "RACE PAUSED"
                     } else {
-                        "F1 Racecraft"
+                        "F1 RACECRAFT"
                     })
                     .size(36.)
                     .strong(),
@@ -417,26 +482,40 @@ pub fn ui(
                 });
             });
             ui.label(RichText::new("Choose your circuit, car and driving aids.").color(DIM));
-            ui.add_space(8.);
-            ui.horizontal(|ui| {
+            ui.add_space(10.);
+            housing().inner_margin(6).corner_radius(10).show(ui, |ui| ui.horizontal(|ui| {
                 for (tab, label) in [
                     (Tab::Race, "Race setup"),
                     (Tab::Aids, "Driving aids"),
                     (Tab::Controls, "Cameras & controls"),
                     (Tab::Graphics, "Graphics"),
                 ] {
-                    let _response = ui.selectable_value(&mut frontend.tab, tab, label);
+                    let selected = frontend.tab == tab;
+                    let _response = ui.add(
+                        egui::Button::new(RichText::new(label.to_uppercase()).strong().color(
+                            if selected { Color32::WHITE } else { DIM },
+                        ))
+                        .fill(if selected { RED } else { WELL })
+                        .min_size(egui::vec2(0., 34.)),
+                    );
+                    if _response.clicked() {
+                        frontend.tab = tab;
+                    }
                     #[cfg(test)]
                     frontend.widgets.insert(label, _response.rect);
                 }
-            });
-            ui.separator();
+            }));
+            ui.add_space(10.);
             if let Some(error) = &frontend.error {
                 ui.colored_label(Color32::from_rgb(255, 150, 150), error);
             }
-            let footer_height = 70.;
+            let footer_height = 96.;
+            let body_height = (ui.available_height() - footer_height).max(100.);
+            housing().show(ui, |ui| {
+            ui.set_min_size(egui::vec2(ui.available_width(), body_height - 36.));
             egui::ScrollArea::vertical()
-                .max_height((ui.available_height() - footer_height).max(100.))
+                .max_height(body_height - 36.)
+                .auto_shrink([false, true])
                 .show(ui, |ui| match frontend.tab {
                     Tab::Race => race_setup(ui, &mut frontend),
                     Tab::Aids => {
@@ -452,11 +531,11 @@ pub fn ui(
                     Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
                     Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
                 });
-            ui.add_space(12.);
-            ui.separator();
+            });
+            ui.add_space(14.);
             ui.horizontal(|ui| {
                 if session.screen == Screen::Paused && ui.add(
-                    egui::Button::new("Resume race").fill(RED).min_size(egui::vec2(180., 44.))
+                    egui::Button::new(RichText::new("Resume race").strong()).fill(RED).min_size(egui::vec2(180., 44.))
                 ).clicked() { resume(&mut session); }
                 let available =
                     frontend.catalog.circuits.iter().any(|track| {
@@ -476,7 +555,8 @@ pub fn ui(
                         })
                         .strong(),
                     )
-                    .fill(if frontend.race_started { Color32::from_rgb(45, 52, 64) } else { RED })
+                    .fill(if frontend.race_started { HOUSING } else { RED })
+                    .stroke(egui::Stroke::new(1., if frontend.race_started { HOUSING_EDGE } else { RED }))
                     .min_size(egui::vec2(220., 44.)),
                 );
                 #[cfg(test)]
@@ -520,7 +600,7 @@ fn race_setup(ui: &mut egui::Ui, frontend: &mut Frontend) {
 }
 
 fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
-    ui.heading("Circuit");
+    section(ui, "Circuit");
     let selected = catalog
         .circuits
         .iter()
@@ -540,7 +620,7 @@ fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
             }
         });
     ui.add_space(4.);
-    ui.heading("Car");
+    section(ui, "Car");
     for car in &catalog.cars {
         ui.radio_value(&mut draft.car, car.id.clone(), car.name);
     }
@@ -595,8 +675,13 @@ fn preview(ui: &mut egui::Ui, catalog: &Catalog, draft: &Options) {
     );
     let (rect, _) =
         ui.allocate_exact_size(egui::vec2(ui.available_width(), 240.), egui::Sense::hover());
-    ui.painter()
-        .rect_filled(rect, 8., Color32::from_rgb(17, 23, 32));
+    ui.painter().rect_filled(rect, 6., WELL);
+    ui.painter().rect_stroke(
+        rect,
+        6.,
+        egui::Stroke::new(1., WELL_RIM),
+        egui::StrokeKind::Inside,
+    );
     if !track.outline.is_empty() {
         let (mut min, mut max) = (
             egui::pos2(f32::MAX, f32::MAX),
@@ -632,7 +717,7 @@ fn preview(ui: &mut egui::Ui, catalog: &Catalog, draft: &Options) {
         ));
     }
     ui.add_space(12.);
-    ui.heading("Drive your way");
+    section(ui, "Drive your way");
     ui.label("Choose individual driving aids or a preset in Driving aids. You can adjust them from the pause menu without restarting.");
     ui.label(
         RichText::new("C cycles cameras / 1 cockpit / 2 TV / 3 third person / Esc menu").color(DIM),
@@ -640,7 +725,7 @@ fn preview(ui: &mut egui::Ui, catalog: &Catalog, draft: &Options) {
 }
 
 fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
-    ui.heading("Driving aids");
+    section(ui, "Driving aids");
     ui.label("Hold the accelerator; guidance helps steer and brake for corners. Manual steering overrides it.");
     let aids = &mut frontend.aids;
     let presets = ui
@@ -692,7 +777,7 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
     });
     ui.add_space(8.);
     ui.columns(2, |columns| {
-        columns[0].heading("Guidance");
+        section(&mut columns[0], "Guidance");
         columns[0].add(
             egui::Slider::new(&mut frontend.corner_braking, 0.0..=1.0)
                 .text("Corner braking")
@@ -703,7 +788,7 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                 .size(15.)
                 .color(DIM),
         );
-        columns[1].heading("Car control");
+        section(&mut columns[1], "Car control");
         for (value, label, help) in [
             (
                 &mut aids.steering,
@@ -747,50 +832,51 @@ fn camera_editor(viewport: &egui::Ui, session: &mut Session, car: &str) {
     egui::Area::new("camera-editor".into())
         .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-18., 0.))
         .show(viewport, |ui| {
-            egui::Frame::new()
-                .fill(Color32::from_black_alpha(235))
-                .inner_margin(18)
-                .show(ui, |ui| {
-                    ui.set_width(330.);
-                    ui.heading("Camera position");
-                    ui.label("Live preview / saved for this car");
-                    ui.horizontal(|ui| {
-                        for mode in Mode::ALL {
-                            if ui
-                                .selectable_label(session.camera.mode == mode, mode.label())
-                                .clicked()
-                            {
-                                session.camera.select(mode);
-                            }
+            housing().fill(HOUSING.gamma_multiply(0.96)).show(ui, |ui| {
+                ui.set_width(330.);
+                section(ui, "Camera position");
+                ui.label(RichText::new("Live preview / saved for this car").color(DIM));
+                ui.horizontal(|ui| {
+                    for mode in Mode::ALL {
+                        if ui
+                            .selectable_label(session.camera.mode == mode, mode.label())
+                            .clicked()
+                        {
+                            session.camera.select(mode);
                         }
-                    });
-                    let mut tuning = session.camera.tuning.clone();
-                    let view = tuning.view_mut(session.camera.mode);
-                    ui.add(egui::Slider::new(&mut view.height, 0.65..=4.).text("Height"));
-                    let range = if session.camera.mode == Mode::Chase {
-                        -10.0..=-3.5
-                    } else {
-                        -1.5..=0.7
-                    };
-                    ui.add(egui::Slider::new(&mut view.fore_aft, range).text("Forward / back"));
-                    ui.add(egui::Slider::new(&mut view.pitch, -10.0..=20.).text("Look down"));
-                    ui.add(egui::Slider::new(&mut view.fov, 40.0..=95.).text("Field of view"));
-                    ui.separator();
-                    ui.add(egui::Slider::new(&mut tuning.shake, 0.0..=1.).text("Vibration"));
-                    ui.add(egui::Slider::new(&mut tuning.horizon, 0.0..=1.).text("Stable horizon"));
-                    if ui.button("Reset this view").clicked() {
-                        *tuning.view_mut(session.camera.mode) =
-                            crate::camera::Tuning::for_car(car).view(session.camera.mode);
-                    }
-                    session.camera.configure(tuning);
-                    ui.separator();
-                    if ui
-                        .button(RichText::new("Done / resume  F4 or Esc").strong())
-                        .clicked()
-                    {
-                        resume(session);
                     }
                 });
+                let mut tuning = session.camera.tuning.clone();
+                let view = tuning.view_mut(session.camera.mode);
+                ui.add(egui::Slider::new(&mut view.height, 0.65..=4.).text("Height"));
+                let range = if session.camera.mode == Mode::Chase {
+                    -10.0..=-3.5
+                } else {
+                    -1.5..=0.7
+                };
+                ui.add(egui::Slider::new(&mut view.fore_aft, range).text("Forward / back"));
+                ui.add(egui::Slider::new(&mut view.pitch, -10.0..=20.).text("Look down"));
+                ui.add(egui::Slider::new(&mut view.fov, 40.0..=95.).text("Field of view"));
+                ui.separator();
+                ui.add(egui::Slider::new(&mut tuning.shake, 0.0..=1.).text("Vibration"));
+                ui.add(egui::Slider::new(&mut tuning.horizon, 0.0..=1.).text("Stable horizon"));
+                if ui.button("Reset this view").clicked() {
+                    *tuning.view_mut(session.camera.mode) =
+                        crate::camera::Tuning::for_car(car).view(session.camera.mode);
+                }
+                session.camera.configure(tuning);
+                ui.separator();
+                if ui
+                    .add(
+                        egui::Button::new(RichText::new("Done / resume  F4 or Esc").strong())
+                            .fill(RED)
+                            .min_size(egui::vec2(ui.available_width(), 36.)),
+                    )
+                    .clicked()
+                {
+                    resume(session);
+                }
+            });
         });
 }
 
@@ -803,7 +889,7 @@ fn warm_fonts(context: &egui::Context) {
         .cloned()
         .collect();
     fonts.extend([15., 36.].map(egui::FontId::proportional));
-    let scale = context.viewport_rect().height() / 1080.;
+    let scale = hud::scale(context.viewport_rect().size());
     for family in [
         egui::FontFamily::Name("regular".into()),
         egui::FontFamily::Name("bold".into()),
@@ -824,7 +910,7 @@ fn warm_fonts(context: &egui::Context) {
 
 fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Session) {
     let selected = &mut frontend.graphics;
-    ui.heading("Graphics preset");
+    section(ui, "Graphics preset");
     ui.label("Changes apply immediately.");
     ui.add_space(6.);
     for quality in crate::graphics::Quality::ALL {
@@ -838,7 +924,7 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
 }
 
 fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session) {
-    ui.heading("Camera");
+    section(ui, "Camera");
     for mode in Mode::ALL {
         if ui.radio_value(selected, mode, mode.label()).changed() {
             session.camera.select(mode);
@@ -853,7 +939,7 @@ fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session)
         .num_columns(3)
         .spacing([28., 12.])
         .show(ui, |ui| {
-            for row in [
+            for (index, row) in [
                 ["Action", "Keyboard", "Gamepad"],
                 ["Throttle / brake", "W / S or arrows", "RT / LT"],
                 ["Steer", "A / D or arrows", "Left stick"],
@@ -863,9 +949,16 @@ fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session)
                 ["Pause / resume", "Esc or P", "Start"],
                 ["Recover car", "R", "Back / Select"],
                 ["Mute / unmute", "M", "-"],
-            ] {
+            ]
+            .into_iter()
+            .enumerate()
+            {
                 for cell in row {
-                    ui.label(cell);
+                    if index == 0 {
+                        section(ui, cell);
+                    } else {
+                        ui.label(cell);
+                    }
                 }
                 ui.end_row();
             }

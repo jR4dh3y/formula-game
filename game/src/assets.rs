@@ -2,7 +2,7 @@
 
 use crate::{materials::CarSurface, options::Options, pose::Pose, sky, Session};
 use bevy::{
-    asset::LoadState, light::atmosphere::ScatteringMedium, prelude::*,
+    asset::LoadState, light::atmosphere::ScatteringMedium, mesh::VertexAttributeValues, prelude::*,
     world_serialization::WorldInstanceReady,
 };
 use racecraft_sim::{Assists, CarGeometry, CarSpec, DriverProfile, EntrantConfig, Race, Track};
@@ -16,6 +16,26 @@ pub struct WheelVisual {
     pub entrant: usize,
     pub wheel: usize,
     pub rest: Transform,
+}
+
+#[derive(Component)]
+pub struct SteeringWheelVisual {
+    pub entrant: usize,
+    pub rest: Transform,
+    pub pivot: Vec3,
+}
+
+// These materials belong exclusively to the wheel, not the fixed dashboard or column.
+fn steering_material(name: &str) -> bool {
+    matches!(
+        name,
+        "RBRWHEEL10"
+            | "redbull_steeringwheel.004"
+            | "sw_decals.004"
+            | "gp21_LCD.003"
+            | "clearled.003"
+            | "kers_blue.003"
+    )
 }
 
 #[derive(Component)]
@@ -85,6 +105,7 @@ pub fn spawn_visuals(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn visual_ready(
     event: On<WorldInstanceReady>,
     mut commands: Commands,
@@ -92,9 +113,32 @@ fn visual_ready(
     children: Query<&Children>,
     nodes: Query<(&Name, &Transform)>,
     material_names: Query<&bevy::gltf::GltfMaterialName>,
+    mesh_handles: Query<&Mesh3d>,
+    meshes: Res<Assets<Mesh>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Ok(car) = cars.get(event.entity) {
+        let pivot = children.iter_descendants(event.entity).find_map(|entity| {
+            let name = material_names.get(entity).ok()?;
+            if !matches!(name.0.as_str(), "RBRWHEEL10" | "redbull_steeringwheel.004") {
+                return None;
+            }
+            let mesh = meshes.get(&mesh_handles.get(entity).ok()?.0)?;
+            let VertexAttributeValues::Float32x3(positions) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)?
+            else {
+                return None;
+            };
+            let mut low = Vec3::splat(f32::INFINITY);
+            let mut high = Vec3::splat(f32::NEG_INFINITY);
+            for position in positions {
+                let position = Vec3::from_array(*position);
+                low = low.min(position);
+                high = high.max(position);
+            }
+            let (_, rest) = nodes.get(entity).ok()?;
+            Some(rest.transform_point((low + high) * 0.5))
+        });
         let mut found = [false; 4];
         let mut body_found = false;
         for entity in children.iter_descendants(event.entity) {
@@ -104,6 +148,18 @@ fn visual_ready(
             let Ok((name, rest)) = nodes.get(entity) else {
                 continue;
             };
+            if let Some(pivot) = pivot {
+                if material_names
+                    .get(entity)
+                    .is_ok_and(|name| steering_material(&name.0))
+                {
+                    commands.entity(entity).insert(SteeringWheelVisual {
+                        entrant: car.0,
+                        rest: *rest,
+                        pivot,
+                    });
+                }
+            }
             body_found |= name.as_str() == "body";
             if let Some(wheel) = ["wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"]
                 .iter()
@@ -185,11 +241,22 @@ fn pose_transform(pose: &Pose) -> Transform {
         ))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn sync_cars(
     session: Res<Session>,
     fixed: Res<Time<Fixed>>,
-    mut bodies: Query<(&CarVisual, &mut Transform), Without<WheelVisual>>,
-    mut wheels: Query<(&WheelVisual, &mut Transform), Without<CarVisual>>,
+    mut bodies: Query<
+        (&CarVisual, &mut Transform),
+        (Without<WheelVisual>, Without<SteeringWheelVisual>),
+    >,
+    mut wheels: Query<
+        (&WheelVisual, &mut Transform),
+        (Without<CarVisual>, Without<SteeringWheelVisual>),
+    >,
+    mut steering_wheels: Query<
+        (&SteeringWheelVisual, &mut Transform),
+        (Without<CarVisual>, Without<WheelVisual>),
+    >,
 ) {
     let blend = fixed.overstep_fraction_f64();
     let poses: Vec<Pose> = (0..session.race.entrants.len())
@@ -209,6 +276,14 @@ pub fn sync_cars(
         transform.rotation = Quat::from_rotation_y(steer)
             * visual.rest.rotation
             * Quat::from_rotation_x(pose.wheels[visual.wheel] as f32);
+    }
+    for (visual, mut transform) in &mut steering_wheels {
+        *transform = visual.rest;
+        // A 6:1 steering ratio gives about 124 degrees at the sim's 0.36 rad lock.
+        transform.rotate_around(
+            visual.pivot,
+            Quat::from_rotation_z(-poses[visual.entrant].steer as f32 * 6.0),
+        );
     }
 }
 

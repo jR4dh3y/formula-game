@@ -12,7 +12,7 @@ Install Rust 1.97.1 or newer and your platform's Bevy build dependencies. On Lin
 cargo run -p f1-the-game -- --assets /path/to/assets --auto-gears
 ```
 
-The generated assets are separate from this repository. Point `--assets` at an existing converted asset tree, or put it at `./assets`:
+The generated assets are separate from this repository. [Download the complete assets ZIP](https://fbs.jr4.in/s/f1-assets) using this permanent link. Extract the ZIP into the repository root to create `./assets`, or point `--assets` at an existing converted asset tree:
 
 ```text
 assets/
@@ -75,6 +75,8 @@ automatically extracts and runs when mounting is unavailable. See
 | Quit | Quit game in menu, or window close | Window close |
 
 There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or Cameras & controls. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and RB22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
+
+The RB6 and RB22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. The existing wheel geometry and its attached controls rotate around the wheel centre; the dashboard stays fixed. This uses the steering materials in the supplied converted car models.
 
 The HUD includes the timing tower, lap times, countdown lights, race messages, shift lights, speed, pedals, steering, tyre temperatures/wear, lock-up/sliding indicators, aero effects, minimap and results.
 

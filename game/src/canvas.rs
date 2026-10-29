@@ -40,10 +40,28 @@ impl Hud {
         );
     }
 
-    pub fn stroke_rect(&self, x: f32, y: f32, w: f32, h: f32, thickness: f32, color: Color32) {
+    pub fn fill_round(&self, x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color32) {
+        self.painter.rect_filled(
+            Rect::from_min_size(Pos2::new(x, y), Vec2::new(w, h)),
+            radius,
+            color,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_round(
+        &self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        radius: f32,
+        thickness: f32,
+        color: Color32,
+    ) {
         self.painter.rect_stroke(
             Rect::from_min_size(Pos2::new(x, y), Vec2::new(w, h)),
-            0.0,
+            radius,
             Stroke::new(thickness, color),
             egui::StrokeKind::Inside,
         );

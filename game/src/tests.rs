@@ -117,6 +117,42 @@ fn bevy_fixed_schedule_waits_for_assets_and_pauses_and_resumes() {
 }
 
 #[test]
+fn cockpit_steering_tracks_both_directions_and_returns_to_rest() {
+    let mut app = App::new();
+    app.insert_resource(session())
+        .init_resource::<Time<Fixed>>()
+        .add_systems(Update, assets::sync_cars);
+    let pivot = Vec3::new(0.0, 0.6, 0.7);
+    let rest = Transform::default();
+    let wheel = app
+        .world_mut()
+        .spawn((
+            assets::SteeringWheelVisual {
+                entrant: 0,
+                rest,
+                pivot,
+            },
+            rest,
+        ))
+        .id();
+    for angle in [-0.3, 0.3, 0.0] {
+        let mut session = app.world_mut().resource_mut::<Session>();
+        session.race.entrants[0].car.steer_angle = angle;
+        let Session { poses, race, .. } = &mut *session;
+        poses.record(race);
+        app.update();
+        let transform = app.world().get::<Transform>(wheel).unwrap();
+        assert!(transform
+            .rotation
+            .abs_diff_eq(Quat::from_rotation_z(-angle as f32 * 6.0), 1e-5));
+        assert!(transform.transform_point(pivot).abs_diff_eq(pivot, 1e-5));
+        if angle == 0.0 {
+            assert_eq!(*transform, rest);
+        }
+    }
+}
+
+#[test]
 fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     let mut session = session();
     let car = &mut session.race.entrants[0].car;
@@ -384,6 +420,7 @@ fn menu_probe(
     mut inputs: Query<&mut bevy_egui::EguiInput>,
     roots: Query<(), With<assets::RaceVisualRoot>>,
     cameras: Query<(), With<Camera3d>>,
+    steering_wheels: Query<&assets::SteeringWheelVisual>,
     mut exit: MessageWriter<AppExit>,
 ) {
     use bevy_egui::egui::{Event, Modifiers, PointerButton};
@@ -483,6 +520,12 @@ fn menu_probe(
                 "old scene roots leaked across a track switch"
             );
             assert_eq!(cameras.iter().count(), 1);
+            assert!(
+                steering_wheels
+                    .iter()
+                    .any(|wheel| wheel.entrant == session.player),
+                "{car} has no animated cockpit wheel"
+            );
             assert!(!session.paused);
             probe.stage = 6;
             probe.ticks = 0;
@@ -564,6 +607,9 @@ fn rendered_game_flows() {
             "1280x720",
             "--auto-gears",
             "--quick-race",
+            // Injected controls must keep running when the compositor has no seat focus.
+            "--frames",
+            "10000",
         ]
         .into_iter()
         .map(str::to_owned),
@@ -628,14 +674,39 @@ fn probe_assertions(
     mut session: ResMut<Session>,
     mut probe: ResMut<RenderProbe>,
     wheels: Query<&assets::WheelVisual>,
+    steering_wheels: Query<(&assets::SteeringWheelVisual, &Transform)>,
     bodies: Query<&assets::CarVisual>,
     meshes: Query<&Mesh3d>,
     images: Res<Assets<Image>>,
     surfaces: Query<(), With<materials::SurfaceReady>>,
+    fixed: Res<Time<Fixed>>,
 ) {
     let frame = probe.frame;
+    if frame == 540 {
+        let pose = session
+            .poses
+            .at(&session.race, session.player, fixed.overstep_fraction_f64());
+        for (wheel, transform) in &steering_wheels {
+            if wheel.entrant == session.player {
+                let rotation = Quat::from_rotation_z(-pose.steer as f32 * 6.0);
+                assert!(transform
+                    .rotation
+                    .abs_diff_eq(rotation * wheel.rest.rotation, 1e-5));
+                assert!(transform
+                    .transform_point(
+                        wheel
+                            .rest
+                            .compute_affine()
+                            .inverse()
+                            .transform_point3(wheel.pivot)
+                    )
+                    .abs_diff_eq(wheel.pivot, 1e-5));
+            }
+        }
+    }
     match frame {
         30 => {
+            assert!(steering_wheels.iter().count() >= session.race.entrants.len());
             assert_eq!(wheels.iter().count(), session.race.entrants.len() * 4);
             assert_eq!(bodies.iter().count(), session.race.entrants.len());
             assert!(meshes.iter().count() > 40);
