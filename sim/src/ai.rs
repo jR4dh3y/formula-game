@@ -325,7 +325,8 @@ fn speed_profile(profile: DriverProfile, car: &Car, track: &Track) -> Vec<f64> {
         lift_area: car.setup.front_lift_area(&spec.aero) + car.setup.rear_lift_area(&spec.aero),
         drag_area: car.setup.drag_area(&spec.aero),
         power: spec.engine.max_power * 0.92,
-        brake_fraction: 0.9 * profile.pace,
+        // Leave headroom for axle brake bias, ABS trimming and turn-in loads.
+        brake_fraction: 0.76 * profile.pace,
     })
 }
 
