@@ -2,7 +2,10 @@
 
 use crate::{materials::CarSurface, options::Options, pose::Pose, sky, Session};
 use bevy::{
-    asset::LoadState, light::atmosphere::ScatteringMedium, mesh::VertexAttributeValues, prelude::*,
+    asset::LoadState,
+    light::atmosphere::ScatteringMedium,
+    mesh::{Indices, VertexAttributeValues},
+    prelude::*,
     world_serialization::WorldInstanceReady,
 };
 use racecraft_sim::{Assists, CarGeometry, CarSpec, DriverProfile, EntrantConfig, Race, Track};
@@ -16,6 +19,17 @@ pub struct WheelVisual {
     pub entrant: usize,
     pub wheel: usize,
     pub rest: Transform,
+}
+
+/// A car primitive whose mesh may hold pieces of the steering wheel modelled
+/// with a shared body material (the RB22's carbon grips and screen bezel).
+#[derive(Component)]
+pub struct WheelShell {
+    entrant: usize,
+    pivot: Vec3,
+    /// The rim's bounds in the same mesh space, as measured from its own material.
+    bounds: (Vec3, Vec3),
+    rest: Transform,
 }
 
 #[derive(Component)]
@@ -137,7 +151,7 @@ fn visual_ready(
                 high = high.max(position);
             }
             let (_, rest) = nodes.get(entity).ok()?;
-            Some(rest.transform_point((low + high) * 0.5))
+            Some((rest.transform_point((low + high) * 0.5), (low, high), *rest))
         });
         let mut found = [false; 4];
         let mut body_found = false;
@@ -148,11 +162,20 @@ fn visual_ready(
             let Ok((name, rest)) = nodes.get(entity) else {
                 continue;
             };
-            if let Some(pivot) = pivot {
-                if material_names
+            if let Some((pivot, bounds, rim_rest)) = pivot {
+                let steering = material_names
                     .get(entity)
-                    .is_ok_and(|name| steering_material(&name.0))
-                {
+                    .is_ok_and(|name| steering_material(&name.0));
+                // Only primitives sharing the rim's mesh space can be compared.
+                if !steering && mesh_handles.contains(entity) && *rest == rim_rest {
+                    commands.entity(entity).insert(WheelShell {
+                        entrant: car.0,
+                        pivot,
+                        bounds,
+                        rest: *rest,
+                    });
+                }
+                if steering {
                     commands.entity(entity).insert(SteeringWheelVisual {
                         entrant: car.0,
                         rest: *rest,
@@ -316,6 +339,117 @@ pub fn sync_cars(
             Quat::from_rotation_z(-poses[visual.entrant].steer as f32 * 6.0),
         );
     }
+}
+
+/// Fixed and turning halves per source mesh; `None` when it has no wheel pieces.
+type ShellSplits = std::collections::HashMap<AssetId<Mesh>, Option<(Handle<Mesh>, Handle<Mesh>)>>;
+
+type ShellItem = (
+    Entity,
+    &'static WheelShell,
+    &'static Mesh3d,
+    &'static MeshMaterial3d<StandardMaterial>,
+    &'static ChildOf,
+);
+
+/// Moves body-material pieces that lie wholly inside the steering wheel into
+/// their own turning mesh, so grips and bezels follow the rim instead of
+/// staying fixed while the wheel turns through them. Each source mesh is
+/// split once and shared by every car built from it.
+pub fn rig_wheel_shells(
+    mut commands: Commands,
+    shells: Query<ShellItem>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut split: Local<ShellSplits>,
+) {
+    for (entity, shell, mesh, material, parent) in &shells {
+        commands.entity(entity).remove::<WheelShell>();
+        let parts = match split.get(&mesh.0.id()) {
+            Some(parts) => parts.clone(),
+            None => {
+                let Some(source) = meshes.get(&mesh.0).cloned() else {
+                    continue;
+                };
+                let parts = split_wheel_pieces(&source, shell.bounds).map(|(fixed, wheel)| {
+                    let mut fixed_mesh = source.clone();
+                    fixed_mesh.insert_indices(Indices::U32(fixed));
+                    let mut wheel_mesh = source;
+                    wheel_mesh.insert_indices(Indices::U32(wheel));
+                    (meshes.add(fixed_mesh), meshes.add(wheel_mesh))
+                });
+                split.insert(mesh.0.id(), parts.clone());
+                parts
+            }
+        };
+        let Some((fixed, wheel)) = parts else {
+            continue;
+        };
+        commands.entity(entity).insert(Mesh3d(fixed));
+        commands.spawn((
+            Mesh3d(wheel),
+            material.clone(),
+            shell.rest,
+            SteeringWheelVisual {
+                entrant: shell.entrant,
+                rest: shell.rest,
+                pivot: shell.pivot,
+            },
+            ChildOf(parent.parent()),
+        ));
+    }
+}
+
+/// Splits triangle indices into (fixed, wheel) by connected piece; a piece
+/// belongs to the wheel when every vertex is inside the rim's bounds.
+fn split_wheel_pieces(mesh: &Mesh, (low, high): (Vec3, Vec3)) -> Option<(Vec<u32>, Vec<u32>)> {
+    let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    else {
+        return None;
+    };
+    let margin = Vec3::splat(0.003);
+    let (low, high) = (low - margin, high + margin);
+    let inside = |index: usize| {
+        let p = Vec3::from_array(positions[index]);
+        p.cmpge(low).all() && p.cmple(high).all()
+    };
+    if !(0..positions.len()).any(inside) {
+        return None;
+    }
+    let indices: Vec<u32> = mesh.indices()?.iter().map(|index| index as u32).collect();
+    let mut parent: Vec<usize> = (0..positions.len()).collect();
+    fn root(parent: &mut [usize], mut index: usize) -> usize {
+        while parent[index] != index {
+            parent[index] = parent[parent[index]];
+            index = parent[index];
+        }
+        index
+    }
+    for triangle in indices.chunks_exact(3) {
+        let a = root(&mut parent, triangle[0] as usize);
+        for &other in &triangle[1..] {
+            let b = root(&mut parent, other as usize);
+            parent[b] = a;
+        }
+    }
+    let mut outside = vec![false; positions.len()];
+    for index in 0..positions.len() {
+        if !inside(index) {
+            let piece = root(&mut parent, index);
+            outside[piece] = true;
+        }
+    }
+    let (mut fixed, mut wheel) = (Vec::new(), Vec::new());
+    for triangle in indices.chunks_exact(3) {
+        let piece = root(&mut parent, triangle[0] as usize);
+        if outside[piece] {
+            &mut fixed
+        } else {
+            &mut wheel
+        }
+        .extend_from_slice(triangle);
+    }
+    (!wheel.is_empty()).then_some((fixed, wheel))
 }
 
 const AI_NAMES: [&str; 15] = [

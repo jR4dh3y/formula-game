@@ -6,11 +6,28 @@ use crate::{assets::SteeringWheelVisual, hud, Session};
 use bevy::{
     asset::RenderAssetUsages,
     camera::{visibility::RenderLayers, RenderTarget},
+    core_pipeline::{
+        mip_generation::{
+            generate_mips_for_phase, MipGenerationJobs, MipGenerationPhaseId,
+            MipGenerationPipelines,
+        },
+        upscaling::upscaling,
+        Core2d,
+    },
     ecs::schedule::ScheduleLabel,
+    image::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     math::Affine2,
     mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
     prelude::*,
-    render::render_resource::TextureFormat,
+    render::{
+        render_asset::RenderAssets,
+        render_resource::{
+            Extent3d, PipelineCache, TextureDimension, TextureFormat, TextureUsages,
+        },
+        renderer::RenderContext,
+        texture::GpuImage,
+        Extract, RenderApp,
+    },
 };
 use bevy_egui::{egui, EguiContext, EguiSchedule, PrimaryEguiContext};
 
@@ -27,9 +44,87 @@ pub enum WheelPart {
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WheelDashPass;
 
+/// The screen is drawn about a tenth of its texture size in the cockpit, so it
+/// is sampled from a mip chain rebuilt every frame; without one, thin strokes
+/// break up and shimmer as the digits change.
+pub struct WheelDashPlugin;
+
+const MIP_PHASE: MipGenerationPhaseId = MipGenerationPhaseId(0x5745_4c44);
+
+impl Plugin for WheelDashPlugin {
+    fn build(&self, app: &mut App) {
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+            return;
+        };
+        render_app
+            .add_systems(ExtractSchedule, extract_screen)
+            .add_systems(Core2d, build_screen_mips.after(upscaling));
+    }
+}
+
+/// Render-world copy of the two screen images.
+#[derive(Resource)]
+struct ScreenImages {
+    target: AssetId<Image>,
+    sampled: AssetId<Image>,
+}
+
+fn extract_screen(
+    mut commands: Commands,
+    dash: Extract<Option<Res<WheelDash>>>,
+    mut jobs: ResMut<MipGenerationJobs>,
+) {
+    let Some(dash) = dash.as_ref() else {
+        return;
+    };
+    jobs.add(MIP_PHASE, dash.screen.id());
+    commands.insert_resource(ScreenImages {
+        target: dash.target.id(),
+        sampled: dash.screen.id(),
+    });
+}
+
+/// After the wheel camera has written its frame, copy it into the sampled
+/// texture's top level and downsample the rest. The wheel camera is the only
+/// 2D camera, and it renders before the scene camera that samples the screen.
+fn build_screen_mips(
+    images: Option<Res<ScreenImages>>,
+    jobs: Res<MipGenerationJobs>,
+    pipeline_cache: Res<PipelineCache>,
+    pipelines: Option<Res<MipGenerationPipelines>>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    mut ctx: RenderContext,
+) {
+    let (Some(images), Some(pipelines)) = (images, pipelines) else {
+        return;
+    };
+    let (Some(target), Some(sampled)) = (
+        gpu_images.get(images.target),
+        gpu_images.get(images.sampled),
+    ) else {
+        return;
+    };
+    ctx.command_encoder().copy_texture_to_texture(
+        target.texture.as_image_copy(),
+        sampled.texture.as_image_copy(),
+        target.texture.size(),
+    );
+    generate_mips_for_phase(
+        MIP_PHASE,
+        &jobs,
+        &pipeline_cache,
+        &pipelines,
+        &gpu_images,
+        &mut ctx,
+    );
+}
+
 #[derive(Resource)]
 pub struct WheelDash {
-    image: Handle<Image>,
+    /// What the wheel camera renders into: one level.
+    target: Handle<Image>,
+    /// What the LCD samples: the same pixels with a full mip chain.
+    screen: Handle<Image>,
     /// The player's wheel uses the pod's strip layout instead of the full LCD.
     compact: bool,
 }
@@ -54,12 +149,33 @@ const REV_LAMPS: usize = 15;
 
 pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let (width, height) = hud::wheel::SIZE;
-    let image = images.add(Image::new_target_texture(
-        width,
-        height,
-        TextureFormat::Rgba8UnormSrgb,
-        None,
-    ));
+    // Linear half floats end to end: egui writes linear colour, the
+    // downsampler needs a storage-capable format, and averaging is correct.
+    let mut target = Image::new_target_texture(width, height, TextureFormat::Rgba16Float, None);
+    target.texture_descriptor.usage |= TextureUsages::COPY_SRC;
+    let target = images.add(target);
+    let mut screen = Image::new_uninit(
+        Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        TextureFormat::Rgba16Float,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    screen.texture_descriptor.mip_level_count = width.max(height).ilog2() + 1;
+    screen.texture_descriptor.usage =
+        TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING;
+    screen.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        mag_filter: ImageFilterMode::Linear,
+        min_filter: ImageFilterMode::Linear,
+        mipmap_filter: ImageFilterMode::Linear,
+        // The LCD is seen at a slant whenever the wheel is turned.
+        anisotropy_clamp: 8,
+        ..default()
+    });
+    let screen = images.add(screen);
     // Draws nothing of the world; it only hosts the wheel's egui context.
     commands.spawn((
         Camera2d,
@@ -68,12 +184,17 @@ pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
             clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
-        RenderTarget::Image(image.clone().into()),
+        RenderTarget::Image(target.clone().into()),
+        // A float main texture so egui's pipeline matches the float target;
+        // LCD colours pass through untoned.
+        bevy::camera::Hdr,
+        bevy::core_pipeline::tonemapping::Tonemapping::None,
         RenderLayers::none(),
         EguiSchedule::new(WheelDashPass),
     ));
     commands.insert_resource(WheelDash {
-        image,
+        target,
+        screen,
         compact: false,
     });
 }
@@ -168,7 +289,7 @@ pub fn attach(
                 let screen = pod(
                     screen_quad(Vec2::new(0.108, 0.022), Vec3::new(0., 0.597, 0.6802)),
                     StandardMaterial {
-                        base_color_texture: Some(dash.image.clone()),
+                        base_color_texture: Some(dash.screen.clone()),
                         unlit: true,
                         double_sided: true,
                         cull_mode: None,
@@ -190,7 +311,7 @@ pub fn attach(
                 commands
                     .entity(entity)
                     .insert(MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color_texture: Some(dash.image.clone()),
+                        base_color_texture: Some(dash.screen.clone()),
                         unlit: true,
                         uv_transform: Affine2::from_scale(Vec2::ONE / window.size())
                             * Affine2::from_translation(-window.min),

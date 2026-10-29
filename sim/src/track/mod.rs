@@ -187,18 +187,52 @@ impl Track {
                 })
                 .expect("tracks have stations"),
         };
-        // Refine on the segment best..best+1 or best-1..best.
-        let station = &self.stations[best];
-        let origin = DVec2::new(station.position.x, station.position.z);
-        let along = (point - origin).dot(station.tangent);
-        let (index, along) = if along < 0.0 {
-            let previous = (best + count - 1) % count;
-            (previous, along + STATION_SPACING)
-        } else {
-            (best, along)
-        };
-        let frame =
-            self.frame_at(index as f64 * STATION_SPACING + along.clamp(0.0, STATION_SPACING));
+        // On the segments either side of `best`, find where the interpolated
+        // normal passes through the point. Measuring along a single station's
+        // tangent instead makes `s` jump backwards at each station when the
+        // car is well off the centreline in a curve.
+        let mut chosen: Option<(f64, f64)> = None;
+        for index in [(best + count - 1) % count, best] {
+            let (a, b) = (&self.stations[index], &self.stations[(index + 1) % count]);
+            let start = DVec2::new(a.position.x, a.position.z);
+            let edge = DVec2::new(b.position.x, b.position.z) - start;
+            let turn = b.tangent - a.tangent;
+            let offset = point - start;
+            // (offset - t·edge) · (tangent_a + t·turn) = 0
+            let (c0, c1, c2) = (
+                offset.dot(a.tangent),
+                offset.dot(turn) - edge.dot(a.tangent),
+                -edge.dot(turn),
+            );
+            let roots = if c2.abs() < 1e-12 {
+                [-c0 / c1, f64::NAN]
+            } else {
+                let discriminant = c1 * c1 - 4.0 * c2 * c0;
+                if discriminant < 0.0 {
+                    continue;
+                }
+                let root = discriminant.sqrt();
+                [(-c1 + root) / (2.0 * c2), (-c1 - root) / (2.0 * c2)]
+            };
+            for t in roots {
+                if !(-1e-9..=1.0 + 1e-9).contains(&t) {
+                    continue;
+                }
+                let distance = (offset - edge * t).length_squared();
+                if chosen.is_none_or(|(_, best)| distance < best) {
+                    chosen = Some((
+                        (index as f64 + t.clamp(0.0, 1.0)) * STATION_SPACING,
+                        distance,
+                    ));
+                }
+            }
+        }
+        let s = chosen.map(|(s, _)| s).unwrap_or_else(|| {
+            let station = &self.stations[best];
+            let origin = DVec2::new(station.position.x, station.position.z);
+            best as f64 * STATION_SPACING + (point - origin).dot(station.tangent)
+        });
+        let frame = self.frame_at(s);
         let lateral = (point - DVec2::new(frame.position.x, frame.position.z)).dot(frame.left());
         TrackPosition {
             station: self.station_at(frame.s),

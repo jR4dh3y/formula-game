@@ -176,7 +176,11 @@ impl AiDriver {
         let local_left = offset.dot(car.left());
         let distance = offset.length().max(1.0);
         let curvature = 2.0 * local_left / (distance * distance);
-        let wheel_angle = (car.spec.wheelbase() * curvature).atan() - car.yaw_rate * 0.03;
+        // Yaw damping steadies the line; a wall strike spikes the yaw rate
+        // far past anything a driver corrects for, so it must not flick the
+        // wheel to opposite lock.
+        let wheel_angle =
+            (car.spec.wheelbase() * curvature).atan() - car.yaw_rate.clamp(-1.5, 1.5) * 0.03;
         let steer = (wheel_angle / car.steer_limit(speed)).clamp(-1.0, 1.0);
 
         // Speed: profile ahead, minus dirty-air caution, adjusted for mistakes and traffic.

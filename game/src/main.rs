@@ -195,6 +195,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ..default()
         })
         .add_plugins(graphics::StaticSkyLighting)
+        .add_plugins(wheel_dash::WheelDashPlugin)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, |mut session: ResMut<Session>| {
             // F1_SHOW_FPS=1 starts with the F3 performance readout visible.
@@ -221,6 +222,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 materials::prepare,
                 assets::check_loading,
                 benchmark::advance,
+                assets::rig_wheel_shells,
                 assets::sync_cars,
                 wheel_dash::attach,
                 wheel_dash::lights,
