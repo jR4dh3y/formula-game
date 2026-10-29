@@ -34,9 +34,9 @@ pub struct Material {
     pub name: String,
     pub class: MaterialClass,
     pub base_color: Color,
-    pub base_color_texture: Option<TextureImage>,
-    pub normal_texture: Option<TextureImage>,
-    pub pbr_texture: Option<TextureImage>,
+    pub base_color_texture: Option<Arc<TextureImage>>,
+    pub normal_texture: Option<Arc<TextureImage>>,
+    pub pbr_texture: Option<Arc<TextureImage>>,
     pub roughness: f32,
     pub metallic: f32,
     pub specular_intensity: f32,
@@ -51,7 +51,67 @@ pub struct Material {
 pub struct TextureImage {
     pub width: u32,
     pub height: u32,
-    pub pixels: Vec<Color>,
+    pub pixels: TexturePixels,
+}
+
+/// Texel storage. Display-referred images stay 8-bit; HDR panoramas keep floats.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TexturePixels {
+    Rgba8(Vec<[u8; 4]>),
+    Float(Vec<Color>),
+}
+
+impl TexturePixels {
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Rgba8(pixels) => pixels.len(),
+            Self::Float(pixels) => pixels.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get(&self, index: usize) -> Option<Color> {
+        match self {
+            Self::Rgba8(pixels) => pixels.get(index).map(|&pixel| Color::from_rgba8(pixel)),
+            Self::Float(pixels) => pixels.get(index).copied(),
+        }
+    }
+
+    pub fn color(&self, index: usize) -> Color {
+        match self {
+            Self::Rgba8(pixels) => Color::from_rgba8(pixels[index]),
+            Self::Float(pixels) => pixels[index],
+        }
+    }
+
+    pub fn to_rgba8(&self) -> Vec<[u8; 4]> {
+        match self {
+            Self::Rgba8(pixels) => pixels.clone(),
+            Self::Float(pixels) => pixels.iter().map(|color| color.to_rgba8()).collect(),
+        }
+    }
+
+    pub fn alpha(&self) -> Vec<f32> {
+        match self {
+            Self::Rgba8(pixels) => pixels.iter().map(|pixel| pixel[3] as f32 / 255.0).collect(),
+            Self::Float(pixels) => pixels.iter().map(|color| color.a).collect(),
+        }
+    }
+}
+
+impl From<Vec<Color>> for TexturePixels {
+    fn from(pixels: Vec<Color>) -> Self {
+        Self::Float(pixels)
+    }
+}
+
+impl From<Vec<[u8; 4]>> for TexturePixels {
+    fn from(pixels: Vec<[u8; 4]>) -> Self {
+        Self::Rgba8(pixels)
+    }
 }
 
 impl TextureImage {
@@ -92,35 +152,29 @@ impl TextureImage {
             image::DynamicImage::ImageRgb32F(image) => Ok(Self {
                 width: image.width(),
                 height: image.height(),
-                pixels: image
-                    .pixels()
-                    .map(|pixel| Color::new(pixel[0], pixel[1], pixel[2], 1.0))
-                    .collect(),
+                pixels: TexturePixels::Float(
+                    image
+                        .pixels()
+                        .map(|pixel| Color::new(pixel[0], pixel[1], pixel[2], 1.0))
+                        .collect(),
+                ),
             }),
             image::DynamicImage::ImageRgba32F(image) => Ok(Self {
                 width: image.width(),
                 height: image.height(),
-                pixels: image
-                    .pixels()
-                    .map(|pixel| Color::new(pixel[0], pixel[1], pixel[2], pixel[3]))
-                    .collect(),
+                pixels: TexturePixels::Float(
+                    image
+                        .pixels()
+                        .map(|pixel| Color::new(pixel[0], pixel[1], pixel[2], pixel[3]))
+                        .collect(),
+                ),
             }),
             image => {
                 let rgba = image.to_rgba8();
                 Ok(Self {
                     width: rgba.width(),
                     height: rgba.height(),
-                    pixels: rgba
-                        .pixels()
-                        .map(|pixel| {
-                            Color::new(
-                                pixel[0] as f32 / 255.0,
-                                pixel[1] as f32 / 255.0,
-                                pixel[2] as f32 / 255.0,
-                                pixel[3] as f32 / 255.0,
-                            )
-                        })
-                        .collect(),
+                    pixels: TexturePixels::Rgba8(rgba.pixels().map(|pixel| pixel.0).collect()),
                 })
             }
         }
@@ -134,7 +188,7 @@ impl TextureImage {
         let v = uv.y.rem_euclid(1.0);
         let x = (u * (self.width - 1) as f32).round() as u32;
         let y = ((1.0 - v) * (self.height - 1) as f32).round() as u32;
-        self.pixels[(y * self.width + x) as usize]
+        self.pixels.color((y * self.width + x) as usize)
     }
 }
 
@@ -195,7 +249,7 @@ impl EnvironmentMap {
             TextureImage {
                 width: 2,
                 height: 1,
-                pixels: vec![color; 2],
+                pixels: TexturePixels::Float(vec![color; 2]),
             },
             EnvironmentEncoding::Srgb,
             0.0,
@@ -203,7 +257,11 @@ impl EnvironmentMap {
         )
     }
 
-    pub fn from_hdr_bytes(bytes: &[u8], exposure_ev: f32, yaw_radians: f32) -> Result<Self, String> {
+    pub fn from_hdr_bytes(
+        bytes: &[u8],
+        exposure_ev: f32,
+        yaw_radians: f32,
+    ) -> Result<Self, String> {
         Ok(Self::new(
             TextureImage::from_encoded_bytes_with_max_dimension(bytes, 0)?,
             EnvironmentEncoding::LinearHdr,
@@ -273,7 +331,6 @@ impl EnvironmentMap {
         self.panorama
             .pixels
             .get(index)
-            .copied()
             .map(|sample| self.decode_radiance(sample) * self.linear_tint)
             .unwrap_or(Vec3::ZERO)
     }
@@ -307,7 +364,9 @@ impl EnvironmentMap {
         let sample = |source_x: i32, source_y: i32| {
             let wrapped_x = source_x.rem_euclid(width) as u32;
             let clamped_y = source_y.clamp(0, height - 1) as u32;
-            self.panorama.pixels[(clamped_y * self.panorama.width + wrapped_x) as usize]
+            self.panorama
+                .pixels
+                .color((clamped_y * self.panorama.width + wrapped_x) as usize)
         };
         let top = mix_color(sample(x0, y0), sample(x0 + 1, y0), tx);
         let bottom = mix_color(sample(x0, y0 + 1), sample(x0 + 1, y0 + 1), tx);

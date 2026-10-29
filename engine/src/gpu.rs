@@ -85,7 +85,7 @@ fn generated_rain_streak_detail() -> TextureImage {
     TextureImage {
         width: WIDTH,
         height: HEIGHT,
-        pixels,
+        pixels: pixels.into(),
     }
 }
 
@@ -4326,24 +4326,24 @@ fn create_material(
         device,
         queue,
         &format!("{}-base-color", material.name),
-        material.base_color_texture.as_ref().unwrap_or(&white),
+        material.base_color_texture.as_deref().unwrap_or(&white),
         true,
     );
     let (normal_texture, normal_view) = upload_material_texture(
         device,
         queue,
         &format!("{}-normal", material.name),
-        material.normal_texture.as_ref().unwrap_or(&flat_normal),
+        material.normal_texture.as_deref().unwrap_or(&flat_normal),
         false,
     );
     let (pbr_texture, pbr_view) = upload_material_texture(
         device,
         queue,
         &format!("{}-pbr", material.name),
-        material.pbr_texture.as_ref().unwrap_or(&default_pbr),
+        material.pbr_texture.as_deref().unwrap_or(&default_pbr),
         false,
     );
-    let opacity_source = material.base_color_texture.as_ref().unwrap_or(&white);
+    let opacity_source = material.base_color_texture.as_deref().unwrap_or(&white);
     let (opacity_texture, opacity_view) = upload_opacity_texture(
         device,
         queue,
@@ -4434,7 +4434,7 @@ fn solid_texture(color: crate::math::Color) -> TextureImage {
     TextureImage {
         width: 1,
         height: 1,
-        pixels: vec![color],
+        pixels: vec![color].into(),
     }
 }
 
@@ -4590,8 +4590,9 @@ fn build_opacity_mip_chain(texture: &TextureImage, material_opacity: f32) -> (u3
     } else {
         texture
             .pixels
-            .iter()
-            .map(|color| (color.a * material_opacity).clamp(0.0, 1.0))
+            .alpha()
+            .into_iter()
+            .map(|alpha| (alpha * material_opacity).clamp(0.0, 1.0))
             .map(|opacity| (opacity * 255.0).round() as u8)
             .collect()
     };
@@ -4631,11 +4632,7 @@ fn build_opacity_mip_chain(texture: &TextureImage, material_opacity: f32) -> (u3
 fn build_mip_chain(texture: &TextureImage) -> (u32, Vec<u8>) {
     let mut width = texture.width.max(1);
     let mut height = texture.height.max(1);
-    let mut level: Vec<[u8; 4]> = texture
-        .pixels
-        .iter()
-        .map(|color| color.to_rgba8())
-        .collect();
+    let mut level = texture.pixels.to_rgba8();
     let mut bytes = Vec::with_capacity(level.len() * 5);
     let mut mip_count = 0;
     loop {

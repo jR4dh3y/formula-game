@@ -404,6 +404,15 @@ impl Color {
         )
     }
 
+    pub fn from_rgba8(pixel: [u8; 4]) -> Self {
+        Self::new(
+            pixel[0] as f32 / 255.0,
+            pixel[1] as f32 / 255.0,
+            pixel[2] as f32 / 255.0,
+            pixel[3] as f32 / 255.0,
+        )
+    }
+
     pub fn to_rgba8(self) -> [u8; 4] {
         let c = self.clamp01();
         [

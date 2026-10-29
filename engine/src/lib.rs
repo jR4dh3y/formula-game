@@ -35,7 +35,9 @@ pub use game::{
     EngineBuildError, EngineError, EngineFrame, EnginePlugin, EngineUpdate, FlyCameraPlugin,
     FrameInput, GameEngine, GameEngineBuilder, InputState, ProjectSettings, TargetPlatform,
 };
-pub use gltf_import::{import_gltf, GltfImportError};
+pub use gltf_import::{
+    import_gltf, import_gltf_scene, GltfImportError, GltfImportOptions, GltfNode, GltfScene,
+};
 pub use gpu::{run_live_game, run_live_renderer, LiveError, LiveOptions};
 pub use graph::{build_baseline_frame_graph, FeatureCategory, GraphIssue, RenderGraph};
 pub use profiler::{required_debug_views, EngineProfiler, FrameBudget, FrameReport, GateFailure};
@@ -46,7 +48,8 @@ pub use runtime::{
 };
 pub use scene::{
     Camera, EnvironmentEncoding, EnvironmentMap, EnvironmentProfile, ExposureProfile, Light,
-    LightKind, Material, MaterialClass, MaterialFlags, Mesh, RenderScene, TextureImage, Vertex,
+    LightKind, Material, MaterialClass, MaterialFlags, Mesh, RenderScene, TextureImage,
+    TexturePixels, Vertex,
 };
 pub use scene_builder::{MaterialId, SceneBuildError, SceneBuilder};
 pub use world::{
