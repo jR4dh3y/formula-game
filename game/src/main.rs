@@ -20,6 +20,7 @@ mod tests;
 mod textures;
 #[cfg(test)]
 mod track_probe;
+mod wheel_dash;
 
 use bevy::{
     app::AppExit,
@@ -27,7 +28,7 @@ use bevy::{
     prelude::*,
     render::view::screenshot::{Screenshot, ScreenshotCaptured},
 };
-use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use bevy_egui::{EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass};
 use options::Options;
 use racecraft_sim::{Race, PHYSICS_RATE};
 use std::process::ExitCode;
@@ -187,6 +188,12 @@ fn build_app(mut options: Options) -> Result<App, String> {
     app.add_plugins(plugins)
         .add_audio_source::<audio::EngineSound>()
         .add_plugins(EguiPlugin::default())
+        // The wheel LCD has its own egui context; the game camera is marked
+        // primary explicitly so the two never trade places.
+        .insert_resource(EguiGlobalSettings {
+            auto_create_primary_context: false,
+            ..default()
+        })
         .add_plugins(graphics::StaticSkyLighting)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, |mut session: ResMut<Session>| {
@@ -198,7 +205,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .insert_resource(options)
         .insert_resource(frontend)
         .init_resource::<Capture>()
-        .add_systems(Startup, (assets::setup, hud::setup, audio::setup))
+        .add_systems(
+            Startup,
+            (assets::setup, hud::setup, audio::setup, wheel_dash::setup),
+        )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .add_systems(FixedUpdate, step_race)
@@ -212,6 +222,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 assets::check_loading,
                 benchmark::advance,
                 assets::sync_cars,
+                wheel_dash::attach,
+                wheel_dash::lights,
                 camera::update,
                 audio::update,
                 driving::racing_line,
@@ -219,6 +231,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 .chain(),
         )
         .add_systems(EguiPrimaryContextPass, (hud::update, menu::ui).chain())
+        .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(Last, capture);
     if profile {
         // F1_PROFILE=1 logs per-pass CPU/GPU render timings every few seconds.

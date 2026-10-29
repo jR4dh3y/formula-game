@@ -43,10 +43,36 @@ Aids and per-car camera positions persist in `$XDG_CONFIG_HOME/f1-racecraft/pref
 
 On Linux with the NVIDIA driver under Wayland, the game presents through XWayland: NVIDIA's native Wayland presentation waits for each frame to finish before returning, which serialized CPU and GPU work (set `F1_WAYLAND=1` to keep native Wayland). Sky lighting is generated once per circuit rather than every frame. Together these took the High preset from 115 to 236 fps uncapped on an RTX 3050 laptop with unchanged output. Vertical sync is on by default; turn it off in Graphics or with `--no-vsync`.
 
-- `--frames N --capture FILE` runs log `Benchmark: … fps` over the frames after a 300-frame warm-up.
+- `--benchmark DIR` runs the comparison workload: two computer-controlled cars
+  already moving, separated on the racing line, for 20 seconds. It checks the
+  complete drive before opening the window and rejects contact or recovery.
+  The measured drive must match that preflight exactly. Loading and warm-up
+  are excluded, and VSync is disabled.
+- Use the same `--benchmark-seed N` (default 24301), `--benchmark-start M`,
+  track, car, camera, resolution and graphics preset for comparisons. Six
+  seeded random sample times cover the run. Their exact states are rendered
+  after timing, so PNG readback does not inflate frame times.
+- Each fresh output directory contains `benchmark.json`, `frames.csv` and six
+  PNGs. The report includes frame-time percentiles, 1% low FPS, workload state
+  hashes and asset fingerprints. Changed asset fingerprints are expected when
+  comparing visual changes; keep them equal when measuring code alone.
+- `--frames N --capture FILE` remains a capture utility. Its old FPS log is
+  diagnostic, not the repeatable moving benchmark.
 - `F1_DETERMINISTIC=1` with a capture run advances exactly 1/60 s per frame and restarts temporal jitter with the race, so captures from different builds can be compared pixel by pixel.
 - `F1_PROFILE=1` logs per-pass CPU and GPU timings; `--features profile` writes a Chrome trace for ui.perfetto.dev.
 - F3 shows frame rate and frame times in game.
+
+```sh
+cargo run --release -p f1-the-game -- --assets ./assets --track spa --car rb6 \
+  --camera chase --size 1920x1080 --graphics high --mute \
+  --benchmark "$HOME/.cache/racecraft-baseline" --benchmark-seed 24301
+```
+
+`tools/verify_benchmark.sh ASSETS NEW_OUTPUT_DIRECTORY` runs two identical
+native Vulkan benchmarks on an isolated Weston display and verifies the
+reports, screenshot files and repeated drive hashes. It requires Weston and
+a Vulkan-capable GPU. Frame times can differ with GPU load and clock speed;
+the repeatability check compares the workload, not a performance threshold.
 
 ## Portable Linux build
 

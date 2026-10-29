@@ -158,6 +158,24 @@ fn visual_ready(
                         rest: *rest,
                         pivot,
                     });
+                    match material_names.get(entity).map(|name| name.0.as_str()) {
+                        Ok("gp21_LCD.003") => {
+                            commands
+                                .entity(entity)
+                                .insert(crate::wheel_dash::WheelPart::Screen(car.0));
+                        }
+                        Ok("RBRWHEEL10") => {
+                            commands
+                                .entity(entity)
+                                .insert(crate::wheel_dash::WheelPart::Mount(car.0));
+                        }
+                        Ok("clearled.003") => {
+                            commands
+                                .entity(entity)
+                                .insert(crate::wheel_dash::WheelPart::Leds(car.0));
+                        }
+                        _ => {}
+                    }
                 }
             }
             body_found |= name.as_str() == "body";

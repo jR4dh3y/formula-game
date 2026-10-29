@@ -1,0 +1,214 @@
+//! Actual menu pointer interaction and native screenshots at the requested size.
+use super::*;
+use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    Arc,
+};
+
+#[test]
+#[ignore = "requires Vulkan display, F1_TEST_ASSETS and a built F1_TEST_GAME_BINARY for the launch case"]
+fn rendered_responsive_settings() {
+    let assets = std::env::var("F1_TEST_ASSETS").unwrap();
+    let size = std::env::var("F1_TEST_SIZE").unwrap_or("1920x1080".into());
+    let options = Options::parse(
+        [
+            "--assets", &assets, "--size", &size, "--frames", "100000", "--mute",
+        ]
+        .into_iter()
+        .map(str::to_owned),
+    )
+    .unwrap();
+    let mut app = crate::build_app(options).unwrap();
+    {
+        let mut session = app.world_mut().resource_mut::<Session>();
+        session.screen = Screen::Main;
+        session.paused = true;
+    }
+    let proof = Proof::default();
+    let done = proof.done.clone();
+    app.insert_resource(proof).add_systems(
+        PreUpdate,
+        drive
+            .after(bevy_egui::EguiPreUpdateSet::ProcessInput)
+            .before(bevy_egui::EguiPreUpdateSet::BeginPass),
+    );
+    assert!(app.run().is_success());
+    assert!(done.load(Ordering::SeqCst));
+}
+
+#[derive(Resource, Default)]
+struct Proof {
+    step: usize,
+    frames: usize,
+    ticks: usize,
+    release: Option<egui::Pos2>,
+    captures: Arc<AtomicUsize>,
+    requested: usize,
+    done: Arc<AtomicBool>,
+    began: Option<std::time::Instant>,
+    initial_time: Option<f64>,
+}
+const TABS: [(&str, Tab); 6] = [
+    ("Race setup", Tab::Race),
+    ("Driving aids", Tab::Aids),
+    ("Cameras & controls", Tab::Controls),
+    ("Graphics", Tab::Graphics),
+    ("HUD & map", Tab::Hud),
+    ("Benchmark", Tab::Benchmark),
+];
+fn snapshot(commands: &mut Commands, proof: &mut Proof, name: &str) {
+    let directory = std::path::PathBuf::from(std::env::var_os("F1_TEST_OUTPUT").unwrap());
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join(format!("{name}.png"));
+    let count = proof.captures.clone();
+    proof.requested += 1;
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(move |event: On<ScreenshotCaptured>| {
+            event
+                .image
+                .clone()
+                .try_into_dynamic()
+                .unwrap()
+                .to_rgb8()
+                .save(&path)
+                .unwrap();
+            count.fetch_add(1, Ordering::SeqCst);
+        });
+}
+fn click(proof: &mut Proof, input: &mut bevy_egui::EguiInput, position: egui::Pos2) {
+    input.0.events.push(egui::Event::PointerMoved(position));
+    input.0.events.push(egui::Event::PointerButton {
+        pos: position,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::default(),
+    });
+    proof.release = Some(position);
+}
+fn drive(
+    mut commands: Commands,
+    mut proof: ResMut<Proof>,
+    mut frontend: ResMut<Frontend>,
+    mut session: ResMut<Session>,
+    mut inputs: Query<&mut bevy_egui::EguiInput>,
+    mut contexts: EguiContexts,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let began = *proof.began.get_or_insert_with(std::time::Instant::now);
+    assert!(
+        began.elapsed().as_secs() < 150,
+        "settings proof stalled at {}",
+        proof.step
+    );
+    if !session.ready {
+        return;
+    }
+    let initial_time = *proof.initial_time.get_or_insert(session.race.time);
+    assert_eq!(
+        session.race.time, initial_time,
+        "settings replaced or advanced the paused race"
+    );
+    proof.frames += 1;
+    let mut input = inputs.single_mut().unwrap();
+    if let Some(position) = proof.release.take() {
+        input.0.events.push(egui::Event::PointerButton {
+            pos: position,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: egui::Modifiers::default(),
+        });
+        return;
+    }
+    proof.ticks += 1;
+    if proof.ticks < 20 || proof.frames < 40 {
+        return;
+    }
+    let rect = contexts.ctx_mut().unwrap().content_rect();
+    for (name, _) in TABS {
+        let Some(widget) = frontend.widgets.get(name) else {
+            return;
+        };
+        assert!(
+            rect.contains_rect(*widget),
+            "tab {name} outside viewport: {widget:?}"
+        );
+    }
+    assert!(
+        rect.contains_rect(frontend.widgets["start"]),
+        "start action outside viewport"
+    );
+    match proof.step {
+        0..=5 => {
+            let (label, tab) = TABS[proof.step];
+            if frontend.tab != tab {
+                click(&mut proof, &mut input, frontend.widgets[label].center());
+                proof.ticks = 0;
+                return;
+            }
+            snapshot(
+                &mut commands,
+                &mut proof,
+                &format!("settings-{}", label.replace(' ', "-")),
+            );
+            proof.step += 1;
+            proof.ticks = 0;
+        }
+        6 => {
+            if std::env::var_os("F1_TEST_BENCHMARK_LAUNCH").is_some() {
+                let button = frontend.widgets["benchmark-run"];
+                assert!(rect.contains_rect(button));
+                click(&mut proof, &mut input, button.center());
+                proof.step = 7;
+            } else {
+                proof.step = 8;
+            }
+            proof.ticks = 0;
+        }
+        7 => {
+            if frontend.benchmark.child.is_some() {
+                return;
+            }
+            let output = frontend
+                .benchmark
+                .output
+                .as_ref()
+                .expect("benchmark button did not launch process");
+            assert!(
+                output.join("benchmark.json").is_file(),
+                "benchmark failed: {:?}",
+                frontend.benchmark.message
+            );
+            assert_eq!(
+                frontend.benchmark.message.as_deref(),
+                Some("Benchmark complete. Frame times and six screenshots are saved below.")
+            );
+            snapshot(&mut commands, &mut proof, "benchmark-complete");
+            proof.step = 8;
+            proof.ticks = 0;
+        }
+        8 => {
+            session.screen = Screen::Paused;
+            frontend.race_started = true;
+            snapshot(&mut commands, &mut proof, "paused-settings");
+            proof.step = 9;
+            proof.ticks = 0;
+        }
+        9 => {
+            session.screen = Screen::CameraEditor;
+            proof.step = 10;
+            proof.ticks = 0;
+        }
+        10 => {
+            snapshot(&mut commands, &mut proof, "camera-editor");
+            proof.step = 11;
+            proof.ticks = 0;
+        }
+        _ if proof.captures.load(Ordering::SeqCst) == proof.requested => {
+            proof.done.store(true, Ordering::SeqCst);
+            exit.write(AppExit::Success);
+        }
+        _ => {}
+    }
+}

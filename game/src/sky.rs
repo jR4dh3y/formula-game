@@ -43,6 +43,7 @@ pub fn setup(commands: &mut Commands, media: &mut Assets<ScatteringMedium>, sun:
     // come from the graphics preset (`graphics::apply`).
     commands.spawn((
         Camera3d::default(),
+        bevy_egui::PrimaryEguiContext,
         Msaa::Off,
         ShadowFilteringMethod::Gaussian,
         // TAA's default negative bias brings back the fine texture noise we are filtering.

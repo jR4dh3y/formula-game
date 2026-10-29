@@ -654,12 +654,16 @@ fn menu_probe(
 fn rendered_game_flows() {
     let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS to generated assets");
     let size = std::env::var("F1_TEST_SIZE").unwrap_or_else(|_| "1280x720".into());
+    // F1_TEST_CAR=rb22 runs the same flow with the modern car's live wheel LCD.
+    let car = std::env::var("F1_TEST_CAR").unwrap_or_else(|_| "rb6".into());
     let options = Options::parse(
         [
             "--assets",
             &root,
             "--size",
             &size,
+            "--car",
+            &car,
             "--auto-gears",
             "--quick-race",
             // Injected controls must keep running when the compositor has no seat focus.
@@ -777,7 +781,12 @@ fn probe_assertions(
                 surfaces.iter().count() > 40,
                 "car material calibration did not run"
             );
-            assert_eq!(session.race.entrants[session.player].car.spec.name, "RB6");
+            let car = std::env::var("F1_TEST_CAR").unwrap_or_else(|_| "rb6".into());
+            assert!(session.race.entrants[session.player]
+                .car
+                .spec
+                .name
+                .eq_ignore_ascii_case(&car));
             let mipped = images
                 .iter()
                 .filter(|(_, image)| image.texture_descriptor.mip_level_count > 1)

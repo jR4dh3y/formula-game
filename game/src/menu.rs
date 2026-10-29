@@ -1,6 +1,10 @@
 //! Race setup and pause menus. Racing keeps controls on keyboard/gamepad.
 //! Setup stays editable; only Start replaces a race.
 
+mod benchmark;
+#[cfg(test)]
+mod proof;
+
 use crate::{
     assets,
     camera::{ChaseCamera, Mode},
@@ -34,6 +38,7 @@ pub(crate) enum Tab {
     Controls,
     Graphics,
     Hud,
+    Benchmark,
 }
 
 pub struct Circuit {
@@ -141,6 +146,7 @@ pub struct Frontend {
     pub vsync: bool,
     pub display: hud::Settings,
     pub views: std::collections::BTreeMap<String, crate::camera::Tuning>,
+    benchmark: benchmark::Benchmark,
     store: crate::preferences::Store,
     pub pending: bool,
     pub error: Option<String>,
@@ -166,6 +172,7 @@ impl Frontend {
             display: prefs.display,
             views: prefs.views,
             store,
+            benchmark: default(),
             pending: false,
             error: None,
             race_started: options.quick_race || options.frames.is_some(),
@@ -331,6 +338,7 @@ pub fn ui(
     mut styled: Local<bool>,
     mut warmed: Local<u8>,
 ) -> Result {
+    frontend.benchmark.poll();
     let context = contexts.ctx_mut()?;
     if !*styled {
         let mut style = (*context.style_of(egui::Theme::Dark)).clone();
@@ -422,128 +430,99 @@ pub fn ui(
             });
         return Ok(());
     }
+    let size = context.content_rect().size();
+    let margin = (size.x * 0.025).clamp(12., 32.);
     egui::CentralPanel::default()
-        .frame(
-            egui::Frame::new()
-                .fill(BACKDROP)
-                .inner_margin(28),
-        )
+        .frame(egui::Frame::new().fill(BACKDROP).inner_margin(margin as i8))
         .show(&mut viewport, |ui| {
-            ui.horizontal(|ui| {
-                let (stripe, _) =
-                    ui.allocate_exact_size(egui::vec2(5., 38.), egui::Sense::hover());
-                ui.painter().rect_filled(stripe, 2., RED);
-                ui.label(
-                    RichText::new(if session.screen == Screen::Paused {
-                        "RACE PAUSED"
-                    } else {
-                        "F1 RACECRAFT"
-                    })
-                    .size(36.)
-                    .strong(),
-                );
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if frontend.race_started && session.ready && ui.button("Resume race").clicked()
-                    {
-                        resume(&mut session);
-                    }
-                    if ui.button("Quit game").clicked() {
-                        exit.write(AppExit::Success);
-                    }
-                });
-            });
-            ui.label(RichText::new("Choose your circuit, car and driving aids.").color(DIM));
-            ui.add_space(10.);
-            housing().inner_margin(6).corner_radius(10).show(ui, |ui| ui.horizontal_wrapped(|ui| {
-                for (tab, label) in [
-                    (Tab::Race, "Race setup"),
-                    (Tab::Aids, "Driving aids"),
-                    (Tab::Controls, "Cameras & controls"),
-                    (Tab::Graphics, "Graphics"),
-                    (Tab::Hud, "HUD & map"),
-                ] {
-                    let selected = frontend.tab == tab;
-                    let _response = ui.add(
-                        egui::Button::new(RichText::new(label.to_uppercase()).strong().color(
-                            if selected { Color32::WHITE } else { DIM },
-                        ))
-                        .fill(if selected { RED } else { WELL })
-                        .min_size(egui::vec2(0., 34.)),
-                    );
-                    if _response.clicked() {
-                        frontend.tab = tab;
-                    }
-                    #[cfg(test)]
-                    frontend.widgets.insert(label, _response.rect);
-                }
-            }));
-            ui.add_space(10.);
-            if let Some(error) = &frontend.error {
-                ui.colored_label(Color32::from_rgb(255, 150, 150), error);
-            }
-            let footer_height = 96.;
-            let body_height = (ui.available_height() - footer_height).max(100.);
-            housing().show(ui, |ui| {
-            ui.set_min_size(egui::vec2(ui.available_width(), body_height - 36.));
-            egui::ScrollArea::vertical()
-                .max_height(body_height - 36.)
-                .auto_shrink([false, true])
-                .show(ui, |ui| match frontend.tab {
-                    Tab::Race => race_setup(ui, &mut frontend),
-                    Tab::Aids => {
-                        let _presets = aids_panel(ui, &mut frontend);
-                        #[cfg(test)]
-                        for (name, rect) in ["beginner", "balanced", "unassisted"]
-                            .into_iter()
-                            .zip(_presets)
-                        {
-                            frontend.widgets.insert(name, rect);
+            let width = ui.available_width().min(1320.);
+            ui.vertical_centered(|ui| {
+                ui.allocate_ui_with_layout(
+                    egui::vec2(width, ui.available_height()),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(RichText::new(if session.screen == Screen::Paused {
+                                "RACE PAUSED"
+                            } else { "F1 RACECRAFT" })
+                                .size(if size.x < 700. { 28. } else { 36. }).strong());
+                            if ui.button("Quit game").clicked() { exit.write(AppExit::Success); }
+                        });
+                        ui.label(RichText::new("Choose your circuit, car and driving aids.").color(DIM));
+                        ui.add_space(12.);
+                        housing().inner_margin(6).corner_radius(10).show(ui, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                for (tab, label) in [
+                                    (Tab::Race, "Race setup"),
+                                    (Tab::Aids, "Driving aids"),
+                                    (Tab::Controls, "Cameras & controls"),
+                                    (Tab::Graphics, "Graphics"),
+                                    (Tab::Hud, "HUD & map"),
+                                    (Tab::Benchmark, "Benchmark"),
+                                ] {
+                                    let selected = frontend.tab == tab;
+                                    let response = ui.add(egui::Button::new(
+                                        RichText::new(label.to_uppercase()).strong()
+                                            .color(if selected { Color32::WHITE } else { DIM }))
+                                        .fill(if selected { RED } else { WELL })
+                                        .min_size(egui::vec2(0., 34.)));
+                                    if response.clicked() { frontend.tab = tab; }
+                                    #[cfg(test)]
+                                    frontend.widgets.insert(label, response.rect);
+                                }
+                            });
+                        });
+                        ui.add_space(12.);
+                        if let Some(error) = &frontend.error {
+                            ui.colored_label(Color32::from_rgb(255, 150, 150), error);
                         }
-                    }
-                    Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
-                    Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
-                    Tab::Hud => display_panel(ui, &mut frontend),
-                });
-            });
-            ui.add_space(14.);
-            ui.horizontal(|ui| {
-                if session.screen == Screen::Paused && ui.add(
-                    egui::Button::new(RichText::new("Resume race").strong()).fill(RED).min_size(egui::vec2(180., 44.))
-                ).clicked() { resume(&mut session); }
-                let available =
-                    frontend.catalog.circuits.iter().any(|track| {
-                        track.id == frontend.draft.track && track.unavailable.is_none()
-                    }) && frontend
-                        .catalog
-                        .cars
-                        .iter()
-                        .any(|car| car.id == frontend.draft.car);
-                let start = ui.add_enabled(
-                    available && !frontend.pending,
-                    egui::Button::new(
-                        RichText::new(if frontend.race_started {
-                            "Start new race"
-                        } else {
-                            "Start race"
-                        })
-                        .strong(),
-                    )
-                    .fill(if frontend.race_started { HOUSING } else { RED })
-                    .stroke(egui::Stroke::new(1., if frontend.race_started { HOUSING_EDGE } else { RED }))
-                    .min_size(egui::vec2(220., 44.)),
-                );
-                #[cfg(test)]
-                frontend.widgets.insert("start", start.rect);
-                if start.clicked() {
-                    frontend.pending = true;
-                }
-                ui.label(
-                    RichText::new(if session.screen == Screen::Paused {
-                        "A new race replaces this session. Driving aids apply immediately."
-                    } else {
-                        "Beginner aids include corner braking, steering guidance and automatic gears."
-                    })
-                    .color(DIM),
+                        let footer_height = if size.x < 800. { 132. } else { 96. };
+                        let body_height = (ui.available_height() - footer_height).max(48.);
+                        housing().show(ui, |ui| {
+                            egui::ScrollArea::vertical()
+                                .max_height((body_height - 36.).max(12.))
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| match frontend.tab {
+                                    Tab::Race => race_setup(ui, &mut frontend),
+                                    Tab::Aids => {
+                                        let presets = aids_panel(ui, &mut frontend);
+                                        #[cfg(test)]
+                                        for (name, rect) in ["beginner", "balanced", "unassisted"].into_iter().zip(presets) {
+                                            frontend.widgets.insert(name, rect);
+                                        }
+                                        #[cfg(not(test))]
+                                        let _ = presets;
+                                    }
+                                    Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
+                                    Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
+                                    Tab::Hud => display_panel(ui, &mut frontend),
+                                    Tab::Benchmark => benchmark::panel(ui, &mut frontend, size * context.pixels_per_point()),
+                                });
+                        });
+                        ui.add_space(14.);
+                        ui.horizontal_wrapped(|ui| {
+                            if frontend.race_started && session.ready && ui.add(
+                                egui::Button::new(RichText::new("Resume race").strong()).fill(RED)
+                                    .min_size(egui::vec2(160., 44.))).clicked() {
+                                resume(&mut session);
+                            }
+                            let available = frontend.catalog.circuits.iter().any(|track| {
+                                track.id == frontend.draft.track && track.unavailable.is_none()
+                            }) && frontend.catalog.cars.iter().any(|car| car.id == frontend.draft.car);
+                            let start = ui.add_enabled(available && !frontend.pending,
+                                egui::Button::new(RichText::new(if frontend.race_started {
+                                    "Start new race"
+                                } else { "Start race" }).strong())
+                                    .fill(if frontend.race_started { HOUSING } else { RED })
+                                    .min_size(egui::vec2(200., 44.)));
+                            #[cfg(test)]
+                            frontend.widgets.insert("start", start.rect);
+                            if start.clicked() { frontend.pending = true; }
+                        });
+                        ui.label(RichText::new(if session.screen == Screen::Paused {
+                            "A new race replaces this session. Driving aids apply immediately."
+                        } else { "Beginner aids include corner braking, steering guidance and automatic gears." }).color(DIM));
+                    },
                 );
             });
         });
@@ -646,8 +625,13 @@ fn preview(ui: &mut egui::Ui, catalog: &Catalog, draft: &Options) {
         ))
         .color(DIM),
     );
-    let (rect, _) =
-        ui.allocate_exact_size(egui::vec2(ui.available_width(), 240.), egui::Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(
+            ui.available_width(),
+            (ui.available_width() * 0.5).clamp(160., 340.),
+        ),
+        egui::Sense::hover(),
+    );
     ui.painter().rect_filled(rect, 6., WELL);
     ui.painter().rect_stroke(
         rect,
@@ -702,7 +686,7 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
     ui.label("Hold the accelerator; guidance helps steer and brake for corners. Manual steering overrides it.");
     let aids = &mut frontend.aids;
     let presets = ui
-        .horizontal(|ui| {
+        .horizontal_wrapped(|ui| {
             let beginner = ui.button("Beginner");
             if beginner.clicked() {
                 frontend.corner_braking = 1.;
@@ -749,7 +733,11 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
         ui.checkbox(&mut frontend.show_racing_line, "Racing line");
     });
     ui.add_space(8.);
-    ui.columns(2, |columns| {
+    let count = if ui.available_width() >= 760. { 2 } else { 1 };
+    ui.columns(count, |columns| {
+        for column in columns.iter_mut() {
+            column.spacing_mut().slider_width = (column.available_width() - 190.).clamp(80., 340.);
+        }
         section(&mut columns[0], "Guidance");
         columns[0].add(
             egui::Slider::new(&mut frontend.corner_braking, 0.0..=1.0)
@@ -761,7 +749,7 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                 .size(15.)
                 .color(DIM),
         );
-        section(&mut columns[1], "Car control");
+        section(&mut columns[count - 1], "Car control");
         for (value, label, help) in [
             (
                 &mut aids.steering,
@@ -787,7 +775,7 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
             let ui = if label == "Steering assistance" {
                 &mut columns[0]
             } else {
-                &mut columns[1]
+                &mut columns[count - 1]
             };
             ui.add(
                 egui::Slider::new(value, 0.0..=1.0)
@@ -806,49 +794,57 @@ fn camera_editor(viewport: &egui::Ui, session: &mut Session, car: &str) {
         .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-18., 0.))
         .show(viewport, |ui| {
             housing().fill(HOUSING.gamma_multiply(0.96)).show(ui, |ui| {
-                ui.set_width(330.);
-                section(ui, "Camera position");
-                ui.label(RichText::new("Live preview / saved for this car").color(DIM));
-                ui.horizontal(|ui| {
-                    for mode in Mode::ALL {
+                ui.set_width((viewport.max_rect().width() - 76.).clamp(180., 330.));
+                egui::ScrollArea::vertical()
+                    .max_height((viewport.max_rect().height() - 80.).max(100.))
+                    .show(ui, |ui| {
+                        section(ui, "Camera position");
+                        ui.label(RichText::new("Live preview / saved for this car").color(DIM));
+                        ui.horizontal(|ui| {
+                            for mode in Mode::ALL {
+                                if ui
+                                    .selectable_label(session.camera.mode == mode, mode.label())
+                                    .clicked()
+                                {
+                                    session.camera.select(mode);
+                                }
+                            }
+                        });
+                        let mut tuning = session.camera.tuning.clone();
+                        let view = tuning.view_mut(session.camera.mode);
+                        ui.add(egui::Slider::new(&mut view.height, 0.65..=4.).text("Height"));
+                        let range = if session.camera.mode == Mode::Chase {
+                            -10.0..=-3.5
+                        } else {
+                            -1.5..=0.7
+                        };
+                        ui.add(egui::Slider::new(&mut view.fore_aft, range).text("Forward / back"));
+                        ui.add(egui::Slider::new(&mut view.pitch, -10.0..=20.).text("Look down"));
+                        ui.add(egui::Slider::new(&mut view.fov, 40.0..=95.).text("Field of view"));
+                        ui.separator();
+                        ui.add(egui::Slider::new(&mut tuning.shake, 0.0..=1.).text("Vibration"));
+                        ui.add(
+                            egui::Slider::new(&mut tuning.horizon, 0.0..=1.).text("Stable horizon"),
+                        );
+                        if ui.button("Reset this view").clicked() {
+                            *tuning.view_mut(session.camera.mode) =
+                                crate::camera::Tuning::for_car(car).view(session.camera.mode);
+                        }
+                        session.camera.configure(tuning);
+                        ui.separator();
                         if ui
-                            .selectable_label(session.camera.mode == mode, mode.label())
+                            .add(
+                                egui::Button::new(
+                                    RichText::new("Done / resume  F4 or Esc").strong(),
+                                )
+                                .fill(RED)
+                                .min_size(egui::vec2(ui.available_width(), 36.)),
+                            )
                             .clicked()
                         {
-                            session.camera.select(mode);
+                            resume(session);
                         }
-                    }
-                });
-                let mut tuning = session.camera.tuning.clone();
-                let view = tuning.view_mut(session.camera.mode);
-                ui.add(egui::Slider::new(&mut view.height, 0.65..=4.).text("Height"));
-                let range = if session.camera.mode == Mode::Chase {
-                    -10.0..=-3.5
-                } else {
-                    -1.5..=0.7
-                };
-                ui.add(egui::Slider::new(&mut view.fore_aft, range).text("Forward / back"));
-                ui.add(egui::Slider::new(&mut view.pitch, -10.0..=20.).text("Look down"));
-                ui.add(egui::Slider::new(&mut view.fov, 40.0..=95.).text("Field of view"));
-                ui.separator();
-                ui.add(egui::Slider::new(&mut tuning.shake, 0.0..=1.).text("Vibration"));
-                ui.add(egui::Slider::new(&mut tuning.horizon, 0.0..=1.).text("Stable horizon"));
-                if ui.button("Reset this view").clicked() {
-                    *tuning.view_mut(session.camera.mode) =
-                        crate::camera::Tuning::for_car(car).view(session.camera.mode);
-                }
-                session.camera.configure(tuning);
-                ui.separator();
-                if ui
-                    .add(
-                        egui::Button::new(RichText::new("Done / resume  F4 or Esc").strong())
-                            .fill(RED)
-                            .min_size(egui::vec2(ui.available_width(), 36.)),
-                    )
-                    .clicked()
-                {
-                    resume(session);
-                }
+                    });
             });
         });
 }
@@ -914,7 +910,7 @@ fn display_panel(ui: &mut egui::Ui, frontend: &mut Frontend) {
         (
             hud::Layout::Gauges,
                 "Analog telemetry",
-                "Separate RPM, speed and pedal needle gauges with metal bezels and a G-force instrument.",
+                "A rev counter with speed, gear and pedal arcs, plus a twin-needle tyre instrument.",
             "hud-gauges",
         ),
     ] {
@@ -963,9 +959,11 @@ fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session)
         session.paused = true;
     }
     ui.separator();
+    let cell_width = ((ui.available_width() - 32.) / 3.).max(50.);
     egui::Grid::new("controls-grid")
         .num_columns(3)
-        .spacing([28., 12.])
+        .spacing([16., 12.])
+        .max_col_width(cell_width)
         .show(ui, |ui| {
             for (index, row) in [
                 ["Action", "Keyboard", "Gamepad"],

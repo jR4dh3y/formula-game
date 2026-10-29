@@ -1,6 +1,7 @@
 //! Race HUD drawn through egui in Bevy.
 
 mod instruments;
+pub mod wheel;
 
 use crate::canvas::{rgba, Align, Finish, Hud};
 use crate::Session;
@@ -160,6 +161,36 @@ fn readout(
     hud.text_mid(&style.regular, height * 1.3, at, align, color, text);
 }
 
+/// Titillium Web for every egui context: the screen HUD and the wheel LCD.
+pub fn fonts() -> egui::FontDefinitions {
+    let mut fonts = egui::FontDefinitions::empty();
+    for (name, data) in [
+        (
+            "regular",
+            include_bytes!("../fonts/TitilliumWeb-SemiBold.ttf").as_slice(),
+        ),
+        (
+            "bold",
+            include_bytes!("../fonts/TitilliumWeb-Bold.ttf").as_slice(),
+        ),
+    ] {
+        fonts
+            .font_data
+            .insert(name.into(), egui::FontData::from_static(data).into());
+        fonts
+            .families
+            .insert(FontFamily::Name(name.into()), vec![name.into()]);
+    }
+    // egui's defaults can still refer to these two built-in family names.
+    fonts
+        .families
+        .insert(FontFamily::Proportional, vec!["regular".into()]);
+    fonts
+        .families
+        .insert(FontFamily::Monospace, vec!["regular".into()]);
+    fonts
+}
+
 pub fn setup(mut commands: Commands) {
     commands.insert_resource(HudStyle {
         regular: FontFamily::Name("regular".into()),
@@ -178,32 +209,7 @@ pub fn update(
 ) -> Result {
     let context = contexts.ctx_mut()?;
     if !*initialized {
-        let mut fonts = egui::FontDefinitions::empty();
-        for (name, data) in [
-            (
-                "regular",
-                include_bytes!("../fonts/TitilliumWeb-SemiBold.ttf").as_slice(),
-            ),
-            (
-                "bold",
-                include_bytes!("../fonts/TitilliumWeb-Bold.ttf").as_slice(),
-            ),
-        ] {
-            fonts
-                .font_data
-                .insert(name.into(), egui::FontData::from_static(data).into());
-            fonts
-                .families
-                .insert(FontFamily::Name(name.into()), vec![name.into()]);
-        }
-        // egui's defaults can still refer to these two built-in family names.
-        fonts
-            .families
-            .insert(FontFamily::Proportional, vec!["regular".into()]);
-        fonts
-            .families
-            .insert(FontFamily::Monospace, vec!["regular".into()]);
-        context.set_fonts(fonts);
+        context.set_fonts(fonts());
         *initialized = true;
         return Ok(());
     }
