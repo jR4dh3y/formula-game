@@ -50,11 +50,12 @@ struct Proof {
     began: Option<std::time::Instant>,
     initial_time: Option<f64>,
 }
-const TABS: [(&str, Tab); 6] = [
+const TABS: [(&str, Tab); 7] = [
     ("Race setup", Tab::Race),
     ("Driving aids", Tab::Aids),
     ("Cameras & controls", Tab::Controls),
     ("Graphics", Tab::Graphics),
+    ("Audio", Tab::Audio),
     ("HUD & map", Tab::Hud),
     ("Benchmark", Tab::Benchmark),
 ];
@@ -145,10 +146,20 @@ fn drive(
         "settings body overflows viewport"
     );
     match proof.step {
-        0..=5 => {
+        step if step < TABS.len() => {
             let (label, tab) = TABS[proof.step];
             if frontend.tab != tab {
                 click(&mut proof, &mut input, frontend.widgets[label].center());
+                proof.ticks = 0;
+                return;
+            }
+            if tab == Tab::Audio
+                && !proof.scrolled
+                && frontend.audio.engine != crate::audio::EngineChoice::V12
+            {
+                let button = frontend.widgets["3.0 V12"];
+                assert!(rect.contains_rect(button));
+                click(&mut proof, &mut input, button.center());
                 proof.ticks = 0;
                 return;
             }
@@ -175,7 +186,7 @@ fn drive(
             }
             proof.ticks = 0;
         }
-        6 => {
+        step if step == TABS.len() => {
             if proof.ticks == 20 {
                 input.0.events.push(egui::Event::PointerMoved(
                     frontend.widgets["settings-body"].center(),
@@ -195,13 +206,13 @@ fn drive(
                 let button = frontend.widgets["benchmark-run"];
                 assert!(rect.contains_rect(button));
                 click(&mut proof, &mut input, button.center());
-                proof.step = 7;
+                proof.step = TABS.len() + 1;
             } else {
-                proof.step = 8;
+                proof.step = TABS.len() + 2;
             }
             proof.ticks = 0;
         }
-        7 => {
+        step if step == TABS.len() + 1 => {
             if frontend.benchmark.child.is_some() {
                 if proof.ticks == 40 {
                     snapshot(&mut commands, &mut proof, "benchmark-running");
@@ -223,24 +234,24 @@ fn drive(
                 Some("Benchmark complete. Frame times and six screenshots are saved below.")
             );
             snapshot(&mut commands, &mut proof, "benchmark-complete");
-            proof.step = 8;
+            proof.step = TABS.len() + 2;
             proof.ticks = 0;
         }
-        8 => {
+        step if step == TABS.len() + 2 => {
             session.screen = Screen::Paused;
             frontend.race_started = true;
             snapshot(&mut commands, &mut proof, "paused-settings");
-            proof.step = 9;
+            proof.step = TABS.len() + 3;
             proof.ticks = 0;
         }
-        9 => {
+        step if step == TABS.len() + 3 => {
             session.screen = Screen::CameraEditor;
-            proof.step = 10;
+            proof.step = TABS.len() + 4;
             proof.ticks = 0;
         }
-        10 => {
+        step if step == TABS.len() + 4 => {
             snapshot(&mut commands, &mut proof, "camera-editor");
-            proof.step = 11;
+            proof.step = TABS.len() + 5;
             proof.ticks = 0;
         }
         _ if proof.captures.load(Ordering::SeqCst) == proof.requested => {

@@ -186,7 +186,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         app.insert_resource(run);
     }
     app.add_plugins(plugins)
-        .add_audio_source::<audio::EngineSound>()
+        .add_audio_source::<audio::Soundscape>()
         .add_plugins(EguiPlugin::default())
         // The wheel LCD has its own egui context; the game camera is marked
         // primary explicitly so the two never trade places.

@@ -20,6 +20,8 @@ pub struct Preferences {
     pub vsync: bool,
     #[serde(default)]
     pub display: crate::hud::Settings,
+    #[serde(default)]
+    pub audio: crate::audio::Settings,
 }
 
 fn vsync_default() -> bool {
@@ -39,6 +41,7 @@ impl Preferences {
             graphics: options.graphics,
             vsync: options.vsync,
             display: crate::hud::Settings::default(),
+            audio: crate::audio::Settings::default(),
         }
     }
     pub fn sanitize(&mut self) {
@@ -63,6 +66,7 @@ impl Preferences {
         for tuning in self.views.values_mut() {
             tuning.sanitize();
         }
+        self.audio.sanitize();
     }
 }
 
@@ -144,6 +148,8 @@ mod tests {
         prefs.corner_braking = 0.35;
         prefs.aids.automatic_gears = false;
         prefs.views.get_mut("rb22").unwrap().cockpit.height = 1.12;
+        prefs.audio.engine = crate::audio::EngineChoice::V12;
+        prefs.audio.opponents = 0.25;
         prefs.display = crate::hud::Settings {
             layout: crate::hud::Layout::Gauges,
             map: crate::hud::MapMode::Nearby,

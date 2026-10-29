@@ -124,11 +124,19 @@ The minimap setting is independent: **Full circuit** shows the whole field; **Ne
 
 ## Engine sound
 
-At the user's request, the player engine samples the engine audio directly from [their F1 2013 RB9 video reference](https://www.youtube.com/watch?v=P19YW7daEFM&t=286s). Separate acceleration and overrun excerpts retain the recorded engine texture. The samples are pitch-stabilized to a common 18,000 RPM and phase-aligned, then continuously resampled against the simulation's RPM. Throttle blends load, upshifts briefly cut ignition, and downshifts blend a rev-match blip. Pause and mute fade smoothly. Press M to toggle sound, or launch with `--mute`.
+The engine voices are synthesized in real time from cylinder firing pulses, exhaust-pipe resonances and intake noise. The RB6 defaults to a high-revving flat-plane V8; the RB22 uses a V6 turbo hybrid with turbo spool, lift-off chatter and electric whine. The **Audio** settings tab also offers a Ferrari-inspired V12 voice on either car. These are stylized procedural interpretations, not recordings of specific Ferrari engines. Sound overrides map the car's idle-to-redline range onto the chosen voice without changing its physics.
 
-The samples are embedded from `game/audio/reference`, independently of `--assets`. See [source and processing credits](game/audio/reference/CREDITS.md). The earlier F60 harmonic voice and F430 loop pack are retained under their separate [CC BY-SA credits](game/audio/v8/CREDITS_LICENSE.md), but are no longer played.
+The mix adds the three nearest rivals with stereo placement, distance filtering and Doppler shift, plus tyre scrub/lock-up squeal, wind, kerb and off-road rumble, drivetrain whine and collision thumps. Cockpit and external views have different balances. A gentle presence dip, stereo-linked compression and soft limiting control harshness and leave output headroom. Saved sliders control master volume, your engine, other cars and effects. Press M to mute; pause and mute fade smoothly, and `--mute` starts muted.
 
-`python3 tools/audio/prepare_engine.py /path/to/reference-240-305.mp4` rebuilds the sampled loops from the video's 4:00–5:05 section (requires NumPy/SciPy and ffmpeg). Export a 14-second listening sample with `cargo test -p f1-the-game export_engine_demo -- --ignored --nocapture`; it writes `/tmp/f1-smooth-engine.wav`.
+No external audio assets are needed by the active sound system. The previous sampled voices remain under `game/audio/reference` and `game/audio/v8` with their existing credits, but are not played. Their conversion script remains under `tools/audio/`.
+
+Export three 16-second listening demos (idle, throttle blips, acceleration, shifts and braking):
+
+```sh
+cargo test -p f1-the-game export_engine_demos -- --ignored --nocapture
+```
+
+This writes `f1-engine-v6-hybrid.wav`, `f1-engine-v8.wav` and `f1-engine-v12.wav` to the system temporary directory (usually `/tmp`).
 
 Track and car PNG textures receive linear-light mipmaps and 16× anisotropic filtering at load time. Temporal antialiasing stabilizes fine detail; camera changes reset its history to avoid carrying the old view into the new one.
 

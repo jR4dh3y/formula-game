@@ -37,6 +37,7 @@ pub(crate) enum Tab {
     Aids,
     Controls,
     Graphics,
+    Audio,
     Hud,
     Benchmark,
 }
@@ -145,6 +146,9 @@ pub struct Frontend {
     pub graphics: crate::graphics::Quality,
     pub vsync: bool,
     pub display: hud::Settings,
+    pub audio: crate::audio::Settings,
+    /// Session-only; M toggles it in a race.
+    pub muted: bool,
     pub views: std::collections::BTreeMap<String, crate::camera::Tuning>,
     benchmark: benchmark::Benchmark,
     store: crate::preferences::Store,
@@ -170,6 +174,8 @@ impl Frontend {
             graphics: prefs.graphics,
             vsync: prefs.vsync,
             display: prefs.display,
+            audio: prefs.audio,
+            muted: options.mute,
             views: prefs.views,
             store,
             benchmark: default(),
@@ -232,6 +238,7 @@ pub fn apply(
         graphics: frontend.graphics,
         vsync: frontend.vsync,
         display: frontend.display,
+        audio: frontend.audio,
     };
     if let Err(error) = frontend.store.save(prefs) {
         frontend.error = Some(error);
@@ -470,6 +477,7 @@ pub fn ui(
                                     (Tab::Aids, "Driving aids"),
                                     (Tab::Controls, "Cameras & controls"),
                                     (Tab::Graphics, "Graphics"),
+                                    (Tab::Audio, "Audio"),
                                     (Tab::Hud, "HUD & map"),
                                     (Tab::Benchmark, "Benchmark"),
                                 ] {
@@ -508,6 +516,7 @@ pub fn ui(
                                     }
                                     Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
                                     Tab::Graphics => graphics_panel(ui, &mut frontend, &mut session),
+                                    Tab::Audio => audio_panel(ui, &mut frontend),
                                     Tab::Hud => display_panel(ui, &mut frontend),
                                     Tab::Benchmark => benchmark::panel(ui, &mut frontend, size * context.pixels_per_point()),
                                 });
@@ -906,6 +915,45 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
     ui.checkbox(&mut frontend.vsync, "Vertical sync")
         .on_hover_text("Off renders as fast as the GPU allows, with possible tearing.");
     ui.checkbox(&mut session.show_performance, "Show frame rate  F3");
+}
+
+fn audio_panel(ui: &mut egui::Ui, frontend: &mut Frontend) {
+    ui.label("Changes apply immediately and are saved for your next race.");
+    ui.add_space(12.);
+    let column_count = if ui.available_width() >= 720. { 2 } else { 1 };
+    ui.columns(column_count, |columns| {
+        let ui = &mut columns[0];
+        section(ui, "Engine sound");
+        ui.add_space(6.);
+        for choice in crate::audio::EngineChoice::ALL {
+            let _response = ui.radio_value(&mut frontend.audio.engine, choice, choice.label());
+            #[cfg(test)]
+            frontend.widgets.insert(choice.label(), _response.rect);
+            ui.label(RichText::new(choice.description()).size(15.).color(DIM));
+            ui.add_space(8.);
+        }
+        let ui = &mut columns[column_count - 1];
+        if column_count == 1 {
+            ui.add_space(16.);
+        }
+        section(ui, "Mix");
+        ui.add_space(6.);
+        let audio = &mut frontend.audio;
+        for (value, label) in [
+            (&mut audio.master, "Master"),
+            (&mut audio.engine_volume, "Your engine"),
+            (&mut audio.opponents, "Other cars"),
+            (&mut audio.effects, "Tyres, wind & kerbs"),
+        ] {
+            ui.add(
+                egui::Slider::new(value, 0.0..=1.0)
+                    .text(label)
+                    .show_value(false),
+            );
+        }
+        ui.add_space(8.);
+        ui.checkbox(&mut frontend.muted, "Mute  M");
+    });
 }
 
 fn display_panel(ui: &mut egui::Ui, frontend: &mut Frontend) {

@@ -192,6 +192,10 @@ impl ChaseCamera {
             (eye, eye + stabilized * direction * 30.)
         }
     }
+    /// Eye position and look-at point; the audio listener follows them.
+    pub fn listener(&self) -> (DVec3, DVec3) {
+        (self.position, self.target)
+    }
     fn snap(&mut self, pose: &Pose) {
         (self.position, self.target) = self.desired(pose);
     }
