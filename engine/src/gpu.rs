@@ -98,6 +98,8 @@ pub struct LiveOptions {
     pub width: u32,
     pub height: u32,
     pub capture_path: Option<PathBuf>,
+    /// Include the HUD in file captures (useful for menus).
+    pub capture_ui: bool,
     pub exposure_min: Option<f32>,
     pub exposure_max: Option<f32>,
     pub exposure_compensation: Option<f32>,
@@ -120,6 +122,7 @@ impl Default for LiveOptions {
             width: 1280,
             height: 720,
             capture_path: None,
+            capture_ui: false,
             exposure_min: None,
             exposure_max: None,
             exposure_compensation: None,
@@ -812,6 +815,7 @@ struct LiveRendererConfig {
     profile_gpu: bool,
     static_camera: bool,
     shadow_distance: f32,
+    capture_ui: bool,
 }
 
 impl LiveRendererConfig {
@@ -842,6 +846,7 @@ impl LiveRendererConfig {
             profile_gpu: options.profile_gpu,
             static_camera: options.static_camera,
             shadow_distance: options.shadow_distance.max(4.0),
+            capture_ui: options.capture_ui,
         }
     }
 }
@@ -1467,6 +1472,7 @@ impl GpuRenderer {
             profile_gpu,
             static_camera,
             shadow_distance,
+            capture_ui,
         } = renderer_config;
         for mesh in &mut scene.meshes {
             if mesh.cloth.is_some() {
@@ -1979,7 +1985,7 @@ impl GpuRenderer {
             environment_view,
             environment_sampler,
             display_fps: 0.0,
-            show_ui: capture_path.is_none(),
+            show_ui: capture_path.is_none() || capture_ui,
             hud_revision: None,
             hud_pixels: Vec::new(),
             frame_capture: capture_path.map(|path| FrameCapture {

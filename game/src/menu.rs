@@ -323,6 +323,7 @@ pub fn handle_launch(options: &Options) -> Result<bool, String> {
             height: options.height,
             max_frames: options.frames,
             capture_path: options.capture.clone(),
+            capture_ui: true,
             ..LiveOptions::default()
         },
     )
