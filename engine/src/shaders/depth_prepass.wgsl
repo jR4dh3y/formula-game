@@ -12,6 +12,6 @@ struct VertexInput {
 };
 
 @vertex
-fn vs_main(input: VertexInput) -> @builtin(position) vec4<f32> {
+fn vs_main(input: VertexInput) -> @invariant @builtin(position) vec4<f32> {
     return camera.view_projection * vec4<f32>(input.position, 1.0);
 }
