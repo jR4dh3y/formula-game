@@ -331,19 +331,20 @@ fn arc(
 /// One input readout, shared by both layouts so pedals never appear twice.
 fn pedal(hud: &Hud, style: &HudStyle, rect: egui::Rect, label: &str, value: f32, color: Color) {
     let scale = rect.height() / 30.;
-    caption(
-        hud,
-        style,
+    let mid = rect.top() + 8. * scale;
+    hud.text_mid(
+        &style.bold,
         12. * scale,
-        (rect.left(), rect.top()),
+        (rect.left(), mid),
         Align::Left,
+        hud.finish.colors().muted,
         label,
     );
     readout(
         hud,
         style,
         11. * scale,
-        (rect.right(), rect.top() + scale),
+        (rect.right(), mid),
         Align::Right,
         hud.finish.colors().ink,
         &format!("{:.0}%", value * 100.),
@@ -370,6 +371,7 @@ fn pedal(hud: &Hud, style: &HudStyle, rect: egui::Rect, label: &str, value: f32,
 struct Dial {
     center: (f32, f32),
     radius: f32,
+    minimum: f32,
     maximum: f32,
     divisions: usize,
     major_every: usize,
@@ -379,6 +381,25 @@ struct Dial {
 impl Dial {
     fn point(&self, fraction: f32, radius: f32) -> (f32, f32) {
         polar(self.center, self.radius * radius, 135. + fraction * 270.)
+    }
+
+    fn fraction(&self, value: f32) -> f32 {
+        ((value - self.minimum) / (self.maximum - self.minimum)).clamp(0., 1.)
+    }
+
+    /// Coloured scale band just inside the graduations.
+    fn band(&self, hud: &Hud, from: f32, to: f32, color: Color) {
+        let (from, to) = (self.fraction(from), self.fraction(to));
+        if to > from {
+            arc(
+                hud,
+                self.center,
+                self.radius * 0.86,
+                (135. + from * 270., 135. + to * 270.),
+                self.radius * 0.06,
+                color,
+            );
+        }
     }
 
     fn face(&self, hud: &Hud, style: &HudStyle, scale: f32) {
@@ -406,15 +427,13 @@ impl Dial {
         );
         let ink = hud.finish.colors().ink;
         if let Some(redline) = self.redline {
-            arc(
-                hud,
-                c,
-                r * 0.89,
-                (135. + redline * 270., 405.),
-                4. * scale,
-                ACCENT,
-            );
+            let span = self.maximum - self.minimum;
+            self.band(hud, self.minimum + redline * span, self.maximum, ACCENT);
         }
+        // Small meters keep only their graduations; numerals there would be
+        // too small to read at a glance.
+        let numeral = r * 0.14;
+        let numbered = numeral >= 9. * scale;
         for i in 0..=self.divisions {
             let fraction = i as f32 / self.divisions as f32;
             let major = i % self.major_every == 0;
@@ -429,26 +448,32 @@ impl Dial {
                 if major { 1.8 } else { 0.8 } * scale,
                 color,
             );
-            if major {
-                let p = self.point(fraction, 0.64);
-                hud.text(
+            if major && numbered {
+                hud.text_mid(
                     &style.regular,
-                    r * 0.115,
-                    (p.0, p.1 - r * 0.085),
+                    numeral,
+                    self.point(fraction, 0.62),
                     Align::Center,
                     color,
-                    &format!("{:.0}", fraction * self.maximum),
+                    &format!(
+                        "{:.0}",
+                        self.minimum + fraction * (self.maximum - self.minimum)
+                    ),
                 );
             }
         }
     }
 
     fn needle(&self, hud: &Hud, value: f32, color: Color, scale: f32) {
-        let theta = 135. + (value / self.maximum).clamp(0., 1.) * 270.;
+        self.pointer(hud, value, 0.8, color, scale);
+    }
+
+    fn pointer(&self, hud: &Hud, value: f32, length: f32, color: Color, scale: f32) {
+        let theta = 135. + self.fraction(value) * 270.;
         let points = [
             polar(self.center, self.radius * 0.17, theta + 180.),
             polar(self.center, 2. * scale, theta + 90.),
-            polar(self.center, self.radius * 0.8, theta),
+            polar(self.center, self.radius * length, theta),
             polar(self.center, 2. * scale, theta - 90.),
         ];
         hud.painter.add(egui::Shape::convex_polygon(
@@ -466,154 +491,153 @@ impl Dial {
     }
 }
 
-/// Separate instruments, arranged like a race-car binnacle rather than a UI panel.
+/// One rev counter carries the whole drive: speed and gear on its face,
+/// pedal travel in the arc gap below the sweep, shift light in the gear bezel.
 fn gauges(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
-    let car = &session.race.entrants[session.player].car;
-    let ink = hud.finish.colors().ink;
-    let px = hud.width() - 510. * scale;
-    let py = hud.height() - 385. * scale;
-    let at = |x: f32, y: f32| (px + x * scale, py + y * scale);
-    let maximum = (car.spec.engine.rev_limit / 1000.).ceil() as f32;
+    let race = &session.race;
+    let car = &race.entrants[session.player].car;
+    let colors = hud.finish.colors();
+    let r = 165. * scale;
+    let c = (
+        hud.width() - 28. * scale - r,
+        hud.height() - 24. * scale - r,
+    );
+    let at = |x: f32, y: f32| (c.0 + x * r, c.1 + y * r);
+    let engine = &car.spec.engine;
+    let maximum = (engine.rev_limit / 1000.).ceil() as f32;
     let tach = Dial {
-        center: at(336., 194.),
-        radius: 148. * scale,
+        center: c,
+        radius: r,
+        minimum: 0.,
         maximum,
         divisions: (maximum * 2.) as usize,
         major_every: 4,
         redline: Some(0.92),
     };
     tach.face(hud, style, scale);
-    caption(
-        hud,
-        style,
-        13. * scale,
-        at(336., 124.),
-        Align::Center,
-        "RACECRAFT",
-    );
-    caption(
-        hud,
-        style,
+    hud.text_mid(
+        &style.bold,
         11. * scale,
-        at(336., 145.),
+        at(0., -0.44),
         Align::Center,
+        colors.muted,
         "RPM × 1000",
     );
-    // An odometer-like gear window is part of the face, without a coloured border.
-    well(
-        hud,
-        px + 309. * scale,
-        py + 244. * scale,
-        54. * scale,
-        51. * scale,
-        scale,
+    hud.text_mid(
+        &style.bold,
+        0.2 * r,
+        at(0., -0.25),
+        Align::Center,
+        colors.ink,
+        &format!("{:.0}", car.speed() * 3.6),
+    );
+    hud.text_mid(
+        &style.bold,
+        10. * scale,
+        at(0., -0.11),
+        Align::Center,
+        colors.muted,
+        "KM/H",
+    );
+
+    // Pedal travel fills inward from both ends of the gap under the sweep.
+    for (start, direction, value, color, label) in [
+        (
+            130.,
+            -1.,
+            session.guidance.activity.input.brake,
+            ACCENT,
+            "BRK",
+        ),
+        (
+            50.,
+            1.,
+            session.guidance.activity.input.throttle,
+            GREEN,
+            "THR",
+        ),
+    ] {
+        let span = 34.;
+        arc(
+            hud,
+            c,
+            r * 0.86,
+            (start, start + direction * span),
+            r * 0.05,
+            Color::from_rgb(8, 9, 10),
+        );
+        if value > 0.005 {
+            arc(
+                hud,
+                c,
+                r * 0.86,
+                (start, start + direction * span * value as f32),
+                r * 0.05,
+                color,
+            );
+        }
+        hud.text_mid(
+            &style.bold,
+            9. * scale,
+            polar(c, r * 0.74, start + direction * span * 0.5),
+            Align::Center,
+            colors.muted,
+            label,
+        );
+    }
+
+    // Gear window doubles as the shift light.
+    let rpm_fraction = ((car.powertrain.rpm - engine.idle_rpm)
+        / (engine.rev_limit - engine.idle_rpm))
+        .clamp(0.0, 1.0) as f32;
+    let flash = car.powertrain.limiter && (race.time * 12.0).sin() > 0.0;
+    let shift = rpm_fraction >= 0.92 && !car.powertrain.limiter || flash;
+    let (gw, gh) = (0.3 * r, 0.3 * r);
+    let (gx, gy) = (c.0 - gw * 0.5, c.1 + 0.24 * r);
+    if shift {
+        hud.fill_round(
+            gx - 4. * scale,
+            gy - 4. * scale,
+            gw + 8. * scale,
+            gh + 8. * scale,
+            7. * scale,
+            BLUE.gamma_multiply(0.35),
+        );
+    }
+    well(hud, gx, gy, gw, gh, scale);
+    hud.stroke_round(
+        gx,
+        gy,
+        gw,
+        gh,
+        3. * scale,
+        if shift { 2. } else { 1. } * scale,
+        if shift { BLUE } else { WELL_RIM },
     );
     let gear = match car.powertrain.gear {
-        -1 => "R".into(),
-        0 => "N".into(),
+        -1 => "R".to_string(),
+        0 => "N".to_string(),
         n => n.to_string(),
     };
-    hud.text(
-        &style.regular,
-        43. * scale,
-        at(336., 240.),
+    hud.text_mid(
+        &style.bold,
+        0.26 * r,
+        (c.0, gy + gh * 0.5),
         Align::Center,
-        ink,
+        colors.ink,
         &gear,
-    );
-    caption(
-        hud,
-        style,
-        10. * scale,
-        at(336., 301.),
-        Align::Center,
-        "GEAR",
     );
     tach.needle(hud, car.powertrain.rpm as f32 / 1000., ACCENT, scale);
 
-    let speed = Dial {
-        center: at(116., 262.),
-        radius: 98. * scale,
-        maximum: 360.,
-        divisions: 36,
-        major_every: 6,
-        redline: None,
-    };
-    speed.face(hud, style, scale);
-    caption(
-        hud,
-        style,
-        11. * scale,
-        at(116., 218.),
-        Align::Center,
-        "KM/H",
-    );
-    hud.text(
-        &style.regular,
-        25. * scale,
-        at(116., 292.),
-        Align::Center,
-        ink,
-        &format!("{:.0}", car.speed() * 3.6),
-    );
-    speed.needle(
-        hud,
-        car.speed() as f32 * 3.6,
-        Color::from_rgb(237, 226, 193),
-        scale,
-    );
-
-    let gc = at(92., 73.);
-    let gr = 55. * scale;
-    hud.disc(gc, gr, Color::from_gray(103), Color::from_gray(21));
-    hud.circle(gc, gr - 3. * scale, WELL);
-    for ring in 1..=4 {
-        hud.painter.circle_stroke(
-            egui::pos2(gc.0, gc.1),
-            ring as f32 * 11. * scale,
-            egui::Stroke::new(0.7 * scale, Color::from_gray(75)),
-        );
-    }
-    hud.line(at(48., 73.), at(136., 73.), scale, Color::from_gray(84));
-    hud.line(at(92., 29.), at(92., 117.), scale, Color::from_gray(84));
-    let g = Vec2::new(-car.acceleration.y as f32, car.acceleration.x as f32) / 9.81;
-    let point = g.clamp_length_max(4.) * (11. * scale);
-    hud.circle((gc.0 + point.x, gc.1 + point.y), 3.5 * scale, AMBER);
-    caption(
-        hud,
-        style,
-        11. * scale,
-        at(92., 132.),
-        Align::Center,
-        &format!("{:.1} G", g.length()),
-    );
-
-    // Pedals use small moving-coil instruments, not progress bars.
-    for (x, label, value, color) in [
-        (228., "THR", session.guidance.activity.input.throttle, GREEN),
-        (425., "BRK", session.guidance.activity.input.brake, ACCENT),
-    ] {
-        let dial = Dial {
-            center: at(x, 56.),
-            radius: 35. * scale,
-            maximum: 100.,
-            divisions: 10,
-            major_every: 5,
-            redline: None,
-        };
-        dial.face(hud, style, scale);
-        dial.needle(hud, value as f32 * 100., color, scale);
-        caption(hud, style, 10. * scale, at(x, 94.), Align::Center, label);
-    }
     if let Some(refusal) = car.powertrain.last_refusal {
         let text = match refusal {
             ShiftRefusal::OverRev => "OVER-REV",
             ShiftRefusal::TooFast => "TOO FAST",
         };
-        hud.text(
+        hud.text_mid(
             &style.bold,
-            14. * scale,
-            at(336., 353.),
+            16. * scale,
+            (c.0, c.1 - r - 16. * scale),
             Align::Center,
             AMBER,
             text,
@@ -759,134 +783,126 @@ fn tyre_display(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
     }
 }
 
-/// Analog binnacle: tyre temperature dials and small aero meters.
+/// Twin-needle tyre gauge: front and rear share one compound-banded scale,
+/// a top-down car on the face holds the per-axle numbers and lock warnings,
+/// and tow and wake are tell-tale lamps rather than more dials.
 fn tyre_dials(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
     let car = &session.race.entrants[session.player].car;
+    let colors = hud.finish.colors();
     let compound = car.setup.compound;
-    let base = hud.height() - 118. * scale;
-    for (axle, x, label) in [(0, 98., "FRONT"), (1, 254., "REAR")] {
+    let props = compound.properties();
+    let (optimal, window) = (props.optimal_temperature as f32, props.window as f32);
+    let r = 104. * scale;
+    let c = (24. * scale + r, hud.height() - 24. * scale - r);
+    let at = |x: f32, y: f32| (c.0 + x * r, c.1 + y * r);
+    let dial = Dial {
+        center: c,
+        radius: r,
+        minimum: 40.,
+        maximum: 160.,
+        divisions: 12,
+        major_every: 4,
+        redline: None,
+    };
+    dial.face(hud, style, scale);
+    for (low, high, color) in [
+        (40., optimal - window, BLUE),
+        (optimal - window, optimal + window, GREEN),
+        (optimal + window, optimal + 2. * window, TYRE_YELLOW),
+        (optimal + 2. * window, 160., ACCENT),
+    ] {
+        dial.band(hud, low, high, color.gamma_multiply(0.85));
+    }
+    hud.text_mid(
+        &style.bold,
+        11. * scale,
+        at(0., -0.4),
+        Align::Center,
+        colors.muted,
+        &format!("{} °C", compound.label()),
+    );
+
+    // Tell-tales glow with the effect's strength.
+    for (x, label, value, color) in [
+        (-0.24, "TOW", car.aero.slipstream(), BLUE),
+        (0.24, "WAKE", car.aero.dirty_air(), AMBER),
+    ] {
+        let value = value.clamp(0., 1.) as f32;
+        let (w, h) = (0.36 * r, 0.15 * r);
+        let (x, y) = at(x, 0.2);
+        let lit = value > 0.05;
+        hud.fill_round(
+            x - w * 0.5,
+            y - h * 0.5,
+            w,
+            h,
+            3. * scale,
+            if lit {
+                color.gamma_multiply(0.25 + 0.75 * value)
+            } else {
+                Color::from_rgb(20, 22, 23)
+            },
+        );
+        hud.text_mid(
+            &style.bold,
+            10. * scale,
+            (x, y),
+            Align::Center,
+            if lit {
+                Color::from_rgb(8, 9, 10)
+            } else {
+                Color::from_gray(70)
+            },
+            label,
+        );
+    }
+
+    // Car plan view in the gap under the sweep. Temperatures take their
+    // needle's colour as the key; footprints carry the thermal band and an
+    // outline when that wheel locks or slides.
+    let needles = [(colors.ink, 0.8), (AMBER, 0.6)];
+    for (axle, y) in [0.56, 0.76].into_iter().enumerate() {
         let tyre = car.tyres[axle];
         let band = TyreBand::of(tyre.temperature, compound);
-        let color = band.color();
-        let center = (x * scale, base);
-        let dial = Dial {
-            center,
-            radius: 69. * scale,
-            maximum: 180.,
-            divisions: 18,
-            major_every: 6,
-            redline: None,
-        };
-        dial.face(hud, style, scale);
-        // The working window is compound-specific; colour and needle are live.
-        let props = compound.properties();
-        for (low, high, color) in [
-            (0., props.optimal_temperature - props.window, BLUE),
-            (
-                props.optimal_temperature - props.window,
-                props.optimal_temperature + props.window,
-                GREEN,
-            ),
-            (
-                props.optimal_temperature + props.window,
-                props.optimal_temperature + 2. * props.window,
-                TYRE_YELLOW,
-            ),
-            (props.optimal_temperature + 2. * props.window, 180., ACCENT),
-        ] {
-            arc(
-                hud,
-                center,
-                62. * scale,
-                (
-                    135. + low as f32 / 180. * 270.,
-                    135. + high as f32 / 180. * 270.,
-                ),
-                2. * scale,
-                color,
-            );
-        }
-        caption(
-            hud,
-            style,
-            11. * scale,
-            (center.0, base - 27. * scale),
-            Align::Center,
-            label,
+        let (cx, cy) = at(0., y);
+        let size = 13. * scale;
+        hud.text_mid(
+            &style.bold,
+            size,
+            (cx - 0.15 * r, cy),
+            Align::Right,
+            needles[axle].0,
+            &format!("{:.0}°", tyre.temperature),
         );
-        hud.text(
-            &style.regular,
-            16. * scale,
-            (center.0, base + 24. * scale),
-            Align::Center,
-            color,
-            &format!("{:.0}°C", tyre.temperature),
-        );
-        dial.needle(hud, tyre.temperature as f32, color, scale);
-        // Two tyre footprints retain the per-wheel lock and slide indication.
         for side in 0..2 {
             let wheel = &car.wheels[axle * 2 + side];
-            let x = center.0 + (side as f32 * 16. - 13.) * scale;
-            hud.fill_round(
-                x,
-                base + 53. * scale,
-                10. * scale,
-                17. * scale,
-                3. * scale,
-                color,
-            );
+            let x = cx + (side as f32 * 2. - 1.) * 0.075 * r - 4. * scale;
+            let (y, w, h) = (cy - 7. * scale, 8. * scale, 14. * scale);
+            hud.fill_round(x, y, w, h, 2. * scale, band.color());
             if wheel.locked || wheel.sliding > 0.3 {
-                hud.stroke_round(
-                    x,
-                    base + 53. * scale,
-                    10. * scale,
-                    17. * scale,
-                    3. * scale,
-                    2. * scale,
-                    WHITE,
-                );
+                hud.stroke_round(x, y, w, h, 2. * scale, 2. * scale, WHITE);
             }
         }
-        hud.text(
+        hud.text_mid(
             &style.regular,
-            12. * scale,
-            (center.0, base + 74. * scale),
-            Align::Center,
-            hud.finish.colors().ink,
-            &format!("{} / {:.0}% WEAR", band.label(), tyre.wear * 100.),
+            size,
+            (cx + 0.15 * r, cy),
+            Align::Left,
+            colors.muted,
+            &format!("{:.0}%", tyre.wear * 100.),
         );
     }
-    // Setup data is available in the pause menu; only live aero effects remain here.
-    let x = 342. * scale;
-    for (y, value, label, color) in [
-        (base - 39. * scale, car.aero.slipstream(), "TOW", BLUE),
-        (base + 38. * scale, car.aero.dirty_air(), "WAKE", AMBER),
-    ] {
-        let dial = Dial {
-            center: (x, y),
-            radius: 30. * scale,
-            maximum: 100.,
-            divisions: 10,
-            major_every: 5,
-            redline: None,
-        };
-        dial.face(hud, style, scale);
-        dial.needle(hud, value as f32 * 100., color, scale);
-        caption(
+    // Chassis spine joining the axles.
+    hud.line(at(0., 0.5), at(0., 0.82), 2. * scale, Color::from_gray(70));
+    // Rear first so the front needle reads on top.
+    for axle in [1, 0] {
+        let (color, length) = needles[axle];
+        dial.pointer(
             hud,
-            style,
-            10. * scale,
-            (x, y + 32. * scale),
-            Align::Center,
-            label,
+            car.tyres[axle].temperature as f32,
+            length,
+            color,
+            scale,
         );
     }
-    caption(
-        hud,
-        style,
-        11. * scale,
-        (176. * scale, base - 97. * scale),
-        Align::Center,
-        &format!("{}  /  TYRE °C", compound.label()),
-    );
 }

@@ -315,6 +315,36 @@ impl Hud {
         );
     }
 
+    /// Text whose capitals are centred on `position.1`, so words line up with
+    /// segment digits and the middle of their row regardless of font padding.
+    pub fn text_mid(
+        &self,
+        family: &FontFamily,
+        size: f32,
+        position: (f32, f32),
+        align: Align,
+        color: Color32,
+        text: &str,
+    ) {
+        let galley =
+            self.painter
+                .layout_no_wrap(text.to_owned(), FontId::new(size, family.clone()), color);
+        let baseline = galley
+            .rows
+            .first()
+            .and_then(|row| row.glyphs.first().map(|glyph| row.pos.y + glyph.pos.y))
+            .unwrap_or(size);
+        let x = position.0
+            - galley.size().x
+                * match align {
+                    Align::Left => 0.,
+                    Align::Center => 0.5,
+                    Align::Right => 1.,
+                };
+        let top = position.1 - baseline + CAP_HEIGHT * size * 0.5;
+        self.painter.galley(Pos2::new(x, top), galley, color);
+    }
+
     pub fn text_width(&self, family: &FontFamily, size: f32, text: &str) -> f32 {
         self.painter
             .layout_no_wrap(
@@ -326,6 +356,9 @@ impl Hud {
             .x
     }
 }
+
+/// Titillium Web cap height as a fraction of the em.
+const CAP_HEIGHT: f32 = 0.685;
 
 fn segment_mask(ch: char) -> u8 {
     match ch {

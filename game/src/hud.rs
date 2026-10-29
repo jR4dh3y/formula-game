@@ -141,6 +141,7 @@ fn caption(hud: &Hud, style: &HudStyle, size: f32, at: (f32, f32), align: Align,
     );
 }
 
+/// Number centred vertically on `at.1`, so it shares a midline with labels.
 fn readout(
     hud: &Hud,
     style: &HudStyle,
@@ -153,17 +154,10 @@ fn readout(
     // The LCD theme carries every number on screen; words and the analog
     // binnacle stay typographic.
     if matches!(hud.finish, Finish::Digital) && Hud::can_segment(text) {
-        hud.segments(height, at, align, color, text);
+        hud.segments(height, (at.0, at.1 - height * 0.5), align, color, text);
         return;
     }
-    hud.text(
-        &style.regular,
-        height * 1.3,
-        (at.0, at.1 - height * 0.2),
-        align,
-        color,
-        text,
-    );
+    hud.text_mid(&style.regular, height * 1.3, at, align, color, text);
 }
 
 pub fn setup(mut commands: Commands) {
@@ -565,19 +559,20 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
         Finish::Analog => Color::from_black_alpha(alpha),
     };
     hud.fill_rect(tower_x, y, tower_w, 35. * scale, smoke(210));
-    caption(
-        hud,
-        style,
+    let mid = y + 17.5 * scale;
+    hud.text_mid(
+        &style.bold,
         16. * scale,
-        (tower_x + 12. * scale, y + 7. * scale),
+        (tower_x + 12. * scale, mid),
         Align::Left,
+        dim,
         "LAP",
     );
     readout(
         hud,
         style,
         16. * scale,
-        (tower_x + 50. * scale, y + 10. * scale),
+        (tower_x + 50. * scale, mid),
         Align::Left,
         ink,
         &format!("{lap}/{}", race.laps),
@@ -586,7 +581,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
         hud,
         style,
         14. * scale,
-        (tower_x + tower_w - 12. * scale, y + 11. * scale),
+        (tower_x + tower_w - 12. * scale, mid),
         Align::Right,
         dim,
         &format!("P{}", race.position_of(session.player)),
@@ -617,6 +612,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             hud.fill_rect(tower_x, y, 3. * scale, row - scale, accent);
         }
         let mine = inverted;
+        let mid = y + (row - scale) * 0.5;
         let ink = if mine {
             Color::from_rgb(14, 17, 19)
         } else {
@@ -631,7 +627,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             hud,
             style,
             16.0 * scale,
-            (tower_x + 34.0 * scale, y + 7.0 * scale),
+            (tower_x + 34.0 * scale, mid),
             Align::Right,
             if mine { ink } else { dim },
             &(rank + 1).to_string(),
@@ -649,10 +645,10 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             2.0 * scale,
             team,
         );
-        hud.text(
+        hud.text_mid(
             &style.regular,
             20.0 * scale,
-            (tower_x + 54.0 * scale, y + 3.0 * scale),
+            (tower_x + 54.0 * scale, mid),
             Align::Left,
             if mine { ink } else { dim },
             &entrant.name.to_uppercase(),
@@ -681,7 +677,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             hud,
             style,
             15.0 * scale,
-            (tower_x + tower_w - 14.0 * scale, y + 7.0 * scale),
+            (tower_x + tower_w - 14.0 * scale, mid),
             Align::Right,
             dim,
             &gap,
@@ -719,19 +715,20 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
         ),
     ];
     for (label, value, color) in lines {
-        caption(
-            hud,
-            style,
+        let mid = y + 19.0 * scale;
+        hud.text_mid(
+            &style.bold,
             16.0 * scale,
-            (tower_x + 16.0 * scale, y + 6.0 * scale),
+            (tower_x + 16.0 * scale, mid),
             Align::Left,
+            dim,
             label,
         );
         readout(
             hud,
             style,
             18.0 * scale,
-            (tower_x + tower_w - 14.0 * scale, y + 6.0 * scale),
+            (tower_x + tower_w - 14.0 * scale, mid),
             Align::Right,
             color,
             &value,
@@ -807,7 +804,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             hud,
             style,
             26.0 * scale,
-            (width * 0.5, 89.0 * scale),
+            (width * 0.5, 102.0 * scale),
             Align::Center,
             color,
             &text,
@@ -910,18 +907,19 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
                 );
             }
             let color = if mine { ink } else { dim };
-            hud.text(
+            let mid = row_y + 15.0 * scale;
+            hud.text_mid(
                 &style.bold,
                 24.0 * scale,
-                (left + 62.0 * scale, row_y),
+                (left + 62.0 * scale, mid),
                 Align::Right,
                 color,
                 &format!("P{}", rank + 1),
             );
-            hud.text(
+            hud.text_mid(
                 &style.bold,
                 24.0 * scale,
-                (left + 78.0 * scale, row_y),
+                (left + 78.0 * scale, mid),
                 Align::Left,
                 color,
                 &entrant.name.to_uppercase(),
@@ -935,7 +933,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
                 hud,
                 style,
                 20.0 * scale,
-                (left + panel_w - 28.0 * scale, row_y + 6.0 * scale),
+                (left + panel_w - 28.0 * scale, mid),
                 Align::Right,
                 color,
                 &best,
