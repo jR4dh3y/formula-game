@@ -40,6 +40,7 @@ fn rendered_responsive_settings() {
 #[derive(Resource, Default)]
 struct Proof {
     step: usize,
+    scrolled: bool,
     frames: usize,
     ticks: usize,
     release: Option<egui::Pos2>,
@@ -92,7 +93,7 @@ fn drive(
     mut proof: ResMut<Proof>,
     mut frontend: ResMut<Frontend>,
     mut session: ResMut<Session>,
-    mut inputs: Query<&mut bevy_egui::EguiInput>,
+    mut inputs: Query<&mut bevy_egui::EguiInput, With<bevy_egui::PrimaryEguiContext>>,
     mut contexts: EguiContexts,
     mut exit: MessageWriter<AppExit>,
 ) {
@@ -139,6 +140,10 @@ fn drive(
         rect.contains_rect(frontend.widgets["start"]),
         "start action outside viewport"
     );
+    assert!(
+        rect.contains_rect(frontend.widgets["settings-body"]),
+        "settings body overflows viewport"
+    );
     match proof.step {
         0..=5 => {
             let (label, tab) = TABS[proof.step];
@@ -147,15 +152,45 @@ fn drive(
                 proof.ticks = 0;
                 return;
             }
+            let suffix = if proof.scrolled { "bottom" } else { "top" };
             snapshot(
                 &mut commands,
                 &mut proof,
-                &format!("settings-{}", label.replace(' ', "-")),
+                &format!("settings-{}-{suffix}", label.replace(' ', "-")),
             );
-            proof.step += 1;
+            if proof.scrolled {
+                proof.step += 1;
+                proof.scrolled = false;
+            } else {
+                input.0.events.push(egui::Event::PointerMoved(
+                    frontend.widgets["settings-body"].center(),
+                ));
+                input.0.events.push(egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    phase: egui::TouchPhase::Move,
+                    delta: egui::vec2(0., -1800.),
+                    modifiers: egui::Modifiers::default(),
+                });
+                proof.scrolled = true;
+            }
             proof.ticks = 0;
         }
         6 => {
+            if proof.ticks == 20 {
+                input.0.events.push(egui::Event::PointerMoved(
+                    frontend.widgets["settings-body"].center(),
+                ));
+                input.0.events.push(egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    phase: egui::TouchPhase::Move,
+                    delta: egui::vec2(0., 3000.),
+                    modifiers: egui::Modifiers::default(),
+                });
+                return;
+            }
+            if proof.ticks < 40 {
+                return;
+            }
             if std::env::var_os("F1_TEST_BENCHMARK_LAUNCH").is_some() {
                 let button = frontend.widgets["benchmark-run"];
                 assert!(rect.contains_rect(button));
@@ -168,6 +203,9 @@ fn drive(
         }
         7 => {
             if frontend.benchmark.child.is_some() {
+                if proof.ticks == 40 {
+                    snapshot(&mut commands, &mut proof, "benchmark-running");
+                }
                 return;
             }
             let output = frontend

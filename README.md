@@ -62,6 +62,13 @@ On Linux with the NVIDIA driver under Wayland, the game presents through XWaylan
 - `F1_PROFILE=1` logs per-pass CPU and GPU timings; `--features profile` writes a Chrome trace for ui.perfetto.dev.
 - F3 shows frame rate and frame times in game.
 
+The **Benchmark** tab in the main or pause menu launches this same workload in
+a separate window, preserving your current race. It uses the selected circuit,
+car, camera, graphics preset and current window resolution. When it finishes,
+the tab shows average FPS, 1% low FPS, p95 frame time and a selectable output
+folder under `$XDG_CACHE_HOME/f1-racecraft/benchmarks` (or
+`~/.cache/f1-racecraft/benchmarks`). Sound is muted during the test.
+
 ```sh
 cargo run --release -p f1-the-game -- --assets ./assets --track spa --car rb6 \
   --camera chase --size 1920x1080 --graphics high --mute \
@@ -73,6 +80,11 @@ native Vulkan benchmarks on an isolated Weston display and verifies the
 reports, screenshot files and repeated drive hashes. It requires Weston and
 a Vulkan-capable GPU. Frame times can differ with GPU load and clock speed;
 the repeatability check compares the workload, not a performance threshold.
+
+`tools/verify_settings.sh ASSETS NEW_OUTPUT_DIRECTORY` checks all six menu
+tabs, pause and camera-editor layouts at 1920×1080, 958×1078 and 640×600. It
+clicks the Benchmark button on the wide layout, waits for the real child
+process and report, and checks that the original race stays paused and intact.
 
 ## Portable Linux build
 

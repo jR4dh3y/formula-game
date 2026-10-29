@@ -51,7 +51,13 @@ impl Benchmark {
             .join(stamp.to_string());
         std::fs::create_dir_all(&output).map_err(|error| error.to_string())?;
         let log = File::create(output.join("runtime.log")).map_err(|error| error.to_string())?;
-        let mut command = Command::new(std::env::current_exe().map_err(|error| error.to_string())?);
+        #[cfg(not(test))]
+        let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+        #[cfg(test)]
+        let executable = std::env::var_os("F1_TEST_GAME_BINARY")
+            .map(PathBuf::from)
+            .ok_or("F1_TEST_GAME_BINARY is required for a renderer test launch")?;
+        let mut command = Command::new(executable);
         command
             .args(arguments(draft, graphics, size, &output))
             .stdin(Stdio::null())

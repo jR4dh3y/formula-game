@@ -687,7 +687,8 @@ fn rendered_game_flows() {
             .after(bevy::input::InputSystems)
             .before(controls::update),
     )
-    .add_systems(Update, probe_assertions.after(camera::update));
+    .add_systems(Update, probe_assertions.after(camera::update))
+    .add_systems(Last, zz_burst);
     assert!(app.run().is_success());
     assert!(
         completed.load(std::sync::atomic::Ordering::SeqCst),
@@ -874,4 +875,122 @@ fn probe_assertions(
             info!("Render probe screenshot: {}", path.display());
         },
     );
+}
+
+#[test]
+#[ignore = "temporary steering diagnostic"]
+fn zz_steer_trace() {
+    let root = std::env::var("F1_TEST_ASSETS").unwrap();
+    for car in ["rb6", "rb22"] {
+        let options = Options::parse(
+            ["--assets", &root, "--car", car, "--track", "spa"]
+                .into_iter()
+                .map(str::to_owned),
+        )
+        .unwrap();
+        let mut race = assets::load_race(&options).unwrap();
+        let player = options.grid_slot - 1;
+        let mut guidance = driving::Guidance::new(&race, player);
+        let dt = 1. / PHYSICS_RATE;
+        let mut angles = Vec::new();
+        for _ in 0..(PHYSICS_RATE * 60.) as usize {
+            let raw = racecraft_sim::CarInput {
+                throttle: 1.,
+                ..Default::default()
+            };
+            let input = guidance.apply(&race.entrants[player].car, &race.track, raw, 0., dt);
+            race.step(&[input]);
+            let c = &race.entrants[player].car;
+            angles.push((race.time, c.steer_angle, c.speed(), input.steer));
+            if car == "rb22" && race.time > 43.2 && race.time < 43.36 {
+                println!(
+                    "T {:.3} in {:+.2} yawrate {:+.3} s {:.2} lat {:+.2} speed {:.1}",
+                    race.time,
+                    input.steer,
+                    c.yaw_rate,
+                    c.track_position.s,
+                    c.track_position.lateral,
+                    c.speed()
+                );
+            }
+        }
+        if car == "rb22" {
+            let line: Vec<String> = angles
+                .iter()
+                .filter(|a| a.0 > 42.6 && a.0 < 44.0)
+                .step_by(4)
+                .map(|a| format!("{:.2}:{:+.3}/{:+.2}", a.0, a.1.to_degrees(), a.3))
+                .collect();
+            println!("TRACE {}", line.join(" "));
+        }
+        let window = (PHYSICS_RATE * 0.25) as usize;
+        let mut worst = (0.0f64, 0.0, 0.0);
+        let mut per_sec = vec![0.0f64; 61];
+        for i in window..angles.len() - window {
+            let mean = angles[i - window..i + window]
+                .iter()
+                .map(|a| a.1)
+                .sum::<f64>()
+                / (2 * window) as f64;
+            let dev = (angles[i].1 - mean).abs();
+            let sec = angles[i].0 as usize;
+            per_sec[sec] = per_sec[sec].max(dev);
+            if dev > worst.0 {
+                worst = (dev, angles[i].0, angles[i].2);
+            }
+        }
+        println!(
+            "{car}: worst wobble {:.2} deg at t={:.1}s speed {:.0} m/s; per-second deg: {}",
+            worst.0.to_degrees(),
+            worst.1,
+            worst.2,
+            per_sec
+                .iter()
+                .map(|d| format!("{:.1}", d.to_degrees()))
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
+    }
+}
+
+fn zz_burst(
+    mut commands: Commands,
+    probe: Res<RenderProbe>,
+    session: Res<Session>,
+    fixed: Res<Time<Fixed>>,
+) {
+    let Some(start) = std::env::var("F1_TEST_BURST")
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+    else {
+        return;
+    };
+    if !(start..start + 12).contains(&probe.frame) {
+        return;
+    }
+    let pose = session
+        .poses
+        .at(&session.race, session.player, fixed.overstep_fraction_f64());
+    let car = &session.race.entrants[session.player].car;
+    println!(
+        "burst {} steer {:+.4} wheel0 {:.3} speed {:.1}",
+        probe.frame,
+        pose.steer,
+        pose.wheels[0],
+        car.speed()
+    );
+    let path = std::path::PathBuf::from(std::env::var("F1_TEST_OUTPUT").unwrap())
+        .join(format!("burst-{}.png", probe.frame));
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(move |event: On<ScreenshotCaptured>| {
+            event
+                .image
+                .clone()
+                .try_into_dynamic()
+                .unwrap()
+                .to_rgb8()
+                .save(&path)
+                .unwrap();
+        });
 }

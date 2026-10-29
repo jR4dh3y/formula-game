@@ -31,7 +31,7 @@ pub enum Screen {
     CameraEditor,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Tab {
     Race,
     Aids,
@@ -200,7 +200,20 @@ pub fn apply(
     roots: Query<Entity, With<assets::RaceVisualRoot>>,
     mut lights: Query<&mut Transform, With<DirectionalLight>>,
     mut windows: Query<&mut Window>,
+    cameras: Query<(Entity, Option<&bevy::camera::visibility::RenderLayers>), With<Camera3d>>,
 ) {
+    // The benchmark window owns the GPU workload; keep the menu available
+    // without also rendering a second race behind it.
+    let layers = if frontend.benchmark.child.is_some() {
+        bevy::camera::visibility::RenderLayers::none()
+    } else {
+        bevy::camera::visibility::RenderLayers::default()
+    };
+    for (camera, current) in &cameras {
+        if current != Some(&layers) {
+            commands.entity(camera).insert(layers.clone());
+        }
+    }
     // Persist the actual active camera, not the next race's draft selection.
     if frontend.race_started {
         frontend
@@ -478,8 +491,8 @@ pub fn ui(
                         }
                         let footer_height = if size.x < 800. { 132. } else { 96. };
                         let body_height = (ui.available_height() - footer_height).max(48.);
-                        housing().show(ui, |ui| {
-                            egui::ScrollArea::vertical()
+                        let body = housing().show(ui, |ui| {
+                            egui::ScrollArea::vertical().id_salt(frontend.tab)
                                 .max_height((body_height - 36.).max(12.))
                                 .auto_shrink([false, false])
                                 .show(ui, |ui| match frontend.tab {
@@ -499,9 +512,13 @@ pub fn ui(
                                     Tab::Benchmark => benchmark::panel(ui, &mut frontend, size * context.pixels_per_point()),
                                 });
                         });
+                        #[cfg(test)]
+                        frontend.widgets.insert("settings-body", body.response.rect);
+                        #[cfg(not(test))]
+                        let _ = body;
                         ui.add_space(14.);
                         ui.horizontal_wrapped(|ui| {
-                            if frontend.race_started && session.ready && ui.add(
+                            if frontend.race_started && session.ready && ui.add_enabled(frontend.benchmark.child.is_none(),
                                 egui::Button::new(RichText::new("Resume race").strong()).fill(RED)
                                     .min_size(egui::vec2(160., 44.))).clicked() {
                                 resume(&mut session);
@@ -509,7 +526,7 @@ pub fn ui(
                             let available = frontend.catalog.circuits.iter().any(|track| {
                                 track.id == frontend.draft.track && track.unavailable.is_none()
                             }) && frontend.catalog.cars.iter().any(|car| car.id == frontend.draft.car);
-                            let start = ui.add_enabled(available && !frontend.pending,
+                            let start = ui.add_enabled(available && !frontend.pending && frontend.benchmark.child.is_none(),
                                 egui::Button::new(RichText::new(if frontend.race_started {
                                     "Start new race"
                                 } else { "Start race" }).strong())
@@ -552,6 +569,7 @@ fn race_setup(ui: &mut egui::Ui, frontend: &mut Frontend) {
 }
 
 fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
+    ui.spacing_mut().slider_width = (ui.available_width() - 180.).clamp(80., 420.);
     section(ui, "Circuit");
     let selected = catalog
         .circuits
@@ -733,15 +751,15 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
         ui.checkbox(&mut frontend.show_racing_line, "Racing line");
     });
     ui.add_space(8.);
-    let count = if ui.available_width() >= 760. { 2 } else { 1 };
+    let count = if ui.available_width() >= 1000. { 2 } else { 1 };
     ui.columns(count, |columns| {
         for column in columns.iter_mut() {
-            column.spacing_mut().slider_width = (column.available_width() - 190.).clamp(80., 340.);
+            column.spacing_mut().slider_width = (column.available_width() - 100.).clamp(80., 500.);
         }
         section(&mut columns[0], "Guidance");
+        columns[0].label("Corner braking");
         columns[0].add(
             egui::Slider::new(&mut frontend.corner_braking, 0.0..=1.0)
-                .text("Corner braking")
                 .custom_formatter(|value, _| format!("{:.0}%", value * 100.)),
         );
         columns[0].label(
@@ -777,10 +795,10 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
             } else {
                 &mut columns[count - 1]
             };
+            ui.label(label);
             ui.add(
                 egui::Slider::new(value, 0.0..=1.0)
                     .step_by(0.05)
-                    .text(label)
                     .custom_formatter(|value, _| format!("{:.0}%", value * 100.)),
             );
             ui.label(RichText::new(help).size(15.).color(DIM));
@@ -796,7 +814,7 @@ fn camera_editor(viewport: &egui::Ui, session: &mut Session, car: &str) {
             housing().fill(HOUSING.gamma_multiply(0.96)).show(ui, |ui| {
                 ui.set_width((viewport.max_rect().width() - 76.).clamp(180., 330.));
                 egui::ScrollArea::vertical()
-                    .max_height((viewport.max_rect().height() - 80.).max(100.))
+                    .max_height((viewport.max_rect().height() - 150.).max(80.))
                     .show(ui, |ui| {
                         section(ui, "Camera position");
                         ui.label(RichText::new("Live preview / saved for this car").color(DIM));
@@ -831,20 +849,18 @@ fn camera_editor(viewport: &egui::Ui, session: &mut Session, car: &str) {
                                 crate::camera::Tuning::for_car(car).view(session.camera.mode);
                         }
                         session.camera.configure(tuning);
-                        ui.separator();
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    RichText::new("Done / resume  F4 or Esc").strong(),
-                                )
-                                .fill(RED)
-                                .min_size(egui::vec2(ui.available_width(), 36.)),
-                            )
-                            .clicked()
-                        {
-                            resume(session);
-                        }
                     });
+                ui.separator();
+                if ui
+                    .add(
+                        egui::Button::new(RichText::new("Done / resume  F4 or Esc").strong())
+                            .fill(RED)
+                            .min_size(egui::vec2(ui.available_width(), 36.)),
+                    )
+                    .clicked()
+                {
+                    resume(session);
+                }
             });
         });
 }
