@@ -149,3 +149,85 @@ pub fn apply(
         }
     }
 }
+
+/// Frames the sky lighting must be generated with every pipeline ready before
+/// it is frozen. Covers pipelined rendering's one-frame lag with margin.
+const ENVIRONMENT_SETTLE_FRAMES: u32 = 8;
+
+/// Consecutive rendered frames with no pipeline still compiling, shared from
+/// the render world.
+#[derive(Resource, Clone, Default)]
+struct PipelinesSettled(std::sync::Arc<std::sync::atomic::AtomicU32>);
+
+/// The sun and atmosphere never change during a race, yet Bevy re-filters the
+/// sky into diffuse and specular lighting every frame (~1 ms of GPU time).
+/// Generate it until it has settled, then keep the result as a static
+/// environment map. A new sun direction or preset regenerates it.
+pub struct StaticSkyLighting;
+
+impl Plugin for StaticSkyLighting {
+    fn build(&self, app: &mut App) {
+        let settled = PipelinesSettled::default();
+        app.insert_resource(settled.clone())
+            .add_systems(Update, freeze_sky_lighting.after(apply));
+        if let Some(render_app) = app.get_sub_app_mut(bevy::render::RenderApp) {
+            render_app.insert_resource(settled).add_systems(
+                bevy::render::Render,
+                track_pipelines.in_set(bevy::render::RenderSystems::Cleanup),
+            );
+        }
+    }
+}
+
+fn track_pipelines(
+    cache: Res<bevy::render::render_resource::PipelineCache>,
+    settled: Res<PipelinesSettled>,
+) {
+    use std::sync::atomic::Ordering;
+    if cache.waiting_pipelines().next().is_some() {
+        settled.0.store(0, Ordering::Relaxed);
+    } else {
+        settled.0.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+type SkyCameras<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, Has<bevy::light::GeneratedEnvironmentMapLight>),
+    (With<Camera3d>, With<AtmosphereEnvironmentMapLight>),
+>;
+
+fn freeze_sky_lighting(
+    mut commands: Commands,
+    settled: Res<PipelinesSettled>,
+    cameras: SkyCameras,
+    sun: Query<(), (With<DirectionalLight>, Changed<Transform>)>,
+    session: Res<crate::Session>,
+    mut generated_frames: Local<u32>,
+) {
+    if !sun.is_empty() {
+        // Re-inserting restarts generation for the new sky.
+        for (camera, _) in &cameras {
+            commands
+                .entity(camera)
+                .insert(AtmosphereEnvironmentMapLight::default());
+        }
+        *generated_frames = 0;
+        return;
+    }
+    for (camera, generating) in &cameras {
+        if !generating || !session.ready {
+            *generated_frames = 0;
+            continue;
+        }
+        *generated_frames += 1;
+        let ready = settled.0.load(std::sync::atomic::Ordering::Relaxed);
+        if *generated_frames > ENVIRONMENT_SETTLE_FRAMES && ready > ENVIRONMENT_SETTLE_FRAMES {
+            // Keeps the generated EnvironmentMapLight textures; only stops refiltering.
+            commands
+                .entity(camera)
+                .remove::<bevy::light::GeneratedEnvironmentMapLight>();
+        }
+    }
+}

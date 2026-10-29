@@ -173,6 +173,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
     app.add_plugins(plugins)
         .add_audio_source::<audio::EngineSound>()
         .add_plugins(EguiPlugin::default())
+        .add_plugins(graphics::StaticSkyLighting)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, |mut session: ResMut<Session>| {
             // F1_SHOW_FPS=1 starts with the F3 performance readout visible.
@@ -273,11 +274,17 @@ fn capture(
     mut state: ResMut<Capture>,
     mut exit: MessageWriter<AppExit>,
     time: Res<Time<Real>>,
+    mut frame_count: ResMut<bevy::diagnostic::FrameCount>,
 ) {
     if !session.ready || state.requested {
         return;
     }
     state.frames += 1;
+    if state.frames == 1 && std::env::var_os("F1_DETERMINISTIC").is_some() {
+        // Temporal jitter and noise follow the frame count; loading takes a
+        // variable number of frames, so restart it with the race.
+        frame_count.0 = 0;
+    }
     if state.frames == BENCHMARK_WARMUP {
         state.benchmark_start = Some(time.elapsed_secs_f64());
     }
