@@ -8,7 +8,7 @@ use racecraft_sim::{
 };
 use std::{sync::Arc, time::Duration};
 
-fn session() -> Session {
+pub(super) fn session() -> Session {
     let stations: Vec<_> = (0..128)
         .map(|i| {
             let angle = i as f64 / 128.0 * std::f64::consts::TAU;
@@ -54,6 +54,9 @@ fn session() -> Session {
         5,
     );
     Session {
+        guidance: driving::Guidance::new(&race, 0),
+        corner_braking: 0.,
+        show_racing_line: false,
         camera: camera::ChaseCamera::new(&race, 0),
         minimap: hud::Minimap::new(&race.track),
         race,
@@ -62,6 +65,7 @@ fn session() -> Session {
         paused: false,
         messages: default(),
         ready: false,
+        screen: menu::Screen::Racing,
     }
 }
 
@@ -152,12 +156,7 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     let mut session = app.world_mut().resource_mut::<Session>();
     let mut pose = Transform::default();
     let mut lens = Projection::Perspective(default());
-    for expected in [
-        camera::Mode::Far,
-        camera::Mode::TCam,
-        camera::Mode::Nose,
-        camera::Mode::Chase,
-    ] {
+    for expected in [camera::Mode::Cockpit, camera::Mode::Tv, camera::Mode::Chase] {
         session.camera.cycle();
         assert_eq!(session.camera.mode, expected);
         let Session {
@@ -172,15 +171,395 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     }
 }
 
+#[test]
+fn camera_shortcuts_pause_menu_and_menu_input_isolation() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(session())
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_message::<AppExit>()
+        .add_systems(PreUpdate, controls::update);
+    for (key, expected) in [
+        (KeyCode::Digit1, camera::Mode::Cockpit),
+        (KeyCode::Digit2, camera::Mode::Tv),
+        (KeyCode::Digit3, camera::Mode::Chase),
+        (KeyCode::KeyC, camera::Mode::Cockpit),
+    ] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+        assert_eq!(app.world().resource::<Session>().camera.mode, expected);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+    }
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Escape);
+    app.update();
+    assert_eq!(
+        app.world().resource::<Session>().screen,
+        menu::Screen::Paused
+    );
+    assert!(app.world().resource::<Session>().paused);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyW);
+    app.update();
+    assert_eq!(app.world().resource::<Session>().controls.throttle(), 0.);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Escape);
+    app.update();
+    assert_eq!(
+        app.world().resource::<Session>().screen,
+        menu::Screen::Racing
+    );
+    assert!(!app.world().resource::<Session>().paused);
+    app.world_mut().resource_mut::<Session>().screen = menu::Screen::Main;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Escape);
+    app.update();
+    assert_eq!(app.world().resource::<Session>().screen, menu::Screen::Main);
+    assert!(app.world().resource::<Messages<AppExit>>().is_empty());
+}
+
+#[test]
+fn failed_race_selection_keeps_existing_session_and_scene() {
+    let options = Options::parse(std::iter::empty()).unwrap();
+    let mut frontend = menu::Frontend::new(&options);
+    frontend.catalog.circuits.push(menu::Circuit {
+        id: "does-not-exist".into(),
+        name: "Broken circuit".into(),
+        length: 0.,
+        outline: vec![],
+        unavailable: None,
+    });
+    frontend.draft.track = "does-not-exist".into();
+    frontend.pending = true;
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+        .insert_resource(options)
+        .insert_resource(frontend)
+        .insert_resource(session())
+        .add_systems(Update, menu::apply);
+    let root = app.world_mut().spawn(assets::RaceVisualRoot).id();
+    let initial = app.world().resource::<Session>().race.track.name.clone();
+    app.update();
+    assert_eq!(app.world().resource::<Session>().race.track.name, initial);
+    assert!(app.world().get_entity(root).is_ok());
+    assert!(app.world().resource::<menu::Frontend>().error.is_some());
+}
+
+/// Clicks the real egui tabs/presets/Start button, then reloads every installed map.
+#[test]
+#[ignore = "requires a Vulkan display and the complete original F1_TEST_ASSETS tree"]
+fn rendered_menu_and_track_selection() {
+    let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS");
+    let options = Options::parse(
+        ["--assets", &root, "--opponents", "0", "--size", "1280x720"]
+            .into_iter()
+            .map(str::to_owned),
+    )
+    .unwrap();
+    let mut app = build_app(options).unwrap();
+    let probe = MenuProbe::default();
+    let completed = probe.completed.clone();
+    app.insert_resource(probe)
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+            1. / 60.,
+        )))
+        .add_systems(
+            PreUpdate,
+            menu_probe
+                .after(bevy_egui::EguiPreUpdateSet::ProcessInput)
+                .before(bevy_egui::EguiPreUpdateSet::BeginPass)
+                .before(controls::update),
+        );
+    assert!(app.run().is_success());
+    assert!(completed.load(std::sync::atomic::Ordering::SeqCst));
+}
+
+#[derive(Resource, Default)]
+struct MenuProbe {
+    initial_time: Option<f64>,
+    stage: usize,
+    ticks: usize,
+    total: usize,
+    case: usize,
+    release: Option<bevy_egui::egui::Pos2>,
+    requested: usize,
+    captures: Arc<std::sync::atomic::AtomicUsize>,
+    completed: Arc<std::sync::atomic::AtomicBool>,
+}
+
+const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
+    ("silverstone", "rb22", camera::Mode::Cockpit),
+    ("bahrain", "rb6", camera::Mode::Tv),
+    ("cota", "rb22", camera::Mode::Chase),
+    ("spa", "rb6", camera::Mode::Cockpit),
+];
+
+fn choose_menu_case(frontend: &mut menu::Frontend, index: usize) {
+    let (track, car, camera) = MENU_CASES[index];
+    frontend.draft.track = track.into();
+    frontend.draft.car = car.into();
+    frontend.draft.camera = camera;
+    frontend.draft.grid_slot = 1;
+}
+
+fn menu_click(
+    probe: &mut MenuProbe,
+    inputs: &mut Query<&mut bevy_egui::EguiInput>,
+    frontend: &menu::Frontend,
+    name: &str,
+) {
+    use bevy_egui::egui::{Event, Modifiers, PointerButton};
+    let position = frontend
+        .widgets
+        .get(name)
+        .unwrap_or_else(|| panic!("missing UI control {name}"))
+        .center();
+    let mut input = inputs.single_mut().unwrap();
+    input.0.events.push(Event::PointerMoved(position));
+    input.0.events.push(Event::PointerButton {
+        pos: position,
+        button: PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::default(),
+    });
+    probe.release = Some(position);
+}
+
+fn menu_snapshot(commands: &mut Commands, probe: &mut MenuProbe, name: &str) {
+    let directory = std::env::var_os("F1_TEST_OUTPUT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("f1-menu-flow-proof"));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join(format!("{name}.png"));
+    let captures = probe.captures.clone();
+    probe.requested += 1;
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(move |event: On<ScreenshotCaptured>| {
+            event
+                .image
+                .clone()
+                .try_into_dynamic()
+                .unwrap()
+                .to_rgb8()
+                .save(&path)
+                .unwrap();
+            captures.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            info!("Menu probe screenshot: {}", path.display());
+        });
+}
+
+#[allow(clippy::too_many_arguments)]
+fn menu_probe(
+    mut commands: Commands,
+    mut probe: ResMut<MenuProbe>,
+    mut frontend: ResMut<menu::Frontend>,
+    session: Res<Session>,
+    options: Res<Options>,
+    mut keys: ResMut<ButtonInput<KeyCode>>,
+    mut inputs: Query<&mut bevy_egui::EguiInput>,
+    roots: Query<(), With<assets::RaceVisualRoot>>,
+    cameras: Query<(), With<Camera3d>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    use bevy_egui::egui::{Event, Modifiers, PointerButton};
+    probe.total += 1;
+    let initial_time = *probe.initial_time.get_or_insert(session.race.time);
+    assert!(
+        probe.total < 6000,
+        "menu probe stalled at stage {}: {:?}",
+        probe.stage,
+        frontend.error
+    );
+    assert!(frontend.error.is_none(), "menu error: {:?}", frontend.error);
+    keys.reset_all();
+    if let Some(position) = probe.release.take() {
+        inputs
+            .single_mut()
+            .unwrap()
+            .0
+            .events
+            .push(Event::PointerButton {
+                pos: position,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: Modifiers::default(),
+            });
+        return;
+    }
+    probe.ticks += 1;
+    match probe.stage {
+        0 if session.ready && probe.ticks > 30 => {
+            assert_eq!(session.screen, menu::Screen::Main);
+            assert!(session.paused);
+            assert_eq!(session.race.time, initial_time);
+            for (track, _, _) in MENU_CASES {
+                assert!(frontend
+                    .catalog
+                    .circuits
+                    .iter()
+                    .any(|c| c.id == track && c.unavailable.is_none()));
+            }
+            menu_snapshot(&mut commands, &mut probe, "main-menu");
+            menu_click(&mut probe, &mut inputs, &frontend, "Driving aids");
+            probe.stage = 1;
+            probe.ticks = 0;
+        }
+        1 if probe.ticks > 12 => {
+            assert!(
+                frontend.tab == menu::Tab::Aids,
+                "Driving aids tab did not respond to pointer input"
+            );
+            menu_click(&mut probe, &mut inputs, &frontend, "beginner");
+            probe.stage = 2;
+            probe.ticks = 0;
+        }
+        2 if probe.ticks > 12 => {
+            assert_eq!(frontend.aids.steering, 1.);
+            assert_eq!(frontend.corner_braking, 1.);
+            assert!(frontend.aids.automatic_gears);
+            menu_snapshot(&mut commands, &mut probe, "driving-aids");
+            menu_click(&mut probe, &mut inputs, &frontend, "Race setup");
+            probe.stage = 3;
+            probe.ticks = 0;
+        }
+        3 if probe.ticks > 12 => {
+            assert!(frontend.tab == menu::Tab::Race);
+            choose_menu_case(&mut frontend, probe.case);
+            probe.stage = 4;
+            probe.ticks = 0;
+        }
+        4 if probe.ticks > 12 => {
+            menu_click(&mut probe, &mut inputs, &frontend, "start");
+            probe.stage = 5;
+            probe.ticks = 0;
+        }
+        5 if session.ready
+            && session.screen == menu::Screen::Racing
+            && options.track == MENU_CASES[probe.case].0 =>
+        {
+            let (track, car, mode) = MENU_CASES[probe.case];
+            assert_eq!(options.track, track);
+            assert_eq!(
+                session.race.entrants[session.player]
+                    .car
+                    .spec
+                    .name
+                    .to_ascii_lowercase(),
+                car
+            );
+            assert_eq!(
+                session.race.entrants[session.player].car.assists,
+                frontend.aids
+            );
+            assert_eq!(session.camera.mode, mode);
+            assert_eq!(
+                roots.iter().count(),
+                2,
+                "old scene roots leaked across a track switch"
+            );
+            assert_eq!(cameras.iter().count(), 1);
+            assert!(!session.paused);
+            probe.stage = 6;
+            probe.ticks = 0;
+        }
+        6 if probe.ticks > 30 => {
+            let track = MENU_CASES[probe.case].0;
+            menu_snapshot(&mut commands, &mut probe, track);
+            if probe.case + 1 == MENU_CASES.len() {
+                probe.stage = 12;
+            } else {
+                probe.stage = 13;
+            }
+            probe.ticks = 0;
+        }
+        13 if probe.ticks > 4 => {
+            keys.press(KeyCode::Escape);
+            probe.stage = if probe.case == 0 { 7 } else { 11 };
+            probe.ticks = 0;
+        }
+        7 if probe.ticks > 12 => {
+            assert_eq!(session.screen, menu::Screen::Paused);
+            assert!(session.paused);
+            menu_click(&mut probe, &mut inputs, &frontend, "Driving aids");
+            probe.stage = 8;
+            probe.ticks = 0;
+        }
+        8 if probe.ticks > 12 => {
+            assert!(frontend.tab == menu::Tab::Aids);
+            menu_click(&mut probe, &mut inputs, &frontend, "unassisted");
+            probe.stage = 9;
+            probe.ticks = 0;
+        }
+        9 if probe.ticks > 12 => {
+            let aids = session.race.entrants[session.player].car.assists;
+            assert_eq!(aids, frontend.aids);
+            assert_eq!(
+                [aids.steering, aids.braking, aids.traction, aids.stability],
+                [0.; 4]
+            );
+            assert!(!aids.automatic_gears);
+            assert_eq!(session.corner_braking, 0.);
+            assert!(!session.show_racing_line);
+            menu_snapshot(&mut commands, &mut probe, "pause-aids");
+            menu_click(&mut probe, &mut inputs, &frontend, "Race setup");
+            probe.stage = 11;
+            probe.ticks = 0;
+        }
+        11 if probe.ticks > 12 => {
+            assert_eq!(session.screen, menu::Screen::Paused);
+            assert!(frontend.tab == menu::Tab::Race);
+            probe.case += 1;
+            choose_menu_case(&mut frontend, probe.case);
+            probe.stage = 4;
+            probe.ticks = 0;
+        }
+        12 if probe.captures.load(std::sync::atomic::Ordering::SeqCst) == probe.requested => {
+            probe
+                .completed
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+            info!(
+                "Menu probe: pointer controls, live assists and all four map/car switches passed"
+            );
+            exit.write(AppExit::Success);
+        }
+        _ => {}
+    }
+}
+
 /// Runs the actual renderer with external assets and injected Bevy keyboard state.
 #[test]
 #[ignore = "requires a Vulkan display and F1_TEST_ASSETS"]
 fn rendered_game_flows() {
     let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS to generated assets");
     let options = Options::parse(
-        ["--assets", &root, "--size", "1280x720", "--auto-gears"]
-            .into_iter()
-            .map(str::to_owned),
+        [
+            "--assets",
+            &root,
+            "--size",
+            "1280x720",
+            "--auto-gears",
+            "--quick-race",
+        ]
+        .into_iter()
+        .map(str::to_owned),
     )
     .unwrap();
     let mut app = build_app(options).unwrap();
@@ -216,6 +595,7 @@ fn probe_input(
     session: Res<Session>,
     mut probe: ResMut<RenderProbe>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     if !session.ready {
         return;
@@ -224,16 +604,18 @@ fn probe_input(
     keys.reset_all();
     keys.press(KeyCode::KeyW);
     if probe.completed.load(std::sync::atomic::Ordering::SeqCst) {
-        keys.press(KeyCode::Escape);
+        exit.write(AppExit::Success);
     }
     match probe.frame {
-        60 | 90 | 120 | 150 => keys.press(KeyCode::KeyC),
+        60 | 90 | 120 | 500 | 570 | 640 => keys.press(KeyCode::KeyC),
+        670 | 695 => keys.press(KeyCode::F4),
         180 | 210 => keys.press(KeyCode::KeyP),
         730 => keys.press(KeyCode::KeyR),
         _ => {}
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn probe_assertions(
     mut commands: Commands,
     mut session: ResMut<Session>,
@@ -241,6 +623,8 @@ fn probe_assertions(
     wheels: Query<&assets::WheelVisual>,
     bodies: Query<&assets::CarVisual>,
     meshes: Query<&Mesh3d>,
+    images: Res<Assets<Image>>,
+    surfaces: Query<(), With<materials::SurfaceReady>>,
 ) {
     let frame = probe.frame;
     match frame {
@@ -248,10 +632,23 @@ fn probe_assertions(
             assert_eq!(wheels.iter().count(), session.race.entrants.len() * 4);
             assert_eq!(bodies.iter().count(), session.race.entrants.len());
             assert!(meshes.iter().count() > 40);
+            assert!(
+                surfaces.iter().count() > 40,
+                "car material calibration did not run"
+            );
+            assert_eq!(session.race.entrants[session.player].car.spec.name, "RB6");
+            let mipped = images
+                .iter()
+                .filter(|(_, image)| image.texture_descriptor.mip_level_count > 1)
+                .count();
+            assert!(
+                mipped >= 100,
+                "expected track/car mip chains, found {mipped}"
+            );
         }
-        60 => assert_eq!(session.camera.mode, camera::Mode::Far),
-        90 => assert_eq!(session.camera.mode, camera::Mode::TCam),
-        120 => assert_eq!(session.camera.mode, camera::Mode::Nose),
+        60 => assert_eq!(session.camera.mode, camera::Mode::Cockpit),
+        90 => assert_eq!(session.camera.mode, camera::Mode::Tv),
+        120 => assert_eq!(session.camera.mode, camera::Mode::Chase),
         150 => assert_eq!(session.camera.mode, camera::Mode::Chase),
         180 => {
             assert!(session.paused);
@@ -262,6 +659,20 @@ fn probe_assertions(
             assert!(!session.paused);
             assert!(session.race.time > probe.paused_time);
         }
+        540 => assert_eq!(session.camera.mode, camera::Mode::Cockpit),
+        610 => assert_eq!(session.camera.mode, camera::Mode::Tv),
+        671 => {
+            assert_eq!(session.screen, menu::Screen::CameraEditor);
+            assert!(session.paused);
+            probe.paused_time = session.race.time;
+            let mut tuning = session.camera.tuning.clone();
+            tuning.chase.height = 1.9;
+            session.camera.configure(tuning);
+        }
+        690 => {
+            assert_eq!(session.race.time, probe.paused_time);
+            assert_eq!(session.camera.tuning.chase.height, 1.9);
+        }
         730 => assert!(session.race.entrants[session.player].car.speed() < 0.5),
         720 => {
             assert!(session.race.entrants[session.player].car.speed() > 5.0);
@@ -270,18 +681,23 @@ fn probe_assertions(
         }
         // Force the presentation state to exercise the results HUD separately from the sim's race-completion tests.
         740 => session.race.phase = racecraft_sim::Phase::Finished,
-        780..=899 if probe.captures == 4 => {
+        780..=899 if probe.captures == 9 => {
             probe
                 .completed
                 .store(true, std::sync::atomic::Ordering::SeqCst);
-            info!("Render probe: recovery and all four screenshots passed");
+            info!("Render probe: recovery, camera editor and all nine screenshots passed");
         }
         900 => panic!("screenshots did not complete"),
         _ => {}
     }
     let name = match frame {
         30 => "grid",
+        80 => "cockpit",
+        110 => "onboard",
         200 => "paused",
+        540 => "moving-cockpit",
+        610 => "moving-tv",
+        685 => "camera-editor",
         720 => "racing",
         760 => "results",
         _ => return,

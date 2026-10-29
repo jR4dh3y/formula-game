@@ -1,11 +1,15 @@
 //! Keyboard and gamepad mapping to car commands.
 //!
 //! Keyboard: W/↑ throttle, S/↓ brake, A/D or ←/→ steer, E/Shift up, Q/Ctrl down,
-//! C camera, R reset to track, P pause, Esc quit.
+//! C camera (1/2/3 direct), R reset to track, P/Esc pause menu.
 //! Gamepad: RT throttle, LT brake, left stick steer, RB/A up, LB/X down,
 //! Y camera, Back reset, Start pause.
 
-use crate::Session;
+use crate::{
+    camera::Mode,
+    menu::{self, Screen},
+    Session,
+};
 use bevy::prelude::*;
 use racecraft_sim::CarInput;
 
@@ -20,7 +24,7 @@ pub struct Controls {
 
 #[derive(Default)]
 pub struct Actions {
-    pub quit: bool,
+    pub menu: bool,
     pub pause: bool,
     pub camera: bool,
     pub reset: bool,
@@ -33,16 +37,40 @@ pub fn update(
     pads: Query<&Gamepad>,
     time: Res<Time>,
     mut session: ResMut<Session>,
-    mut exit: MessageWriter<AppExit>,
 ) {
     let actions = session
         .controls
         .update(&keys, pads.iter().next(), time.delta_secs());
-    if actions.quit {
-        exit.write(AppExit::Success);
+    if actions.menu || actions.pause {
+        match session.screen {
+            Screen::Racing => {
+                session.screen = Screen::Paused;
+                session.paused = true;
+            }
+            Screen::Paused | Screen::CameraEditor => menu::resume(&mut session),
+            _ => {}
+        }
     }
-    if actions.pause {
-        session.paused = !session.paused;
+    if keys.just_pressed(KeyCode::F4) && session.ready {
+        if session.screen == Screen::CameraEditor {
+            menu::resume(&mut session);
+        } else if matches!(session.screen, Screen::Racing | Screen::Paused) {
+            session.screen = Screen::CameraEditor;
+            session.paused = true;
+        }
+    }
+    if session.screen != Screen::Racing {
+        session.controls = Controls::default();
+        return;
+    }
+    for (key, mode) in [
+        (KeyCode::Digit1, Mode::Cockpit),
+        (KeyCode::Digit2, Mode::Tv),
+        (KeyCode::Digit3, Mode::Chase),
+    ] {
+        if keys.just_pressed(key) {
+            session.camera.select(mode);
+        }
     }
     if actions.camera {
         session.camera.cycle();
@@ -111,7 +139,7 @@ impl Controls {
             || pad_pressed(GamepadButton::West);
 
         Actions {
-            quit: pressed(&[KeyCode::Escape]),
+            menu: pressed(&[KeyCode::Escape]),
             pause: pressed(&[KeyCode::KeyP]) || pad_pressed(GamepadButton::Start),
             camera: pressed(&[KeyCode::KeyC]) || pad_pressed(GamepadButton::North),
             reset: pressed(&[KeyCode::KeyR]) || pad_pressed(GamepadButton::Select),

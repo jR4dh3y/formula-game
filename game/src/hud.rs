@@ -1,6 +1,5 @@
 //! Race HUD drawn through egui in Bevy.
 
-use crate::camera::Mode;
 use crate::canvas::{rgba, Align, Hud};
 use crate::Session;
 use bevy::prelude::*;
@@ -79,9 +78,14 @@ pub fn update(
         )),
         size: context.content_rect().size(),
     };
-    if session.ready {
+    if session.ready
+        && matches!(
+            session.screen,
+            crate::menu::Screen::Racing | crate::menu::Screen::CameraEditor
+        )
+    {
         draw(&mut hud, &style, &mut session, time.delta_secs());
-    } else {
+    } else if !session.ready {
         hud.text(
             &style.bold,
             32.0,
@@ -437,26 +441,6 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         );
         banner_y += 64.0 * scale;
     }
-    if session.paused {
-        hud.fill_rect(0.0, 0.0, width, height, rgba(0.0, 0.0, 0.0, 0.45));
-        hud.text(
-            &style.bold,
-            72.0 * scale,
-            (width * 0.5, height * 0.4),
-            Align::Center,
-            WHITE,
-            "PAUSED",
-        );
-        hud.text(
-            &style.regular,
-            26.0 * scale,
-            (width * 0.5, height * 0.4 + 90.0 * scale),
-            Align::Center,
-            DIM,
-            "P resume   ·   R reset car   ·   C camera   ·   Esc quit",
-        );
-    }
-
     // ---- Driver panel (bottom right)
     let panel_w = 420.0 * scale;
     let panel_h = 190.0 * scale;
@@ -547,7 +531,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     hud.fill_rect(
         px + 16.0 * scale,
         bar_y,
-        bar_w * session.controls.brake() as f32,
+        bar_w * session.guidance.activity.input.brake as f32,
         10.0 * scale,
         ACCENT,
     );
@@ -561,11 +545,11 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     hud.fill_rect(
         px + 32.0 * scale + bar_w,
         bar_y,
-        bar_w * session.controls.throttle() as f32,
+        bar_w * session.guidance.activity.input.throttle as f32,
         10.0 * scale,
         GREEN,
     );
-    let steer = session.controls.steer() as f32;
+    let steer = session.guidance.activity.input.steer as f32;
     let centre = px + panel_w * 0.5;
     hud.fill_rect(
         centre - 1.0 * scale,
@@ -599,6 +583,55 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     // ---- Car state (bottom left): tyres, aero, assists
     let cx = 24.0 * scale;
     let cy = height - 214.0 * scale;
+    hud.fill_rect(cx, cy - 76. * scale, 340. * scale, 68. * scale, PANEL);
+    if session.corner_braking > 0. {
+        hud.text(
+            &style.regular,
+            16. * scale,
+            (cx + 14. * scale, cy - 68. * scale),
+            Align::Left,
+            DIM,
+            &format!(
+                "CORNER TARGET  {:.0} km/h",
+                session.guidance.activity.target_speed * 3.6
+            ),
+        );
+    }
+    for (index, label, configured, active) in [
+        (
+            0,
+            "STEER",
+            car.assists.steering > 0.,
+            session.guidance.activity.steering,
+        ),
+        (
+            1,
+            "BRAKE",
+            session.corner_braking > 0.,
+            session.guidance.activity.braking,
+        ),
+        (
+            2,
+            "AUTO",
+            car.assists.automatic_gears,
+            car.assists.automatic_gears,
+        ),
+    ] {
+        hud.text(
+            &style.bold,
+            17. * scale,
+            (cx + (14. + index as f32 * 108.) * scale, cy - 38. * scale),
+            Align::Left,
+            if active {
+                GREEN
+            } else if configured {
+                DIM
+            } else {
+                Color::from_rgb(90, 95, 105)
+            },
+            label,
+        );
+    }
     hud.fill_rect(cx, cy, 340.0 * scale, 190.0 * scale, PANEL);
     let compound = car.setup.compound;
     let properties = compound.properties();
@@ -725,12 +758,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             } else {
                 "MANUAL"
             },
-            match session.camera.mode {
-                Mode::Chase => "CHASE",
-                Mode::Far => "FAR",
-                Mode::TCam => "T-CAM",
-                Mode::Nose => "NOSE",
-            }
+            session.camera.mode.label().to_uppercase()
         ),
     );
 

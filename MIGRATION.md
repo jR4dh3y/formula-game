@@ -21,6 +21,10 @@ Branch: `t3/recreate-game-bevy`, starting at `8da559c`. The initial worktree was
 
 ## Coverage and completion ledger
 
+Post-migration client additions: race/pause menus with automatic asset discovery, four available circuits and two cars, individual live driving-aid controls, and exactly three selectable cameras (cockpit, TV pod, third person). Deferred Nürburgring conversion remains unavailable. The simulation polish agent fixed reverse engine braking, gear skipping during active shifts and stale recovery state; regression tests cover all three. The pre-existing Spa lap-time target remains unchanged and failing.
+
+The subsequent driving/presentation pass adds actual racing-line steering guidance and anticipatory corner braking, independently of ABS. Beginner defaults include automatic gears; manual steering overrides guidance. A one-minute real-asset Spa regression with only throttle held covers 2.9 km, reaches seventh gear and records zero off-track ticks; the same input without guidance goes off track for 18,942 of 21,600 ticks. The HUD shows applied pedals, intervention indicators and corner target speed. Camera framing now has per-car defaults, velocity-aware chase smoothing, horizon stabilization and an F4 live-preview editor. Aids and per-car camera settings persist in user preferences; automated runs do not touch those files. Unit checks now pass 51 tests, and strict workspace Clippy passes. Renderer checks cover both cars, four map switches, live aid presets, moving onboard views and the paused camera editor. The original AI lap-time ceiling is not relaxed.
+
 | Surface | Applies | Check | State |
 | --- | --- | --- | --- |
 | CLI: track, assets, setup, grid, field size, laps, assists, gears, window | Yes | Options tests, 8/16-car launches, invalid arguments and missing track | proved |
@@ -32,7 +36,8 @@ Branch: `t3/recreate-game-bevy`, starting at `8da559c`. The initial worktree was
 | HUD tower, timing, lights, messages, tyres, aero, minimap, results | Yes | Four renderer captures inspected; finish state forced for results presentation | proved |
 | Pause/resume, Escape quit | Yes | Fixed-schedule and actual renderer assertions | proved |
 | Frame-limited capture and asset-load errors | Yes | CLI PNG, 1/12-frame exit, first-frame capture, failed capture write and missing-asset exits | proved |
-| Multiplayer, remote/relay, mobile, audio | No | No implementation in original game client | N/A |
+| Multiplayer, remote/relay, mobile | No | No implementation in original game client | N/A |
+| Player engine audio | Added after migration | Direct user-reference acceleration/overrun samples; continuous RPM resampling, shifts, limiter, pause/mute | See README audio section |
 | Custom-engine API and renderer tests | No | The game no longer consumes those APIs; engine source is archived | N/A |
 | Docs and active workspace dependencies | Yes | README, cargo metadata/tree, no Dhool dependency in game/lockfile | proved |
 

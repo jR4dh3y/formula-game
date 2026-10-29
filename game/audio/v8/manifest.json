@@ -1,0 +1,105 @@
+{
+  "engine_style": "F1-inspired recording-derived V8 (NOT actual F1 engine)",
+  "sample_rate": 48000,
+  "format": "stereo signed PCM 16-bit",
+  "license": "CC BY-SA 3.0",
+  "reference_rpm": 7252,
+  "loop_bands": [
+    {
+      "file": "loops/V8_05500RPM_on.wav",
+      "rpm": 5500,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_05500RPM_off.wav",
+      "rpm": 5500,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_07000RPM_on.wav",
+      "rpm": 7000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_07000RPM_off.wav",
+      "rpm": 7000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_09000RPM_on.wav",
+      "rpm": 9000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_09000RPM_off.wav",
+      "rpm": 9000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_11000RPM_on.wav",
+      "rpm": 11000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_11000RPM_off.wav",
+      "rpm": 11000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_13000RPM_on.wav",
+      "rpm": 13000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_13000RPM_off.wav",
+      "rpm": 13000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_15000RPM_on.wav",
+      "rpm": 15000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_15000RPM_off.wav",
+      "rpm": 15000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_17000RPM_on.wav",
+      "rpm": 17000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_17000RPM_off.wav",
+      "rpm": 17000,
+      "load": "off",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_18000RPM_on.wav",
+      "rpm": 18000,
+      "load": "on",
+      "duration_s": 2.0
+    },
+    {
+      "file": "loops/V8_18000RPM_off.wav",
+      "rpm": 18000,
+      "load": "off",
+      "duration_s": 2.0
+    }
+  ]
+}

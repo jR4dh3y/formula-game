@@ -1,6 +1,6 @@
 //! Bevy glTF scenes and simulation-to-render transforms.
 
-use crate::{options::Options, sky, Session};
+use crate::{materials::CarSurface, options::Options, sky, Session};
 use bevy::{
     asset::LoadState, light::atmosphere::ScatteringMedium, prelude::*,
     world_serialization::WorldInstanceReady,
@@ -21,8 +21,14 @@ pub struct WheelVisual {
 #[derive(Component)]
 pub struct VisualReady;
 
+#[derive(Component)]
+pub struct RaceVisualRoot;
+
 #[derive(Resource)]
-pub struct VisualAssets(Vec<Handle<bevy::world_serialization::WorldAsset>>);
+pub struct VisualAssets {
+    handles: Vec<Handle<bevy::world_serialization::WorldAsset>>,
+    started: Option<f64>,
+}
 
 pub fn setup(
     mut commands: Commands,
@@ -31,12 +37,31 @@ pub fn setup(
     session: Res<Session>,
     mut media: ResMut<Assets<ScatteringMedium>>,
 ) {
+    spawn_visuals(&mut commands, &server, &options, &session);
+    let sun = session.race.track.sun_direction;
+    sky::setup(
+        &mut commands,
+        &mut media,
+        Vec3::new(sun.x as f32, sun.y as f32, sun.z as f32),
+    );
+}
+
+pub fn spawn_visuals(
+    commands: &mut Commands,
+    server: &AssetServer,
+    options: &Options,
+    session: &Session,
+) {
     let track = server
         .load(GltfAssetLabel::Scene(0).from_asset(format!("tracks/{}/visual.glb", options.track)));
     let rb22 = server.load(GltfAssetLabel::Scene(0).from_asset("cars/rb22/car.glb"));
     let rb6 = server.load(GltfAssetLabel::Scene(0).from_asset("cars/rb6/car.glb"));
     commands
-        .spawn((WorldAssetRoot(track.clone()), Transform::default()))
+        .spawn((
+            RaceVisualRoot,
+            WorldAssetRoot(track.clone()),
+            Transform::default(),
+        ))
         .observe(visual_ready);
     for (index, entrant) in session.race.entrants.iter().enumerate() {
         let scene = if entrant.car.spec.name == "RB22" {
@@ -48,18 +73,16 @@ pub fn setup(
             .spawn((
                 Name::new(format!("car-{index}")),
                 CarVisual(index),
+                RaceVisualRoot,
                 WorldAssetRoot(scene),
                 body_transform(&entrant.car),
             ))
             .observe(visual_ready);
     }
-    commands.insert_resource(VisualAssets(vec![track, rb22, rb6]));
-    let sun = session.race.track.sun_direction;
-    sky::setup(
-        &mut commands,
-        &mut media,
-        Vec3::new(sun.x as f32, sun.y as f32, sun.z as f32),
-    );
+    commands.insert_resource(VisualAssets {
+        handles: vec![track, rb22, rb6],
+        started: None,
+    });
 }
 
 fn visual_ready(
@@ -68,12 +91,16 @@ fn visual_ready(
     cars: Query<&CarVisual>,
     children: Query<&Children>,
     nodes: Query<(&Name, &Transform)>,
+    material_names: Query<&bevy::gltf::GltfMaterialName>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Ok(car) = cars.get(event.entity) {
         let mut found = [false; 4];
         let mut body_found = false;
         for entity in children.iter_descendants(event.entity) {
+            if material_names.contains(entity) {
+                commands.entity(entity).insert(CarSurface);
+            }
             let Ok((name, rest)) = nodes.get(entity) else {
                 continue;
             };
@@ -101,28 +128,45 @@ fn visual_ready(
 
 pub fn check_loading(
     server: Res<AssetServer>,
-    visuals: Res<VisualAssets>,
+    mut visuals: ResMut<VisualAssets>,
     ready: Query<(), With<VisualReady>>,
     time: Res<Time<Real>>,
     mut session: ResMut<Session>,
     mut exit: MessageWriter<AppExit>,
+    mut menu: ResMut<crate::menu::Frontend>,
 ) {
     if session.ready {
         return;
     }
-    for handle in &visuals.0 {
+    let started = *visuals.started.get_or_insert(time.elapsed_secs_f64());
+    for handle in &visuals.handles {
         if let Some(LoadState::Failed(error)) = server.get_load_state(handle.id()) {
             error!("visual asset failed: {error}");
-            exit.write(AppExit::error());
+            menu.error = Some(format!("Could not load the scene: {error}"));
+            session.screen = crate::menu::Screen::Main;
+            session.paused = true;
+            if menu.draft.frames.is_some() {
+                exit.write(AppExit::error());
+            }
             return;
         }
     }
     if ready.iter().count() == session.race.entrants.len() + 1 {
         session.ready = true;
+        if session.screen == crate::menu::Screen::Loading {
+            menu.race_started = true;
+            session.screen = crate::menu::Screen::Racing;
+            session.paused = false;
+        }
         info!("Track and {} car scenes ready", session.race.entrants.len());
-    } else if time.elapsed_secs() > 120.0 {
+    } else if time.elapsed_secs_f64() - started > 120.0 {
         error!("Timed out loading track/car scenes and their dependencies");
-        exit.write(AppExit::error());
+        menu.error = Some("Scene loading timed out. Choose another circuit and try again.".into());
+        session.screen = crate::menu::Screen::Main;
+        session.paused = true;
+        if menu.draft.frames.is_some() {
+            exit.write(AppExit::error());
+        }
     }
 }
 
@@ -194,6 +238,11 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     let rb6 = CarGeometry::load(root.join("cars/rb6/car.json"))?;
     let rb22_spec = Arc::new(CarSpec::rb22_with(&rb22));
     let rb6_spec = Arc::new(CarSpec::rb6_with(&rb6));
+    let field_spec = if options.car == "rb6" {
+        rb6_spec
+    } else {
+        rb22_spec
+    };
     // Grid: the player starts in the requested slot among the AI field.
     let player_slot = options.grid_slot - 1;
     let total = options.opponents + 1;
@@ -203,15 +252,9 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
             if slot == player_slot {
                 return EntrantConfig {
                     name: "You".to_string(),
-                    spec: rb22_spec.clone(),
+                    spec: field_spec.clone(),
                     setup: options.setup,
-                    assists: Assists {
-                        steering: options.assist_level.max(0.3),
-                        braking: options.assist_level,
-                        traction: options.assist_level,
-                        stability: options.assist_level,
-                        automatic_gears: options.automatic_gears,
-                    },
+                    assists: options.player_assists(),
                     ai: None,
                     human_slot: 0,
                     livery: [1.0, 1.0, 1.0],
@@ -223,11 +266,7 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
             let pace = 0.985 - 0.006 * slot as f64;
             EntrantConfig {
                 name: AI_NAMES[index % AI_NAMES.len()].to_string(),
-                spec: if index % 3 == 1 {
-                    rb22_spec.clone()
-                } else {
-                    rb6_spec.clone()
-                },
+                spec: field_spec.clone(),
                 setup: options.setup,
                 assists: Assists::default(),
                 ai: Some(DriverProfile {

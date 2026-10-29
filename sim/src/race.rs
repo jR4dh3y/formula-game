@@ -542,16 +542,17 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64) {
         .collision
         .ground(position + DVec3::Y * 2.0)
         .map_or(position.y, |hit| hit.height);
-    car.position = DVec3::new(position.x, ground, position.z);
-    car.yaw = yaw;
-    car.yaw_rate = 0.0;
-    car.velocity = DVec2::ZERO;
-    car.steer_angle = 0.0;
-    car.powertrain.gear = 1;
-    for wheel in &mut car.wheels {
-        wheel.ground_height = ground;
-    }
-    car.track_position = track.project(car.position, None);
+    // Recovery clears crash dynamics, but does not grant fresh tyres.
+    let tyres = car.tyres;
+    *car = Car::new(
+        car.spec.clone(),
+        car.setup,
+        car.assists,
+        track,
+        DVec3::new(position.x, ground, position.z),
+        yaw,
+    );
+    car.tyres = tyres;
 }
 
 fn closest_on_segment(a: DVec2, b: DVec2, point: DVec2) -> DVec2 {
@@ -604,6 +605,50 @@ mod tests {
         assert_eq!(race.phase, Phase::Racing);
         assert!(race.events.contains(&RaceEvent::LightsOut));
         assert!(race.entrants[0].car.speed() > 5.0);
+    }
+
+    #[test]
+    fn recovery_clears_crash_dynamics_but_preserves_tyres_and_timing() {
+        let track = Arc::new(oval_track());
+        let mut race = Race::new(track.clone(), field(1, 0), 1, 3);
+        let entrant = &mut race.entrants[0];
+        entrant.car.acceleration = DVec2::new(25.0, 35.0);
+        entrant.car.velocity = DVec2::new(10.0, -20.0);
+        entrant.car.yaw_rate = 4.0;
+        entrant.car.powertrain.shift_timer = 0.1;
+        entrant.car.powertrain.refusal_timer = 0.25;
+        entrant.car.impact = 10_000.0;
+        entrant.car.tyres[0].temperature = 110.0;
+        entrant.car.tyres[1].wear = 0.4;
+        for wheel in &mut entrant.car.wheels {
+            wheel.lateral_force = 4_000.0;
+            wheel.locked = true;
+            wheel.spinning = true;
+        }
+        let tyres = entrant.car.tyres;
+        let timing = entrant.timing.clone();
+        race.recover(0);
+        let car = &race.entrants[0].car;
+        assert_eq!(car.tyres, tyres);
+        assert_eq!(race.entrants[0].timing, timing);
+        let mut clean = Car::new(
+            car.spec.clone(),
+            car.setup,
+            car.assists,
+            &track,
+            car.position,
+            car.yaw,
+        );
+        clean.tyres = tyres;
+        let recovered = &mut race.entrants[0].car;
+        for _ in 0..180 {
+            recovered.step(&CarInput::default(), &track, 1.0 / PHYSICS_RATE);
+            clean.step(&CarInput::default(), &track, 1.0 / PHYSICS_RATE);
+            assert_eq!(recovered.velocity, clean.velocity);
+            assert_eq!(recovered.yaw_rate, clean.yaw_rate);
+            assert_eq!(recovered.powertrain, clean.powertrain);
+            assert_eq!(recovered.wheels, clean.wheels);
+        }
     }
 
     #[test]

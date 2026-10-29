@@ -60,7 +60,10 @@ impl Powertrain {
     }
 
     pub fn shift_up(&mut self, spec: &EngineSpec, speed: f64) {
-        if self.refusal_timer > 0.0 || self.gear >= spec.gear_ratios.len() as i32 {
+        if self.shift_timer > 0.0
+            || self.refusal_timer > 0.0
+            || self.gear >= spec.gear_ratios.len() as i32
+        {
             return;
         }
         if self.gear == REVERSE && speed.abs() > 2.0 {
@@ -72,7 +75,7 @@ impl Powertrain {
     }
 
     pub fn shift_down(&mut self, spec: &EngineSpec, speed: f64, wheel_radius: f64) {
-        if self.refusal_timer > 0.0 || self.gear <= REVERSE {
+        if self.shift_timer > 0.0 || self.refusal_timer > 0.0 || self.gear <= REVERSE {
             return;
         }
         let target = self.gear - 1;
@@ -159,7 +162,9 @@ impl Powertrain {
             * 0.09
             * (self.rpm / spec.rev_limit)
             * (1.0 - throttle);
-        let engine_brake = braking_torque * ratio / wheel_radius * forward_speed.signum();
+        // Braking opposes travel even in reverse; fade out as the clutch opens at rest.
+        let engine_brake =
+            braking_torque * ratio.abs() / wheel_radius * (forward_speed / 0.5).clamp(-1.0, 1.0);
         drive - engine_brake
     }
 }
@@ -177,6 +182,50 @@ pub fn power_shape(x: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::car::spec::{test_wheels, CarSpec};
+
+    #[test]
+    fn engine_braking_opposes_motion_in_forward_and_reverse_gears() {
+        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        for gear in [REVERSE, 1] {
+            for speed in [-5.0, 5.0] {
+                let mut powertrain = Powertrain::new(&spec);
+                powertrain.gear = gear;
+                let force = powertrain.drive_force(&spec, 0.0, speed, 0.355, 0.01);
+                assert!(
+                    force * speed < 0.0,
+                    "gear {gear}, speed {speed}, force {force}"
+                );
+            }
+            let mut powertrain = Powertrain::new(&spec);
+            powertrain.gear = gear;
+            assert_eq!(powertrain.drive_force(&spec, 0.0, 0.0, 0.355, 0.01), 0.0);
+        }
+    }
+
+    #[test]
+    fn shifting_cannot_skip_gears_during_the_torque_cut() {
+        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        for up in [false, true] {
+            let mut powertrain = Powertrain::new(&spec);
+            powertrain.gear = 3;
+            let shift = |powertrain: &mut Powertrain| {
+                if up {
+                    powertrain.shift_up(&spec, 10.0);
+                } else {
+                    powertrain.shift_down(&spec, 10.0, 0.355);
+                }
+            };
+            shift(&mut powertrain);
+            let expected = if up { 4 } else { 2 };
+            let timer = powertrain.shift_timer;
+            shift(&mut powertrain);
+            assert_eq!(powertrain.gear, expected);
+            assert_eq!(powertrain.shift_timer, timer);
+            powertrain.drive_force(&spec, 0.0, 10.0, 0.355, timer + 0.001);
+            shift(&mut powertrain);
+            assert_eq!(powertrain.gear, if up { 5 } else { 1 });
+        }
+    }
 
     #[test]
     fn early_upshift_loses_acceleration() {

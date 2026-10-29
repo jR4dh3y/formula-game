@@ -240,7 +240,7 @@ fn height_on_triangle(triangle: &Triangle, x: f64, z: f64) -> Option<f64> {
     let v = ((c.z - a.z) * (x - c.x) + (a.x - c.x) * (z - c.z)) / denominator;
     let w = 1.0 - u - v;
     const EPSILON: f64 = -1e-6;
-    (u >= EPSILON && v >= EPSILON && w >= EPSILON).then(|| u * a.y + v * b.y + w * c.y)
+    (u >= EPSILON && v >= EPSILON && w >= EPSILON).then_some(u * a.y + v * b.y + w * c.y)
 }
 
 struct Reader<'a> {
