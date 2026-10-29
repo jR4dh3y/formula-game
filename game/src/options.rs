@@ -6,6 +6,8 @@ use std::path::PathBuf;
 pub struct Options {
     pub assets: PathBuf,
     pub track: String,
+    pub track_selected: bool,
+    pub list_tracks: bool,
     pub laps: u32,
     pub opponents: usize,
     pub grid_slot: usize,
@@ -22,7 +24,8 @@ pub struct Options {
 impl Options {
     pub const USAGE: &'static str = "usage: f1-the-game [options]
   --assets DIR        asset directory (default: ./assets)
-  --track NAME        track directory under assets/tracks (default: spa)
+  --track NAME        track directory under assets/tracks (otherwise show menu)
+  --list-tracks       list installed tracks and exit
   --laps N            race length (default: 3)
   --opponents N       AI cars (default: 7)
   --grid N            starting slot, 1 = pole (default: 6)
@@ -39,6 +42,8 @@ impl Options {
         let mut options = Self {
             assets: PathBuf::from("assets"),
             track: "spa".to_string(),
+            track_selected: false,
+            list_tracks: false,
             laps: 3,
             opponents: 7,
             grid_slot: 6,
@@ -59,7 +64,11 @@ impl Options {
             };
             match flag.as_str() {
                 "--assets" => options.assets = PathBuf::from(value()?),
-                "--track" => options.track = value()?,
+                "--track" => {
+                    options.track = value()?;
+                    options.track_selected = true;
+                }
+                "--list-tracks" => options.list_tracks = true,
                 "--laps" => options.laps = number(value()?)?.max(1.0) as u32,
                 "--opponents" => options.opponents = number(value()?)?.clamp(0.0, 15.0) as usize,
                 "--grid" => options.grid_slot = number(value()?)?.max(1.0) as usize,

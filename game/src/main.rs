@@ -4,6 +4,7 @@ mod assets;
 mod camera;
 mod controls;
 mod hud;
+mod menu;
 mod options;
 mod sky;
 
@@ -42,6 +43,9 @@ fn main() -> ExitCode {
 }
 
 fn run(options: Options) -> Result<(), String> {
+    if menu::handle_launch(&options)? {
+        return Ok(());
+    }
     let loaded = assets::load(&options)?;
     let assets::Loaded {
         scene,

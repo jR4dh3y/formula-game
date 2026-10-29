@@ -443,6 +443,8 @@ dependencies = [
  "dhool-pro",
  "glam",
  "racecraft-sim",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
