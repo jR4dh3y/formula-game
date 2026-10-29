@@ -70,7 +70,26 @@ fn main() -> ExitCode {
     }
 }
 
+/// NVIDIA's Wayland presentation waits for each frame to finish rendering
+/// before returning, so the CPU cannot prepare the next frame while the GPU
+/// draws this one: both sit half idle. Presenting through XWayland overlaps
+/// them (116 -> 191 fps on an RTX 3050 laptop) with identical output.
+/// `F1_WAYLAND=1` keeps native Wayland.
+fn prefer_x11_on_nvidia() {
+    let nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
+    if cfg!(target_os = "linux")
+        && nvidia
+        && std::env::var_os("F1_WAYLAND").is_none()
+        && std::env::var_os("WAYLAND_DISPLAY").is_some()
+        && std::env::var_os("DISPLAY").is_some()
+    {
+        // Single-threaded: no other thread can be reading the environment yet.
+        std::env::remove_var("WAYLAND_DISPLAY");
+    }
+}
+
 fn run(options: Options) -> Result<AppExit, String> {
+    prefer_x11_on_nvidia();
     Ok(build_app(options)?.run())
 }
 
@@ -134,6 +153,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
     let plugins = plugins.set(bevy::winit::WinitPlugin {
         run_on_any_thread: true,
     });
+    if capture_run && std::env::var_os("F1_DETERMINISTIC").is_some() {
+        // Every frame advances exactly 1/60 s, so the same frame shows the same
+        // race state in any build: captures can be compared pixel by pixel.
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        ));
+    }
     if !capture_run {
         // A paused race in the background only needs to redraw occasionally.
         app.insert_resource(bevy::winit::WinitSettings {
@@ -143,6 +169,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         });
     }
+    let profile = std::env::var_os("F1_PROFILE").is_some();
     app.add_plugins(plugins)
         .add_audio_source::<audio::EngineSound>()
         .add_plugins(EguiPlugin::default())
@@ -177,6 +204,16 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(EguiPrimaryContextPass, (hud::update, menu::ui).chain())
         .add_systems(Last, capture);
+    if profile {
+        // F1_PROFILE=1 logs per-pass CPU/GPU render timings every few seconds.
+        app.add_plugins((
+            bevy::render::diagnostic::RenderDiagnosticsPlugin,
+            bevy::diagnostic::LogDiagnosticsPlugin {
+                wait_duration: std::time::Duration::from_secs(5),
+                ..default()
+            },
+        ));
+    }
     Ok(app)
 }
 
@@ -222,7 +259,12 @@ fn step_race(mut session: ResMut<Session>) {
 struct Capture {
     frames: u64,
     requested: bool,
+    /// Real time when the benchmark window opened, after scene warm-up.
+    benchmark_start: Option<f64>,
 }
+
+/// Capture runs report the average frame rate after this many frames.
+const BENCHMARK_WARMUP: u64 = 300;
 
 fn capture(
     mut commands: Commands,
@@ -230,13 +272,26 @@ fn capture(
     session: Res<Session>,
     mut state: ResMut<Capture>,
     mut exit: MessageWriter<AppExit>,
+    time: Res<Time<Real>>,
 ) {
     if !session.ready || state.requested {
         return;
     }
     state.frames += 1;
+    if state.frames == BENCHMARK_WARMUP {
+        state.benchmark_start = Some(time.elapsed_secs_f64());
+    }
     if options.frames.is_some_and(|limit| state.frames >= limit) {
         state.requested = true;
+        if let Some(start) = state.benchmark_start {
+            let frames = state.frames - BENCHMARK_WARMUP;
+            let seconds = time.elapsed_secs_f64() - start;
+            info!(
+                "Benchmark: {:.1} fps over {frames} frames ({:.2} ms/frame)",
+                frames as f64 / seconds,
+                seconds * 1000.0 / frames as f64
+            );
+        }
         if let Some(path) = options.capture.clone() {
             commands.spawn(Screenshot::primary_window()).observe(
                 move |event: On<ScreenshotCaptured>, mut exit: MessageWriter<AppExit>| {
