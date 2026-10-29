@@ -33,6 +33,8 @@ Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid s
 
 The menu discovers converted circuits in the selected asset directory. The original asset tree on this machine contains **Spa, Silverstone, Bahrain and COTA**, plus **RB6 and RB22**. Deferred Nürburgring assets remain disabled until their drivable-surface conversion is repaired. To add a circuit, provide `tracks/<id>/{track.json,collision.bin,visual.glb}`. The worktree's ignored `assets` symlink points at the original asset tree for convenient local launching.
 
+The Graphics tab offers Low, Medium, High (default) and Ultra presets, applied immediately and saved with your preferences; `--graphics low|medium|high|ultra` sets one from the command line. Leaving the window during a race opens the pause menu, and rendering is throttled while the window is unfocused.
+
 Driving aids has Beginner, Balanced and Unassisted presets. Beginner is the default, including automatic gears. Steering guidance follows the racing line when you release steering; strong manual steering overrides it. Corner braking anticipates bends, adds brake pressure and reduces a held accelerator. ABS, traction and stability are separate controls. You still control acceleration. The coloured racing line previews corner speed, and STEER / BRAKE indicators light up during interventions. Pause-menu changes apply immediately. Unassisted disables all aids and automatic shifting.
 
 Aids and per-car camera positions persist in `$XDG_CONFIG_HOME/f1-racecraft/preferences.json` (or `~/.config/f1-racecraft/preferences.json`). `F1_SETTINGS` overrides the file. Explicit CLI aid settings override saved aids; `--quick-race` and capture runs use their CLI configuration without reading or writing preferences. Start new race replaces the current session; Resume race keeps it.
@@ -60,6 +62,7 @@ automatically extracts and runs when mounting is unavailable. See
 | Recover to track | R | Back / Select |
 | Pause menu / resume | Escape or P | Start |
 | Mute / unmute | M | — |
+| Frame-rate readout | F3 | — |
 | Quit | Quit game in menu, or window close | Window close |
 
 There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or Cameras & controls. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and RB22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.

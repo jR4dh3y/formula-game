@@ -18,7 +18,7 @@ pub const MAX_SLIPSTREAM: f64 = 0.24;
 pub const MAX_DIRTY_AIR: f64 = 0.24;
 
 /// Computes every car's influence from every other car.
-pub fn influences(cars: &[Car]) -> Vec<AeroInfluence> {
+pub fn influences(cars: &[&Car]) -> Vec<AeroInfluence> {
     cars.iter()
         .enumerate()
         .map(|(index, follower)| {

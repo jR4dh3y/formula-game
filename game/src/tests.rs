@@ -57,13 +57,16 @@ pub(super) fn session() -> Session {
         guidance: driving::Guidance::new(&race, 0),
         corner_braking: 0.,
         show_racing_line: false,
+        show_performance: false,
         camera: camera::ChaseCamera::new(&race, 0),
         minimap: hud::Minimap::new(&race.track),
+        poses: pose::Poses::new(&race),
         race,
         player: 0,
         controls: default(),
         paused: false,
         messages: default(),
+        delta: default(),
         ready: false,
         screen: menu::Screen::Racing,
     }
@@ -121,8 +124,11 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     car.pitch = 0.1;
     car.steer_angle = 0.2;
     car.wheels[0].rotation = 1.4;
+    let Session { poses, race, .. } = &mut session;
+    poses.record(race);
     let mut app = App::new();
     app.insert_resource(session)
+        .init_resource::<Time<Fixed>>()
         .add_systems(Update, assets::sync_cars);
     let body = app
         .world_mut()
@@ -165,7 +171,8 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
             player,
             ..
         } = &mut *session;
-        camera.update(&mut pose, &mut lens, race, *player, 1.0 / 60.0);
+        let car = pose::Pose::of(&race.entrants[*player].car);
+        camera.update(&mut pose, &mut lens, race, *player, &car, 1.0 / 60.0);
         assert!(pose.translation.is_finite());
         assert!(pose.rotation.is_finite());
     }

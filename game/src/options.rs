@@ -26,6 +26,8 @@ pub struct Options {
     pub corner_braking: f64,
     pub aids_explicit: bool,
     pub camera_explicit: bool,
+    pub graphics: crate::graphics::Quality,
+    pub graphics_explicit: bool,
 }
 
 impl Options {
@@ -45,7 +47,7 @@ impl Options {
   --quick-race        skip the race selection menu
   --camera cockpit|tv|chase   starting view (default: chase)
   --assists 0-1       driving aid strength (default: 1.0, automatic gears)
-  --manual-gears      disable automatic shifting
+  --graphics low|medium|high|ultra   graphics preset (default: high)
   --size WxH          window size (default: 1600x900)
   --frames N --capture FILE   render N frames, save the last one, exit";
 
@@ -71,6 +73,8 @@ impl Options {
             corner_braking: 1.,
             aids_explicit: false,
             camera_explicit: false,
+            graphics: crate::graphics::Quality::High,
+            graphics_explicit: false,
         };
         while let Some(flag) = args.next() {
             let mut value = || args.next().ok_or(format!("{flag} needs a value"));
@@ -134,6 +138,17 @@ impl Options {
                         "tv" => Mode::Tv,
                         "chase" => Mode::Chase,
                         _ => return Err("camera must be cockpit, tv or chase".into()),
+                    }
+                }
+                "--graphics" => {
+                    use crate::graphics::Quality;
+                    options.graphics_explicit = true;
+                    options.graphics = match value()?.as_str() {
+                        "low" => Quality::Low,
+                        "medium" => Quality::Medium,
+                        "high" => Quality::High,
+                        "ultra" => Quality::Ultra,
+                        _ => return Err("graphics must be low, medium, high or ultra".into()),
                     }
                 }
                 "--assists" => {

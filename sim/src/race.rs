@@ -61,8 +61,9 @@ pub struct Entrant {
     pub driver: Driver,
     pub timing: Timing,
     pub livery: [f32; 3],
-    /// Last on-track pose, used to recover a car that is stuck or beached.
-    safe_pose: (DVec3, f64),
+    /// Last on-track pose and its centerline station, used to recover a car
+    /// that is stuck or beached.
+    safe_pose: (DVec3, f64, usize),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -145,6 +146,7 @@ impl Race {
                     },
                 };
                 let distance = track.delta(0.0, car.track_position.s).min(0.0);
+                let track_station = car.track_position.station;
                 Entrant {
                     name: config.name,
                     car,
@@ -154,7 +156,7 @@ impl Race {
                         ..Timing::default()
                     },
                     livery: config.livery,
-                    safe_pose: (position, yaw),
+                    safe_pose: (position, yaw, track_station),
                 }
             })
             .collect();
@@ -197,13 +199,8 @@ impl Race {
         self.time += dt;
         let held = self.advance_phase(dt);
 
-        let influences = aero::influences(
-            &self
-                .entrants
-                .iter()
-                .map(|e| e.car.clone())
-                .collect::<Vec<_>>(),
-        );
+        let influences =
+            aero::influences(&self.entrants.iter().map(|e| &e.car).collect::<Vec<_>>());
         let rivals: Vec<Vec<Rival>> = (0..self.entrants.len())
             .map(|index| self.rivals_of(index))
             .collect();
@@ -218,6 +215,9 @@ impl Race {
                 || entrant.timing.finish_time.is_some() && matches!(entrant.driver, Driver::Ai(_))
             {
                 if held {
+                    if let Driver::Ai(driver) = &mut entrant.driver {
+                        driver.hold();
+                    }
                     // On the grid: hold the brakes, let the engine rev.
                     input.brake = 1.0;
                 } else {
@@ -386,13 +386,14 @@ impl Race {
 
     fn recover_stuck_cars(&mut self) {
         let racing = matches!(self.phase, Phase::Racing | Phase::Finishing);
-        for entrant in &mut self.entrants {
+        for index in 0..self.entrants.len() {
+            let entrant = &mut self.entrants[index];
             let car = &entrant.car;
             let on_track = car.track_position.lateral.abs()
                 < self.track.station(car.track_position.station).half_width
                 && car.speed() > 8.0;
             if on_track {
-                entrant.safe_pose = (car.position, car.yaw);
+                entrant.safe_pose = (car.position, car.yaw, car.track_position.station);
             }
             let Driver::Ai(driver) = &mut entrant.driver else {
                 continue;
@@ -402,22 +403,63 @@ impl Race {
                 .dot(self.track.frame_at(car.track_position.s).tangent)
                 < -0.3;
             if racing && (driver.stuck_time() > 2.5 || wrong_way && car.speed() > 3.0) {
-                let s = car.track_position.s;
-                let frame = self.track.frame_at(s);
-                let lateral = self.track.racing_line.offsets[self.track.station_at(s)];
-                let position = frame.point_at(lateral);
-                let yaw = frame.tangent.x.atan2(frame.tangent.y);
-                reset_car(&mut entrant.car, &self.track, position, yaw);
                 driver.reset_after_recovery();
+                let s = car.track_position.s;
+                let (position, yaw) = self.clear_spot(index, s);
+                let station = self.track.station_at(s);
+                self.teleport(index, position, yaw, station);
             }
         }
     }
 
+    /// A pose on the racing line near `s` that no other car occupies, so
+    /// recovered cars never land inside a pile-up and get recovered again.
+    fn clear_spot(&self, index: usize, s: f64) -> (DVec3, f64) {
+        let clearance = self.entrants[index].car.spec.length * 1.6;
+        let occupied = |point: DVec3| {
+            self.entrants.iter().enumerate().any(|(other, entrant)| {
+                other != index
+                    && DVec2::new(
+                        entrant.car.position.x - point.x,
+                        entrant.car.position.z - point.z,
+                    )
+                    .length()
+                        < clearance
+            })
+        };
+        let pose = |along: f64, side: f64| {
+            let s = s + along;
+            let frame = self.track.frame_at(s);
+            let line = self.track.racing_line.offsets[self.track.station_at(s)];
+            let limit = (frame.half_width - 1.5).max(0.0);
+            let position = frame.point_at((line + side).clamp(-limit, limit));
+            (position, frame.tangent.x.atan2(frame.tangent.y))
+        };
+        // Prefer a short step forward (out of the queue), then further back.
+        for along in [0.0, 12.0, 24.0, -12.0, 36.0, -24.0, 48.0, 60.0] {
+            for side in [0.0, 3.5, -3.5] {
+                let (position, yaw) = pose(along, side);
+                if !occupied(position) {
+                    return (position, yaw);
+                }
+            }
+        }
+        pose(0.0, 0.0)
+    }
+
+    /// Moves a car to a new pose and keeps its race distance consistent.
+    fn teleport(&mut self, index: usize, position: DVec3, yaw: f64, station: usize) {
+        let track = self.track.clone();
+        let entrant = &mut self.entrants[index];
+        let before = entrant.car.track_position.s;
+        reset_car(&mut entrant.car, &track, position, yaw, station);
+        entrant.timing.distance += track.delta(before, entrant.car.track_position.s);
+    }
+
     /// Puts a human car back on track at its last safe pose (the "reset" key).
     pub fn recover(&mut self, entrant: usize) {
-        let (position, yaw) = self.entrants[entrant].safe_pose;
-        let track = self.track.clone();
-        reset_car(&mut self.entrants[entrant].car, &track, position, yaw);
+        let (position, yaw, station) = self.entrants[entrant].safe_pose;
+        self.teleport(entrant, position, yaw, station);
     }
 
     fn update_timing(&mut self) {
@@ -537,7 +579,7 @@ impl Race {
     }
 }
 
-fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64) {
+fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64, station: usize) {
     let ground = track
         .collision
         .ground(position + DVec3::Y * 2.0)
@@ -553,6 +595,8 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64) {
         yaw,
     );
     car.tyres = tyres;
+    // A global projection can pick a nearby, different part of the circuit.
+    car.track_position = track.project(car.position, Some(station));
 }
 
 fn closest_on_segment(a: DVec2, b: DVec2, point: DVec2) -> DVec2 {

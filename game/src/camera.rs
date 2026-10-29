@@ -1,5 +1,5 @@
 //! Per-car driver, TV-pod and chase views, with live editable framing.
-use crate::Session;
+use crate::{pose::Pose, Session};
 use bevy::{anti_alias::taa::TemporalAntiAliasing, prelude::*};
 use glam::DVec3;
 use racecraft_sim::Race;
@@ -144,7 +144,7 @@ impl ChaseCamera {
             fov: 54.,
             cut: true,
         };
-        camera.snap(race, player);
+        camera.snap(&Pose::of(car));
         camera
     }
     pub fn cycle(&mut self) {
@@ -167,9 +167,8 @@ impl ChaseCamera {
             self.cut = true;
         }
     }
-    fn desired(&self, race: &Race, player: usize) -> (DVec3, DVec3) {
-        let car = &race.entrants[player].car;
-        let origin = car.model_origin();
+    fn desired(&self, car: &Pose) -> (DVec3, DVec3) {
+        let origin = car.origin;
         let view = self.tuning.view(self.mode);
         let pitch = view.pitch.to_radians();
         let direction = DVec3::new(0., -pitch.sin(), pitch.cos());
@@ -193,8 +192,8 @@ impl ChaseCamera {
             (eye, eye + stabilized * direction * 30.)
         }
     }
-    fn snap(&mut self, race: &Race, player: usize) {
-        (self.position, self.target) = self.desired(race, player);
+    fn snap(&mut self, pose: &Pose) {
+        (self.position, self.target) = self.desired(pose);
     }
     pub fn update(
         &mut self,
@@ -202,20 +201,21 @@ impl ChaseCamera {
         projection: &mut Projection,
         race: &Race,
         player: usize,
+        pose: &Pose,
         dt: f32,
     ) -> bool {
         let dt = dt as f64;
         let car = &race.entrants[player].car;
         let cut = self.cut;
         if cut {
-            self.yaw = car.yaw;
-            self.snap(race, player);
+            self.yaw = pose.yaw;
+            self.snap(pose);
             self.cut = false;
         }
-        let delta = (car.yaw - self.yaw + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU)
+        let delta = (pose.yaw - self.yaw + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU)
             - std::f64::consts::PI;
         self.yaw += delta * (1. - (-dt * 8.).exp());
-        let (position, target) = self.desired(race, player);
+        let (position, target) = self.desired(pose);
         if self.mode != Mode::Chase {
             self.position = position;
             self.target = target;
@@ -281,7 +281,12 @@ type CameraQuery<'w, 's> = Query<
     With<Camera3d>,
 >;
 
-pub fn update(mut session: ResMut<Session>, mut cameras: CameraQuery, time: Res<Time>) {
+pub fn update(
+    mut session: ResMut<Session>,
+    mut cameras: CameraQuery,
+    time: Res<Time>,
+    fixed: Res<Time<Fixed>>,
+) {
     let dt = if session.paused {
         0.
     } else {
@@ -291,11 +296,13 @@ pub fn update(mut session: ResMut<Session>, mut cameras: CameraQuery, time: Res<
         race,
         player,
         camera: rig,
+        poses,
         ..
     } = &mut *session;
+    let pose = poses.at(race, *player, fixed.overstep_fraction_f64());
     for (mut transform, mut lens, taa) in &mut cameras {
         let previous = transform.translation;
-        let cut = rig.update(&mut transform, &mut lens, race, *player, dt);
+        let cut = rig.update(&mut transform, &mut lens, race, *player, &pose, dt);
         if let Some(mut taa) = taa {
             taa.reset |= cut || transform.translation.distance(previous) > 15.;
         }
@@ -311,17 +318,18 @@ mod tests {
         session.race.entrants[0].car.velocity = glam::DVec2::new(40., 20.);
         let mut transform = Transform::default();
         let mut projection = Projection::Perspective(PerspectiveProjection::default());
+        let pose = Pose::of(&session.race.entrants[0].car);
         let rig = &mut session.camera;
-        rig.update(&mut transform, &mut projection, &session.race, 0, 0.);
+        rig.update(&mut transform, &mut projection, &session.race, 0, &pose, 0.);
         let initial = transform.translation;
         for _ in 0..100 {
-            rig.update(&mut transform, &mut projection, &session.race, 0, 0.);
+            rig.update(&mut transform, &mut projection, &session.race, 0, &pose, 0.);
         }
         assert_eq!(transform.translation, initial);
         let mut tuning = rig.tuning.clone();
         tuning.chase.height += 0.5;
         rig.configure(tuning);
-        assert!(rig.update(&mut transform, &mut projection, &session.race, 0, 0.));
+        assert!(rig.update(&mut transform, &mut projection, &session.race, 0, &pose, 0.));
         assert!((transform.translation.y - initial.y - 0.5).abs() < 0.001);
     }
 }

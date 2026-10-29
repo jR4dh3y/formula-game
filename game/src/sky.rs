@@ -1,14 +1,13 @@
 //! Bevy's daylight atmosphere and environment lighting.
 
 use bevy::{
-    anti_alias::taa::TemporalAntiAliasing,
     camera::Exposure,
     core_pipeline::tonemapping::Tonemapping,
     light::{
-        atmosphere::ScatteringMedium, Atmosphere, AtmosphereEnvironmentMapLight,
-        CascadeShadowConfigBuilder, DirectionalLightShadowMap, ShadowFilteringMethod, SunDisk,
+        atmosphere::ScatteringMedium, Atmosphere, CascadeShadowConfigBuilder,
+        DirectionalLightShadowMap, ShadowFilteringMethod, SunDisk,
     },
-    pbr::{AtmosphereSettings, ContactShadows, ScreenSpaceAmbientOcclusion},
+    pbr::AtmosphereSettings,
     prelude::*,
     render::camera::MipBias,
 };
@@ -40,16 +39,11 @@ pub fn setup(commands: &mut Commands, media: &mut Assets<ScatteringMedium>, sun:
         .build(),
         SunDisk::EARTH,
     ));
+    // Antialiasing, ambient occlusion, contact shadows and environment lighting
+    // come from the graphics preset (`graphics::apply`).
     commands.spawn((
         Camera3d::default(),
         Msaa::Off,
-        TemporalAntiAliasing::default(),
-        ContactShadows::default(),
-        ScreenSpaceAmbientOcclusion {
-            radius: 0.32,
-            constant_object_thickness: 0.12,
-            ..default()
-        },
         ShadowFilteringMethod::Gaussian,
         // TAA's default negative bias brings back the fine texture noise we are filtering.
         MipBias(0.0),
@@ -60,7 +54,6 @@ pub fn setup(commands: &mut Commands, media: &mut Assets<ScatteringMedium>, sun:
             ..default()
         }),
         AtmosphereSettings::default(),
-        AtmosphereEnvironmentMapLight::default(),
         Exposure { ev100: 12.6 },
         Tonemapping::AcesFitted,
     ));

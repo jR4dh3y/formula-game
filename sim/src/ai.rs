@@ -6,6 +6,8 @@ use crate::track::racing_line::PerformanceEnvelope;
 use crate::track::{Track, STATION_SPACING};
 use glam::DVec2;
 
+const PLAN_INTERVAL: f64 = 0.25;
+
 /// Personality of a computer driver.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DriverProfile {
@@ -60,23 +62,30 @@ pub struct AiDriver {
     plan_timer: f64,
     stuck_timer: f64,
     lateral_target: f64,
+    /// Tyre grip the current speed profile was planned for.
+    planned_grip: f64,
 }
 
 impl AiDriver {
     pub fn new(profile: DriverProfile, car: &Car, track: &Track, seed: u64) -> Self {
-        let speed_profile = speed_profile(profile, car, track);
+        let planned_grip = tyre_grip(car);
+        let speed_profile = speed_profile(profile, car, track, planned_grip);
         let corners = find_corners(track, &speed_profile);
+        let mut rng = Rng::new(seed);
+        // Stagger replanning so a full field never plans on the same tick.
+        let plan_timer = rng.next_f64() * PLAN_INTERVAL;
         Self {
             profile,
             speed_profile,
             corners,
             intent: Intent::Line,
-            rng: Rng::new(seed),
+            rng,
             mistake: 0.0,
             mistake_corner: None,
-            plan_timer: 0.0,
+            plan_timer,
             stuck_timer: 0.0,
             lateral_target: 0.0,
+            planned_grip,
         }
     }
 
@@ -103,6 +112,11 @@ impl AiDriver {
         self.stuck_timer
     }
 
+    /// Held on the grid: standing still is not being stuck.
+    pub fn hold(&mut self) {
+        self.stuck_timer = 0.0;
+    }
+
     pub fn reset_after_recovery(&mut self) {
         self.stuck_timer = 0.0;
         self.intent = Intent::Line;
@@ -115,7 +129,7 @@ impl AiDriver {
 
         self.plan_timer -= dt;
         if self.plan_timer <= 0.0 {
-            self.plan_timer = 0.25;
+            self.plan_timer += PLAN_INTERVAL;
             self.replan(car, track, rivals, corner);
         }
         self.stuck_timer = if speed < 2.0 {
@@ -212,8 +226,13 @@ impl AiDriver {
     }
 
     fn replan(&mut self, car: &Car, track: &Track, rivals: &[Rival], corner: Option<CornerPlan>) {
-        self.speed_profile = speed_profile(self.profile, car, track);
-        self.corners = find_corners(track, &self.speed_profile);
+        // The whole-lap profile only needs rebuilding once the tyres have changed.
+        let grip = tyre_grip(car);
+        if (grip - self.planned_grip).abs() > self.planned_grip * 0.004 {
+            self.planned_grip = grip;
+            self.speed_profile = speed_profile(self.profile, car, track, grip);
+            self.corners = find_corners(track, &self.speed_profile);
+        }
         let s = car.track_position.s;
         // Forget a plan once its corner is behind us.
         match self.intent {
@@ -312,13 +331,8 @@ impl AiDriver {
 
 /// Match the braking plan to the tyre compound, temperature and wear used by
 /// the physical car, rather than assuming optimal tyres for the whole race.
-fn speed_profile(profile: DriverProfile, car: &Car, track: &Track) -> Vec<f64> {
+fn speed_profile(profile: DriverProfile, car: &Car, track: &Track, tyre_grip: f64) -> Vec<f64> {
     let spec = &car.spec;
-    let tyre_grip = car
-        .tyres
-        .iter()
-        .map(|tyre| tyre.grip(car.setup.compound))
-        .fold(f64::INFINITY, f64::min);
     track.racing_line.speed_profile(&PerformanceEnvelope {
         mass: spec.mass,
         grip: spec.tyre_friction * 0.84 * profile.pace * tyre_grip,
@@ -328,6 +342,13 @@ fn speed_profile(profile: DriverProfile, car: &Car, track: &Track) -> Vec<f64> {
         // Leave headroom for axle brake bias, ABS trimming and turn-in loads.
         brake_fraction: 0.76 * profile.pace,
     })
+}
+
+fn tyre_grip(car: &Car) -> f64 {
+    car.tyres
+        .iter()
+        .map(|tyre| tyre.grip(car.setup.compound))
+        .fold(f64::INFINITY, f64::min)
 }
 
 /// Finds braking zones and apexes from the speed profile's local minima.

@@ -38,6 +38,7 @@ pub fn update(
     style: Res<HudStyle>,
     mut session: ResMut<Session>,
     time: Res<Time>,
+    diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
     mut initialized: Local<bool>,
 ) -> Result {
     let context = contexts.ctx_mut()?;
@@ -93,6 +94,26 @@ pub fn update(
             Align::Center,
             WHITE,
             "LOADING TRACK AND CARS",
+        );
+    }
+    if session.show_performance {
+        use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+        let frame = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME);
+        let average = frame.and_then(|d| d.smoothed()).unwrap_or(0.0);
+        let worst = frame
+            .map(|d| d.values().copied().fold(0.0, f64::max))
+            .unwrap_or(0.0);
+        let scale = hud.height() / 1080.0;
+        hud.text(
+            &style.regular,
+            18.0 * scale,
+            (hud.width() * 0.5, hud.height() - 30.0 * scale),
+            Align::Center,
+            AMBER,
+            &format!(
+                "{:.0} FPS   {average:.1} ms avg   {worst:.1} ms worst",
+                1000.0 / average.max(0.01)
+            ),
         );
     }
     Ok(())
@@ -160,6 +181,62 @@ impl Messages {
     }
 }
 
+/// Live delta against the player's best lap, sampled per centerline station.
+#[derive(Default)]
+pub struct Delta {
+    best: Vec<f64>,
+    lap: Vec<f64>,
+    laps: u32,
+    current: Option<f64>,
+}
+
+impl Delta {
+    fn update(&mut self, race: &racecraft_sim::Race, player: usize) {
+        let timing = &race.entrants[player].timing;
+        let count = race.track.stations.len();
+        if self.lap.len() != count {
+            self.lap = vec![f64::NAN; count];
+        }
+        if timing.laps_completed != self.laps {
+            let filled = self.lap.iter().filter(|t| t.is_finite()).count();
+            if timing.laps_completed > self.laps
+                && timing.last_lap.is_some()
+                && timing.last_lap == timing.best_lap
+                && filled * 10 > count * 9
+            {
+                // Carry samples over stations skipped by a fast frame.
+                let mut last = 0.0;
+                for time in &mut self.lap {
+                    if time.is_finite() {
+                        last = *time;
+                    } else {
+                        *time = last;
+                    }
+                }
+                self.best = std::mem::replace(&mut self.lap, vec![f64::NAN; count]);
+            } else {
+                self.lap.fill(f64::NAN);
+            }
+            self.laps = timing.laps_completed;
+        }
+        self.current = None;
+        if !matches!(race.phase, Phase::Racing | Phase::Finishing)
+            || timing.finish_time.is_some()
+            || timing.distance < 0.0
+        {
+            return;
+        }
+        let elapsed = race.time - timing.lap_start;
+        let station = race.track.station_at(timing.distance);
+        if self.lap[station].is_nan() {
+            self.lap[station] = elapsed;
+        }
+        if let Some(&best) = self.best.get(station) {
+            self.current = Some(elapsed - best);
+        }
+    }
+}
+
 pub fn format_time(seconds: f64) -> String {
     let minutes = (seconds / 60.0).floor();
     let rest = seconds - minutes * 60.0;
@@ -223,6 +300,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         return;
     }
     follow_events(session);
+    session.delta.update(&session.race, session.player);
     if session.race.phase == Phase::Finished {
         session.messages.active.clear();
     }
@@ -321,7 +399,8 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             if metres > race.track.length {
                 format!("+{} LAP", (metres / race.track.length) as u32)
             } else {
-                format!("+{:.1}", metres / car.speed().max(30.0))
+                // Each chaser covers the gap at its own pace, not the player's.
+                format!("+{:.1}", metres / entrant.car.speed().max(30.0))
             }
         };
         hud.text(
@@ -418,6 +497,29 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 &corner.name.to_uppercase(),
             );
         }
+    }
+    if let Some(delta) = session.delta.current {
+        let text = format!("{delta:+.3}");
+        let box_w = 150.0 * scale;
+        hud.fill_rect(
+            width * 0.5 - box_w * 0.5,
+            62.0 * scale,
+            box_w,
+            40.0 * scale,
+            if delta <= 0.0 {
+                rgba(0.08, 0.55, 0.22, 0.88)
+            } else {
+                rgba(0.75, 0.1, 0.12, 0.88)
+            },
+        );
+        hud.text(
+            &style.bold,
+            30.0 * scale,
+            (width * 0.5, 63.0 * scale),
+            Align::Center,
+            WHITE,
+            &text,
+        );
     }
     let mut banner_y = height * 0.28;
     for (text, color, remaining) in &session.messages.active {

@@ -1,6 +1,6 @@
 //! Bevy glTF scenes and simulation-to-render transforms.
 
-use crate::{materials::CarSurface, options::Options, sky, Session};
+use crate::{materials::CarSurface, options::Options, pose::Pose, sky, Session};
 use bevy::{
     asset::LoadState, light::atmosphere::ScatteringMedium, prelude::*,
     world_serialization::WorldInstanceReady,
@@ -171,35 +171,44 @@ pub fn check_loading(
 }
 
 fn body_transform(car: &racecraft_sim::Car) -> Transform {
-    let origin = car.model_origin();
+    pose_transform(&Pose::of(car))
+}
+
+fn pose_transform(pose: &Pose) -> Transform {
+    let origin = pose.origin;
     Transform::from_translation(Vec3::new(origin.x as f32, origin.y as f32, origin.z as f32))
         .with_rotation(Quat::from_euler(
             EulerRot::YXZ,
-            car.yaw as f32,
-            -car.pitch as f32,
-            car.roll as f32,
+            pose.yaw as f32,
+            -pose.pitch as f32,
+            pose.roll as f32,
         ))
 }
 
 pub fn sync_cars(
     session: Res<Session>,
+    fixed: Res<Time<Fixed>>,
     mut bodies: Query<(&CarVisual, &mut Transform), Without<WheelVisual>>,
     mut wheels: Query<(&WheelVisual, &mut Transform), Without<CarVisual>>,
 ) {
+    let blend = fixed.overstep_fraction_f64();
+    let poses: Vec<Pose> = (0..session.race.entrants.len())
+        .map(|index| session.poses.at(&session.race, index, blend))
+        .collect();
     for (visual, mut transform) in &mut bodies {
-        *transform = body_transform(&session.race.entrants[visual.0].car);
+        *transform = pose_transform(&poses[visual.0]);
     }
     for (visual, mut transform) in &mut wheels {
-        let car = &session.race.entrants[visual.entrant].car;
+        let pose = &poses[visual.entrant];
         let steer = if visual.wheel < 2 {
-            car.steer_angle as f32
+            pose.steer as f32
         } else {
             0.0
         };
         *transform = visual.rest;
         transform.rotation = Quat::from_rotation_y(steer)
             * visual.rest.rotation
-            * Quat::from_rotation_x(car.wheels[visual.wheel].rotation as f32);
+            * Quat::from_rotation_x(pose.wheels[visual.wheel] as f32);
     }
 }
 

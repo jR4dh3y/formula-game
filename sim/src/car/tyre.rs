@@ -56,8 +56,12 @@ impl AxleTyres {
         dt: f64,
     ) {
         let properties = compound.properties();
-        let heating = (slide_power * 2.2e-5 + rolling_power * 1.1e-7) * properties.warm_up;
-        let cooling = (self.temperature - AMBIENT_TEMPERATURE) * (0.010 + speed * 0.00022);
+        // Carcass flex heats with load and speed; airflow cools with speed. Load
+        // grows with downforce, so the square root keeps steady running near the
+        // bottom of the window at any speed, and sliding lifts it into the window.
+        let heating =
+            (slide_power * 2.2e-5 + rolling_power.max(0.0).sqrt() * 2.3e-3) * properties.warm_up;
+        let cooling = (self.temperature - AMBIENT_TEMPERATURE) * (0.004 + speed * 0.0004);
         self.temperature =
             (self.temperature + (heating - cooling) * dt).clamp(AMBIENT_TEMPERATURE, 160.0);
 
@@ -119,8 +123,8 @@ mod tests {
         let mut calm = AxleTyres::default();
         let mut sliding = AxleTyres::default();
         for _ in 0..6000 {
-            calm.update(Compound::Soft, 2_000.0, 3.0e6, 50.0, 0.01);
-            sliding.update(Compound::Soft, 60_000.0, 3.0e6, 50.0, 0.01);
+            calm.update(Compound::Soft, 2_000.0, 4.0e5, 50.0, 0.01);
+            sliding.update(Compound::Soft, 60_000.0, 4.0e5, 50.0, 0.01);
         }
         assert!(sliding.temperature > calm.temperature + 10.0);
         assert!(sliding.wear > calm.wear);

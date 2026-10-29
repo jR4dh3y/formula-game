@@ -51,6 +51,9 @@ pub fn update(
             _ => {}
         }
     }
+    if keys.just_pressed(KeyCode::F3) {
+        session.show_performance ^= true;
+    }
     if keys.just_pressed(KeyCode::F4) && session.ready {
         if session.screen == Screen::CameraEditor {
             menu::resume(&mut session);

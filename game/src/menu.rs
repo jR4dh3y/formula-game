@@ -32,6 +32,7 @@ pub(crate) enum Tab {
     Race,
     Aids,
     Controls,
+    Graphics,
 }
 
 pub struct Circuit {
@@ -135,6 +136,7 @@ pub struct Frontend {
     pub aids: Assists,
     pub corner_braking: f64,
     pub show_racing_line: bool,
+    pub graphics: crate::graphics::Quality,
     pub views: std::collections::BTreeMap<String, crate::camera::Tuning>,
     store: crate::preferences::Store,
     pub pending: bool,
@@ -156,6 +158,7 @@ impl Frontend {
             aids: prefs.aids,
             corner_braking: prefs.corner_braking,
             show_racing_line: prefs.racing_line,
+            graphics: prefs.graphics,
             views: prefs.views,
             store,
             pending: false,
@@ -201,6 +204,7 @@ pub fn apply(
         racing_line: frontend.show_racing_line,
         camera: frontend.draft.camera,
         views: frontend.views.clone(),
+        graphics: frontend.graphics,
     };
     if let Err(error) = frontend.store.save(prefs) {
         frontend.error = Some(error);
@@ -264,13 +268,16 @@ pub fn apply(
         guidance: crate::driving::Guidance::new(&race, player),
         corner_braking: frontend.corner_braking,
         show_racing_line: frontend.show_racing_line,
+        show_performance: session.show_performance,
         minimap: hud::Minimap::new(&race.track),
+        poses: crate::pose::Poses::new(&race),
         race,
         player,
         camera,
         controls: default(),
         paused: true,
         messages: default(),
+        delta: default(),
         ready: false,
         screen: Screen::Loading,
     };
@@ -413,6 +420,7 @@ pub fn ui(
                     (Tab::Race, "Race setup"),
                     (Tab::Aids, "Driving aids"),
                     (Tab::Controls, "Cameras & controls"),
+                    (Tab::Graphics, "Graphics"),
                 ] {
                     let _response = ui.selectable_value(&mut frontend.tab, tab, label);
                     #[cfg(test)]
@@ -439,6 +447,7 @@ pub fn ui(
                         }
                     }
                     Tab::Controls => controls_panel(ui, &mut frontend.draft.camera, &mut session),
+                    Tab::Graphics => graphics_panel(ui, &mut frontend.graphics, &mut session),
                 });
             ui.add_space(12.);
             ui.separator();
@@ -808,6 +817,22 @@ fn warm_fonts(context: &egui::Context) {
             atlas.layout_no_wrap(glyphs.clone(), font, Color32::WHITE);
         }
     });
+}
+
+fn graphics_panel(
+    ui: &mut egui::Ui,
+    selected: &mut crate::graphics::Quality,
+    session: &mut Session,
+) {
+    ui.heading("Graphics preset");
+    ui.label("Changes apply immediately.");
+    ui.add_space(6.);
+    for quality in crate::graphics::Quality::ALL {
+        ui.radio_value(selected, quality, quality.label());
+        ui.label(RichText::new(quality.description()).size(15.).color(DIM));
+    }
+    ui.add_space(8.);
+    ui.checkbox(&mut session.show_performance, "Show frame rate  F3");
 }
 
 fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session) {

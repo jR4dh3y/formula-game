@@ -14,6 +14,8 @@ pub struct Preferences {
     pub racing_line: bool,
     pub camera: Mode,
     pub views: BTreeMap<String, Tuning>,
+    #[serde(default)]
+    pub graphics: crate::graphics::Quality,
 }
 
 impl Preferences {
@@ -26,6 +28,7 @@ impl Preferences {
             views: ["rb6", "rb22"]
                 .map(|id| (id.into(), Tuning::for_car(id)))
                 .into(),
+            graphics: options.graphics,
         }
     }
     pub fn sanitize(&mut self) {
@@ -81,6 +84,9 @@ impl Store {
         prefs.sanitize();
         if options.camera_explicit {
             prefs.camera = options.camera;
+        }
+        if options.graphics_explicit {
+            prefs.graphics = options.graphics;
         }
         if options.aids_explicit {
             prefs.aids = options.player_assists();
