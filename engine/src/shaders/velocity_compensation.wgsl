@@ -97,7 +97,7 @@ fn fs_smooth(input: VertexOutput) -> @location(0) vec4<f32> {
     let depth = textureLoad(scene_depth, pixel, 0);
     let motion = textureLoad(motion_vectors, pixel, 0).rg;
     let speed = length(motion);
-    if depth <= 0.00001 || speed <= 0.0002 {
+    if depth <= 0.00001 || settings.params.x <= 0.0001 || speed <= 0.0002 {
         return center;
     }
     let direction = motion / speed;

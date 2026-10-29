@@ -274,6 +274,17 @@ fn blend_pixel(
         return;
     }
     let pixel = &mut pixels[(y as u32 * width + x as u32) as usize];
+    // Most HUD pixels are drawn onto transparent canvas after clear(). Avoid
+    // three divisions for those pixels and for fully opaque source colours.
+    if pixel[3] == 0 || source_alpha >= 1.0 {
+        *pixel = [
+            (color.r.clamp(0.0, 1.0) * 255.0).round() as u8,
+            (color.g.clamp(0.0, 1.0) * 255.0).round() as u8,
+            (color.b.clamp(0.0, 1.0) * 255.0).round() as u8,
+            (source_alpha * 255.0).round() as u8,
+        ];
+        return;
+    }
     let destination_alpha = pixel[3] as f32 / 255.0;
     let out_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
     let channel = |source: f32, destination: u8| {

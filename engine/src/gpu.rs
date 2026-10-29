@@ -394,6 +394,8 @@ struct LiveApplication {
     frame_count: u64,
     title_clock: Instant,
     title_frames: u32,
+    /// CPU time per stage since the last FPS report: advance, stream, render.
+    cpu_stages: [Duration; 3],
     game_input: LiveGameInput,
     game_clock: Instant,
     gilrs: Option<gilrs::Gilrs>,
@@ -418,6 +420,7 @@ impl LiveApplication {
             frame_count: 0,
             title_clock: Instant::now(),
             title_frames: 0,
+            cpu_stages: [Duration::ZERO; 3],
             game_input: LiveGameInput::default(),
             game_clock: Instant::now(),
             gilrs: None,
@@ -456,7 +459,7 @@ impl ApplicationHandler for LiveApplication {
             LiveContent::Scene(scene) => *scene.take().expect("scene is consumed once"),
             LiveContent::Game(game) => game.world.build_render_scene(),
         };
-        let renderer = match pollster::block_on(GpuRenderer::new(
+        let mut renderer = match pollster::block_on(GpuRenderer::new(
             window.clone(),
             scene,
             self.options.capture_path.clone(),
@@ -469,6 +472,9 @@ impl ApplicationHandler for LiveApplication {
                 return;
             }
         };
+        if let Some(capture) = &mut renderer.frame_capture {
+            capture.frame = self.options.max_frames.unwrap_or(31).saturating_sub(1);
+        }
         println!(
             "live GPU: {} ({:?}, {:?})",
             renderer.adapter.name, renderer.adapter.backend, renderer.adapter.device_type
@@ -567,6 +573,7 @@ impl ApplicationHandler for LiveApplication {
                     if let Some(hud) = game.resources.get_mut::<Hud>() {
                         hud.resize(renderer.config.width, renderer.config.height);
                     }
+                    let stage = Instant::now();
                     if let Err(error) = game.advance(FrameInput {
                         delta_seconds,
                         input: self.game_input.state(),
@@ -574,6 +581,8 @@ impl ApplicationHandler for LiveApplication {
                         self.fail(event_loop, LiveError::Engine(error.to_string()));
                         return;
                     }
+                    self.cpu_stages[0] += stage.elapsed();
+                    let stage = Instant::now();
                     if let Err(error) = renderer.update_world(&game.world) {
                         self.fail(event_loop, LiveError::Scene(error));
                         return;
@@ -581,6 +590,7 @@ impl ApplicationHandler for LiveApplication {
                     if let Some(hud) = game.resources.get::<Hud>() {
                         renderer.upload_hud(hud);
                     }
+                    self.cpu_stages[1] += stage.elapsed();
                     self.game_input.finish_frame();
                     if !game.events.read::<AppExit>().is_empty() {
                         event_loop.exit();
@@ -591,7 +601,10 @@ impl ApplicationHandler for LiveApplication {
                     self.fail(event_loop, LiveError::Scene(message));
                     return;
                 }
-                match renderer.render() {
+                let stage = Instant::now();
+                let result = renderer.render();
+                self.cpu_stages[2] += stage.elapsed();
+                match result {
                     RenderResult::Presented => {
                         self.frame_count += 1;
                         self.title_frames += 1;
@@ -608,6 +621,16 @@ impl ApplicationHandler for LiveApplication {
                 if elapsed >= Duration::from_secs(1) {
                     let fps = self.title_frames as f64 / elapsed.as_secs_f64();
                     println!("live FPS: {fps:.1}");
+                    if self.options.profile_gpu {
+                        let frames = self.title_frames.max(1) as f64;
+                        let [advance, stream, render] = self
+                            .cpu_stages
+                            .map(|stage| stage.as_secs_f64() * 1000.0 / frames);
+                        println!(
+                            "cpu ms/frame: game {advance:.2}, world stream {stream:.2}, render submit {render:.2}"
+                        );
+                    }
+                    self.cpu_stages = [Duration::ZERO; 3];
                     window.set_title(&format!(
                         "{} | {} | {:.0} FPS",
                         self.options.title, renderer.adapter.name, fps
@@ -1247,6 +1270,7 @@ struct GpuRenderer {
     vertex_buffer: wgpu::Buffer,
     previous_position_buffer: wgpu::Buffer,
     dynamic_instances: Vec<DynamicInstance>,
+    instance_transforms: InstanceTransforms,
     dynamic_layout: Vec<(EntityId, u64)>,
     dynamic_shadow_camera: CameraUniform,
     shadow_distance: f32,
@@ -1349,10 +1373,37 @@ struct GpuRenderer {
     show_ui: bool,
     /// Revision of the HUD canvas currently in `gbuffer.hud_texture`.
     hud_revision: Option<u64>,
+    hud_pixels: Vec<[u8; 4]>,
     frame_capture: Option<FrameCapture>,
     gpu_profiler: Option<GpuTimestampProfiler>,
     cloths: Vec<LiveCloth>,
     cloth_accumulator: f32,
+}
+
+/// One moving instance to re-transform on the GPU this frame.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct TransformJob {
+    current: [[f32; 4]; 4],
+    previous: [[f32; 4]; 4],
+    start: u32,
+    count: u32,
+    _padding: [u32; 2],
+}
+
+/// GPU instance transforms: object-space vertices plus per-frame jobs.
+struct InstanceTransforms {
+    pipeline: wgpu::ComputePipeline,
+    layout: wgpu::BindGroupLayout,
+    resources: Option<InstanceTransformResources>,
+    jobs: Vec<TransformJob>,
+}
+
+struct InstanceTransformResources {
+    _local_vertices: wgpu::Buffer,
+    job_buffer: wgpu::Buffer,
+    job_capacity: usize,
+    bind_group: wgpu::BindGroup,
 }
 
 /// A world entity's slice of the live vertex buffer.
@@ -1380,6 +1431,7 @@ enum RenderResult {
 struct FrameCapture {
     path: PathBuf,
     written: bool,
+    frame: u64,
 }
 
 struct PendingFrameCapture {
@@ -1756,6 +1808,7 @@ impl GpuRenderer {
         let rain_pipeline = create_rain_pipeline(&device, &rain_layout, HDR_FORMAT);
         let aa_pipeline = create_aa_pipeline(&device, &aa_layout, config.format);
         let ui_pipeline = create_ui_pipeline(&device, &ui_layout);
+        let instance_transforms = create_instance_transforms(&device);
         let present_pipeline = create_present_pipeline(&device, &present_layout, config.format);
         let gbuffer = GBuffer::new(
             &device,
@@ -1826,6 +1879,7 @@ impl GpuRenderer {
             // Games stream their world on the first update; the startup upload
             // only has to be valid until then.
             dynamic_instances: Vec::new(),
+            instance_transforms,
             dynamic_layout: Vec::new(),
             dynamic_shadow_camera: shadow_camera,
             shadow_distance,
@@ -1927,9 +1981,11 @@ impl GpuRenderer {
             display_fps: 0.0,
             show_ui: capture_path.is_none(),
             hud_revision: None,
+            hud_pixels: Vec::new(),
             frame_capture: capture_path.map(|path| FrameCapture {
                 path,
                 written: false,
+                frame: 30,
             }),
             gpu_profiler,
             cloths,
@@ -2114,20 +2170,43 @@ impl GpuRenderer {
                 contents: bytemuck::cast_slice(&flattened.indices),
                 usage: wgpu::BufferUsages::INDEX,
             });
+        let streamed =
+            wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE;
         self.vertex_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("dynamic-scene-vertices"),
                 contents: bytemuck::cast_slice(&flattened.vertices),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                usage: streamed,
             });
         self.previous_position_buffer =
             self.device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("dynamic-scene-previous-positions"),
                     contents: bytemuck::cast_slice(&flattened.previous_positions),
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    usage: streamed,
                 });
+        // Object-space copy in the same order, for GPU re-transforms.
+        let mut local_vertices = vec![GpuVertex::zeroed(); flattened.vertices.len()];
+        for (item, range) in items.iter().zip(&flattened.vertex_ranges) {
+            for (slot, vertex) in local_vertices[range.start as usize..range.end as usize]
+                .iter_mut()
+                .zip(&item.mesh.vertices)
+            {
+                *slot = gpu_vertex(&crate::math::Mat4::IDENTITY, vertex);
+            }
+        }
+        self.instance_transforms.resources = (!local_vertices.is_empty()).then(|| {
+            create_instance_transform_resources(
+                &self.device,
+                &self.instance_transforms.layout,
+                &local_vertices,
+                &self.vertex_buffer,
+                &self.previous_position_buffer,
+                items.len().max(1),
+            )
+        });
+        self.instance_transforms.jobs.clear();
         self.batches = flattened.batches;
         self.dynamic_instances = items
             .iter()
@@ -2142,59 +2221,69 @@ impl GpuRenderer {
             .collect();
     }
 
-    /// Re-transforms entities that moved this frame or last frame (so their
-    /// motion vectors settle). Returns whether any shadow caster changed.
+    /// Queues GPU re-transforms for entities that moved this frame or last
+    /// frame (so their motion vectors settle). Deforming meshes are rebuilt on
+    /// the CPU. Returns whether any shadow caster changed.
     fn stream_moved_instances(&mut self, instances: &[RenderInstance<'_>]) -> bool {
         let vertex_stride = std::mem::size_of::<GpuVertex>() as u64;
         let previous_stride = std::mem::size_of::<GpuPreviousPosition>() as u64;
         let mut shadow_casters_moved = false;
+        self.instance_transforms.jobs.clear();
         for (instance, cached) in instances.iter().zip(&mut self.dynamic_instances) {
             let moved = instance.deforming || instance.transform != cached.transform;
             if !moved && !cached.moved_last_frame {
                 continue;
             }
-            let vertices: Vec<_> = instance
-                .mesh
-                .vertices
-                .iter()
-                .map(|vertex| gpu_vertex(&instance.transform, vertex))
-                .collect();
-            let previous_positions: Vec<_> = if instance.deforming {
-                instance
+            if instance.deforming {
+                let vertices: Vec<_> = instance
+                    .mesh
+                    .vertices
+                    .iter()
+                    .map(|vertex| gpu_vertex(&instance.transform, vertex))
+                    .collect();
+                let previous_positions: Vec<_> = instance
                     .mesh
                     .vertices
                     .iter()
                     .map(|vertex| gpu_previous_position(&instance.transform, vertex))
-                    .collect()
-            } else if moved {
-                instance
-                    .mesh
-                    .vertices
-                    .iter()
-                    .map(|vertex| gpu_position(&cached.transform, vertex.position))
-                    .collect()
+                    .collect();
+                let start = cached.vertex_range.start as u64;
+                self.queue.write_buffer(
+                    &self.vertex_buffer,
+                    start * vertex_stride,
+                    bytemuck::cast_slice(&vertices),
+                );
+                self.queue.write_buffer(
+                    &self.previous_position_buffer,
+                    start * previous_stride,
+                    bytemuck::cast_slice(&previous_positions),
+                );
             } else {
-                vertices
-                    .iter()
-                    .map(|vertex| GpuPreviousPosition {
-                        position: vertex.position,
-                    })
-                    .collect()
-            };
-            let start = cached.vertex_range.start as u64;
-            self.queue.write_buffer(
-                &self.vertex_buffer,
-                start * vertex_stride,
-                bytemuck::cast_slice(&vertices),
-            );
-            self.queue.write_buffer(
-                &self.previous_position_buffer,
-                start * previous_stride,
-                bytemuck::cast_slice(&previous_positions),
-            );
+                // Settling frames repeat the current pose so motion vectors go to zero.
+                let previous = if moved {
+                    cached.transform
+                } else {
+                    instance.transform
+                };
+                self.instance_transforms.jobs.push(TransformJob {
+                    current: instance.transform.m,
+                    previous: previous.m,
+                    start: cached.vertex_range.start,
+                    count: cached.vertex_range.end - cached.vertex_range.start,
+                    _padding: [0; 2],
+                });
+            }
             cached.transform = instance.transform;
             cached.moved_last_frame = moved;
             shadow_casters_moved |= cached.casts_shadow;
+        }
+        if let Some(resources) = &self.instance_transforms.resources {
+            let jobs = &self.instance_transforms.jobs;
+            debug_assert!(jobs.len() <= resources.job_capacity);
+            if !jobs.is_empty() {
+                self.queue
+                    .write_buffer(&resources.job_buffer, 0, bytemuck::cast_slice(jobs));
+            }
         }
         shadow_casters_moved
     }
@@ -2205,25 +2294,36 @@ impl GpuRenderer {
         {
             return;
         }
-        self.queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &self.gbuffer.hud_texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            bytemuck::cast_slice(hud.pixels()),
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(hud.width() * 4),
-                rows_per_image: Some(hud.height()),
-            },
-            wgpu::Extent3d {
-                width: hud.width(),
-                height: hud.height(),
-                depth_or_array_layers: 1,
-            },
+        let regions = changed_hud_regions(
+            hud.pixels(),
+            &self.hud_pixels,
+            hud.width(),
+            hud.height(),
+            self.hud_revision.is_none(),
         );
+        for [x, y, width, height] in regions {
+            self.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &self.gbuffer.hud_texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d { x, y, z: 0 },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                bytemuck::cast_slice(hud.pixels()),
+                wgpu::TexelCopyBufferLayout {
+                    offset: ((y as u64 * hud.width() as u64 + x as u64) * 4),
+                    bytes_per_row: Some(hud.width() * 4),
+                    rows_per_image: Some(hud.height()),
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
+        self.hud_pixels.clear();
+        self.hud_pixels.extend_from_slice(hud.pixels());
         self.hud_revision = Some(hud.revision());
     }
 
@@ -2454,6 +2554,21 @@ impl GpuRenderer {
         if let Some(profiler) = &self.gpu_profiler {
             encoder.write_timestamp(&profiler.query_set, 0);
         }
+        if let (Some(resources), false) = (
+            &self.instance_transforms.resources,
+            self.instance_transforms.jobs.is_empty(),
+        ) {
+            let jobs = &self.instance_transforms.jobs;
+            let longest = jobs.iter().map(|job| job.count).max().unwrap_or(0);
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("instance-transforms"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.instance_transforms.pipeline);
+            pass.set_bind_group(0, &resources.bind_group, &[]);
+            pass.dispatch_workgroups(longest.div_ceil(64), jobs.len() as u32, 1);
+        }
+        self.instance_transforms.jobs.clear();
 
         if !self.shadow_cache_ready {
             {
@@ -3121,26 +3236,24 @@ impl GpuRenderer {
             );
         }
 
-        let pending_capture = if self
-            .frame_capture
-            .as_ref()
-            .is_some_and(|capture| !capture.written)
-            && self.frame_index >= 30
-        {
-            self.frame_capture.as_ref().map(|capture| {
-                copy_presented_frame_to_buffer(
-                    &self.device,
-                    &mut encoder,
-                    &frame.texture,
-                    self.config.width,
-                    self.config.height,
-                    self.config.format,
-                    capture.path.clone(),
-                )
-            })
-        } else {
-            None
-        };
+        let pending_capture =
+            if self.frame_capture.as_ref().is_some_and(|capture| {
+                !capture.written && u64::from(self.frame_index) >= capture.frame
+            }) {
+                self.frame_capture.as_ref().map(|capture| {
+                    copy_presented_frame_to_buffer(
+                        &self.device,
+                        &mut encoder,
+                        &frame.texture,
+                        self.config.width,
+                        self.config.height,
+                        self.config.format,
+                        capture.path.clone(),
+                    )
+                })
+            } else {
+                None
+            };
 
         self.queue.submit(Some(encoder.finish()));
         if let Some(profiler) = &self.gpu_profiler {
@@ -5859,6 +5972,137 @@ fn create_aa_pipeline(
     })
 }
 
+/// Compare final canvases, so clear-and-redraw does not upload unchanged panels.
+/// Adjacent dirty tiles share a write; the row pitch still spans the full canvas.
+fn changed_hud_regions(
+    pixels: &[[u8; 4]],
+    previous: &[[u8; 4]],
+    width: u32,
+    height: u32,
+    force: bool,
+) -> Vec<[u32; 4]> {
+    if width == 0 || height == 0 {
+        return Vec::new();
+    }
+    if force || previous.len() != pixels.len() {
+        return vec![[0, 0, width, height]];
+    }
+    let mut regions = Vec::new();
+    for y in (0..height).step_by(64) {
+        let bottom = (y + 64).min(height);
+        let mut run = None;
+        for x in (0..width).step_by(64) {
+            let right = (x + 64).min(width);
+            let changed = (y..bottom).any(|row| {
+                let start = (row * width + x) as usize;
+                let end = (row * width + right) as usize;
+                pixels[start..end] != previous[start..end]
+            });
+            if changed {
+                run.get_or_insert(x);
+            } else if let Some(start) = run.take() {
+                regions.push([start, y, x - start, bottom - y]);
+            }
+        }
+        if let Some(start) = run {
+            regions.push([start, y, width - start, bottom - y]);
+        }
+    }
+    regions
+}
+
+fn create_instance_transforms(device: &wgpu::Device) -> InstanceTransforms {
+    let storage = |binding, read_only| wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::COMPUTE,
+        ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Storage { read_only },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    };
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("instance-transform-layout"),
+        entries: &[
+            storage(0, true),
+            storage(1, false),
+            storage(2, false),
+            storage(3, true),
+        ],
+    });
+    let shader =
+        device.create_shader_module(wgpu::include_wgsl!("shaders/instance_transform.wgsl"));
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("instance-transform-pipeline-layout"),
+        bind_group_layouts: &[Some(&layout)],
+        immediate_size: 0,
+    });
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("instance-transform-pipeline"),
+        layout: Some(&pipeline_layout),
+        module: &shader,
+        entry_point: Some("main"),
+        compilation_options: wgpu::PipelineCompilationOptions::default(),
+        cache: None,
+    });
+    InstanceTransforms {
+        pipeline,
+        layout,
+        resources: None,
+        jobs: Vec::new(),
+    }
+}
+
+fn create_instance_transform_resources(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    local_vertices: &[GpuVertex],
+    world_vertices: &wgpu::Buffer,
+    previous_positions: &wgpu::Buffer,
+    job_capacity: usize,
+) -> InstanceTransformResources {
+    let local = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("instance-object-space-vertices"),
+        contents: bytemuck::cast_slice(local_vertices),
+        usage: wgpu::BufferUsages::STORAGE,
+    });
+    let job_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("instance-transform-jobs"),
+        size: (job_capacity * std::mem::size_of::<TransformJob>()) as u64,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("instance-transform-bind-group"),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: local.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: world_vertices.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: previous_positions.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: job_buffer.as_entire_binding(),
+            },
+        ],
+    });
+    InstanceTransformResources {
+        _local_vertices: local,
+        job_buffer,
+        job_capacity,
+        bind_group,
+    }
+}
+
 fn create_ui_pipeline(
     device: &wgpu::Device,
     ui_layout: &wgpu::BindGroupLayout,
@@ -6660,6 +6904,157 @@ fn texture_entry(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hud_regions_include_erasure_and_partial_edge_tiles() {
+        let (width, height) = (130, 70);
+        let mut previous = vec![[0; 4]; width * height];
+        let mut pixels = previous.clone();
+        assert!(changed_hud_regions(&pixels, &previous, 130, 70, false).is_empty());
+        previous[0] = [255; 4]; // removed panel must be uploaded too
+        pixels[64] = [255; 4]; // adjacent changed tiles merge
+        pixels[69 * width + 129] = [255; 4]; // partial right/bottom tile
+        assert_eq!(
+            changed_hud_regions(&pixels, &previous, 130, 70, false),
+            vec![[0, 0, 128, 64], [128, 64, 2, 6]]
+        );
+        assert_eq!(
+            changed_hud_regions(&pixels, &previous, 130, 70, true),
+            vec![[0, 0, 130, 70]]
+        );
+        assert_eq!(
+            changed_hud_regions(&pixels, &[], 130, 70, false),
+            vec![[0, 0, 130, 70]]
+        );
+    }
+
+    #[test]
+    fn gpu_instance_transform_matches_cpu_vertices_and_motion() {
+        pollster::block_on(async {
+            let instance = wgpu::Instance::default();
+            let Ok(adapter) = instance
+                .request_adapter(&wgpu::RequestAdapterOptions::default())
+                .await
+            else {
+                eprintln!("skipping GPU readback: no adapter");
+                return;
+            };
+            let (device, queue) = adapter
+                .request_device(&wgpu::DeviceDescriptor::default())
+                .await
+                .unwrap();
+            let source = crate::scene::Vertex {
+                position: Vec3::new(1.0, -2.0, 3.0),
+                previous_position: Vec3::ZERO,
+                normal: Vec3::Y,
+                tangent: Vec3::ZERO,
+                tangent_sign: -1.0,
+                uv: crate::math::Vec2::new(0.25, 0.75),
+                color: crate::math::Color::new(0.1, 0.4, 0.9, 0.8),
+            };
+            let local = vec![gpu_vertex(&crate::math::Mat4::IDENTITY, &source); 4];
+            let current = crate::math::Mat4::translation(Vec3::new(200.0, 10.0, -30.0))
+                * crate::math::Mat4::rotation_y(0.7)
+                * crate::math::Mat4::scale(Vec3::new(2.0, 0.5, -3.0));
+            let previous = crate::math::Mat4::translation(Vec3::new(198.0, 9.0, -31.0));
+            let world_size = std::mem::size_of_val(local.as_slice()) as u64;
+            let previous_size = (4 * std::mem::size_of::<GpuPreviousPosition>()) as u64;
+            let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC;
+            let world = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(&local),
+                usage,
+            });
+            let history = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: &vec![0; previous_size as usize],
+                usage,
+            });
+            let transforms = create_instance_transforms(&device);
+            let resources = create_instance_transform_resources(
+                &device,
+                &transforms.layout,
+                &local,
+                &world,
+                &history,
+                2,
+            );
+            let jobs = [
+                TransformJob {
+                    current: current.m,
+                    previous: previous.m,
+                    start: 1,
+                    count: 2,
+                    _padding: [0; 2],
+                },
+                // A settling frame writes zero object motion.
+                TransformJob {
+                    current: current.m,
+                    previous: current.m,
+                    start: 3,
+                    count: 1,
+                    _padding: [0; 2],
+                },
+            ];
+            queue.write_buffer(&resources.job_buffer, 0, bytemuck::cast_slice(&jobs));
+            let readback = device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: world_size + previous_size,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            });
+            let mut encoder =
+                device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+            {
+                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+                pass.set_pipeline(&transforms.pipeline);
+                pass.set_bind_group(0, &resources.bind_group, &[]);
+                pass.dispatch_workgroups(1, 2, 1);
+            }
+            encoder.copy_buffer_to_buffer(&world, 0, &readback, 0, world_size);
+            encoder.copy_buffer_to_buffer(&history, 0, &readback, world_size, previous_size);
+            queue.submit([encoder.finish()]);
+            let (sender, receiver) = mpsc::channel();
+            readback
+                .slice(..)
+                .map_async(wgpu::MapMode::Read, move |result| {
+                    sender.send(result).unwrap()
+                });
+            device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+            receiver.recv().unwrap().unwrap();
+            let bytes = readback.slice(..).get_mapped_range();
+            let vertices: &[GpuVertex] = bytemuck::cast_slice(&bytes[..world_size as usize]);
+            let positions: &[GpuPreviousPosition] =
+                bytemuck::cast_slice(&bytes[world_size as usize..]);
+            assert_eq!(
+                bytemuck::bytes_of(&vertices[0]),
+                bytemuck::bytes_of(&local[0])
+            );
+            let expected = gpu_vertex(&current, &source);
+            for index in 1..4 {
+                for (actual, expected) in vertices[index]
+                    .position
+                    .iter()
+                    .zip(expected.position)
+                    .chain(vertices[index].normal.iter().zip(expected.normal))
+                    .chain(vertices[index].tangent.iter().zip(expected.tangent))
+                {
+                    assert!((actual - expected).abs() < 0.0001, "{actual} != {expected}");
+                }
+                assert_eq!(vertices[index].color, expected.color);
+                assert_eq!(vertices[index].uv, expected.uv);
+                let pose = if index == 3 { current } else { previous };
+                let expected_previous = gpu_position(&pose, source.position);
+                for (actual, expected) in positions[index]
+                    .position
+                    .iter()
+                    .zip(expected_previous.position)
+                {
+                    assert!((actual - expected).abs() < 0.0001);
+                }
+            }
+        });
+    }
 
     #[test]
     fn wasd_moves_camera_relative_to_view_direction() {

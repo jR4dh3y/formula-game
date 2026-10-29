@@ -44,11 +44,14 @@ fn cs_main(
     let size = textureDimensions(lighting_hdr);
     var sum = 0.0;
     var count = 0u;
-    // Each lane covers a strided portion of the frame. Lighting alpha contains
-    // the material-independent diffuse illuminance proxy emitted by lighting.
-    for (var y = local_id.y; y < size.y; y += 8u) {
-        for (var x = local_id.x; x < size.x; x += 8u) {
-            let diffuse_illuminance = textureLoad(lighting_hdr, vec2<i32>(i32(x), i32(y)), 0).a;
+    // Stratified 64x64 metering grid. Reading every screen pixel from one
+    // workgroup serializes millions of texture loads and scales with resolution.
+    // Every lane takes the same number of samples, including on tiny viewports.
+    for (var y = local_id.y; y < 64u; y += 8u) {
+        for (var x = local_id.x; x < 64u; x += 8u) {
+            let uv = (vec2<f32>(f32(x), f32(y)) + 0.5) / 64.0;
+            let pixel = min(vec2<u32>(uv * vec2<f32>(size)), size - vec2<u32>(1u));
+            let diffuse_illuminance = textureLoad(lighting_hdr, vec2<i32>(pixel), 0).a;
             sum += log(max(diffuse_illuminance, 0.0001));
             count += 1u;
         }
