@@ -1,0 +1,27 @@
+[package]
+name = "dhool-pro"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+description = "A reusable Rust game runtime with deterministic simulation and vendor-agnostic rendering"
+publish = false
+
+[lib]
+name = "dhool_pro"
+path = "src/lib.rs"
+
+[build-dependencies]
+cc = "1.2"
+
+[dependencies]
+bytemuck = { version = "1.25", features = ["derive"] }
+glam = "0.33"
+gltf = "1.4"
+half = "2.6"
+image = { version = "0.25", default-features = false, features = ["hdr", "jpeg", "png"] }
+pollster = "0.4"
+wgpu = { version = "29", default-features = false, features = ["std", "dx12", "gles", "vulkan", "wgsl"] }
+winit = "0.30.12"
+
+[dev-dependencies]
+naga = { version = "29", features = ["wgsl-in"] }

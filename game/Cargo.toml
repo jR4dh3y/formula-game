@@ -1,0 +1,9 @@
+[package]
+name = "f1-the-game"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+dhool-pro = { path = "../engine" }
+racecraft-sim = { path = "../sim" }
