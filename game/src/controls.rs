@@ -5,7 +5,8 @@
 //! Gamepad: RT throttle, LT brake, left stick steer, RB/A up, LB/X down,
 //! Y camera, Back reset, Start pause.
 
-use dhool_pro::{GamepadButton, InputState, Key};
+use crate::Session;
+use bevy::prelude::*;
 use racecraft_sim::CarInput;
 
 #[derive(Default)]
@@ -27,19 +28,50 @@ pub struct Actions {
 
 const STICK_DEADZONE: f32 = 0.08;
 
+pub fn update(
+    keys: Res<ButtonInput<KeyCode>>,
+    pads: Query<&Gamepad>,
+    time: Res<Time>,
+    mut session: ResMut<Session>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let actions = session
+        .controls
+        .update(&keys, pads.iter().next(), time.delta_secs());
+    if actions.quit {
+        exit.write(AppExit::Success);
+    }
+    if actions.pause {
+        session.paused = !session.paused;
+    }
+    if actions.camera {
+        session.camera.cycle();
+    }
+    if actions.reset {
+        let player = session.player;
+        session.race.recover(player);
+    }
+}
+
 impl Controls {
     /// Reads this frame's input; discrete presses are queued for the next physics tick.
-    pub fn update(&mut self, input: &InputState, dt: f32) -> Actions {
+    pub fn update(
+        &mut self,
+        input: &ButtonInput<KeyCode>,
+        pad: Option<&Gamepad>,
+        dt: f32,
+    ) -> Actions {
         let dt = dt as f64;
-        let held = |keys: &[Key]| keys.iter().any(|&key| input.keys.contains(key));
-        let pressed = |keys: &[Key]| keys.iter().any(|&key| input.keys_pressed.contains(key));
-        let pad = input.gamepad;
-        let pad_pressed = |button| pad.connected && pad.pressed.contains(button);
+        let held = |keys: &[KeyCode]| keys.iter().any(|&key| input.pressed(key));
+        let pressed = |keys: &[KeyCode]| keys.iter().any(|&key| input.just_pressed(key));
+        let pad_pressed = |button| pad.is_some_and(|pad| pad.just_pressed(button));
 
-        let left = held(&[Key::A, Key::ArrowLeft]);
-        let right = held(&[Key::D, Key::ArrowRight]);
-        let stick = pad.left_stick.x;
-        if pad.connected && stick.abs() > STICK_DEADZONE {
+        let left = held(&[KeyCode::KeyA, KeyCode::ArrowLeft]);
+        let right = held(&[KeyCode::KeyD, KeyCode::ArrowRight]);
+        let stick = pad
+            .and_then(|pad| pad.get(GamepadAxis::LeftStickX))
+            .unwrap_or(0.0);
+        if pad.is_some() && stick.abs() > STICK_DEADZONE {
             let magnitude = ((stick.abs() - STICK_DEADZONE) / (1.0 - STICK_DEADZONE)) as f64;
             // A gentle curve gives finer control near the centre.
             self.steer = -(stick.signum() as f64) * magnitude.powf(1.5);
@@ -55,18 +87,14 @@ impl Controls {
             self.steer += (target - self.steer).clamp(-step, step);
         }
 
-        let key_throttle = held(&[Key::W, Key::ArrowUp]);
-        let key_brake = held(&[Key::S, Key::ArrowDown]);
-        let pad_throttle = if pad.connected {
-            pad.right_trigger as f64
-        } else {
-            0.0
-        };
-        let pad_brake = if pad.connected {
-            pad.left_trigger as f64
-        } else {
-            0.0
-        };
+        let key_throttle = held(&[KeyCode::KeyW, KeyCode::ArrowUp]);
+        let key_brake = held(&[KeyCode::KeyS, KeyCode::ArrowDown]);
+        let pad_throttle = pad
+            .and_then(|pad| pad.get(GamepadButton::RightTrigger2))
+            .unwrap_or(0.0) as f64;
+        let pad_brake = pad
+            .and_then(|pad| pad.get(GamepadButton::LeftTrigger2))
+            .unwrap_or(0.0) as f64;
         self.throttle = if key_throttle { 1.0 } else { pad_throttle };
         // Keyboard braking builds over ~0.15 s instead of slamming the pedal.
         self.brake = if key_brake {
@@ -75,18 +103,18 @@ impl Controls {
             pad_brake
         };
 
-        self.shift_up |= pressed(&[Key::E, Key::ShiftLeft, Key::ShiftRight])
-            || pad_pressed(GamepadButton::RightBumper)
+        self.shift_up |= pressed(&[KeyCode::KeyE, KeyCode::ShiftLeft, KeyCode::ShiftRight])
+            || pad_pressed(GamepadButton::RightTrigger)
             || pad_pressed(GamepadButton::South);
-        self.shift_down |= pressed(&[Key::Q, Key::ControlLeft, Key::ControlRight])
-            || pad_pressed(GamepadButton::LeftBumper)
+        self.shift_down |= pressed(&[KeyCode::KeyQ, KeyCode::ControlLeft, KeyCode::ControlRight])
+            || pad_pressed(GamepadButton::LeftTrigger)
             || pad_pressed(GamepadButton::West);
 
         Actions {
-            quit: pressed(&[Key::Escape]),
-            pause: pressed(&[Key::P]) || pad_pressed(GamepadButton::Start),
-            camera: pressed(&[Key::C]) || pad_pressed(GamepadButton::North),
-            reset: pressed(&[Key::R]) || pad_pressed(GamepadButton::Select),
+            quit: pressed(&[KeyCode::Escape]),
+            pause: pressed(&[KeyCode::KeyP]) || pad_pressed(GamepadButton::Start),
+            camera: pressed(&[KeyCode::KeyC]) || pad_pressed(GamepadButton::North),
+            reset: pressed(&[KeyCode::KeyR]) || pad_pressed(GamepadButton::Select),
         }
     }
 
@@ -114,5 +142,66 @@ impl Controls {
 
     pub fn brake(&self) -> f64 {
         self.brake
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shifts_survive_render_frames_but_fire_for_one_physics_tick() {
+        let mut keys = ButtonInput::default();
+        let mut controls = Controls::default();
+        keys.press(KeyCode::KeyE);
+        controls.update(&keys, None, 0.01);
+        keys.clear();
+        controls.update(&keys, None, 0.01);
+        assert!(controls.car_input().shift_up);
+        assert!(!controls.car_input().shift_up);
+        keys.press(KeyCode::KeyQ);
+        controls.update(&keys, None, 0.01);
+        assert!(controls.car_input().shift_down);
+        assert!(!controls.car_input().shift_down);
+    }
+
+    #[test]
+    fn analog_controls_release_after_gamepad_disconnect() {
+        let keys = ButtonInput::default();
+        let mut pad = Gamepad::default();
+        pad.analog_mut().set(GamepadAxis::LeftStickX, 0.6);
+        pad.analog_mut().set(GamepadButton::RightTrigger2, 0.8);
+        pad.analog_mut().set(GamepadButton::LeftTrigger2, 0.2);
+        pad.digital_mut().press(GamepadButton::North);
+        let mut controls = Controls::default();
+        assert!(controls.update(&keys, Some(&pad), 0.1).camera);
+        let input = controls.car_input();
+        assert!(input.steer < -0.3 && input.steer > -0.6);
+        assert!((input.throttle - 0.8).abs() < 1e-6);
+        assert!((input.brake - 0.2).abs() < 1e-6);
+        controls.update(&keys, None, 0.2);
+        let input = controls.car_input();
+        assert_eq!(input.throttle, 0.0);
+        assert_eq!(input.brake, 0.0);
+        assert_eq!(input.steer, 0.0);
+    }
+
+    #[test]
+    fn keyboard_steering_reverses_and_recentres() {
+        let mut keys = ButtonInput::default();
+        let mut controls = Controls::default();
+        keys.press(KeyCode::KeyA);
+        keys.press(KeyCode::KeyW);
+        controls.update(&keys, None, 0.1);
+        assert!(controls.steer() > 0.0);
+        assert_eq!(controls.throttle(), 1.0);
+        keys.release(KeyCode::KeyA);
+        keys.press(KeyCode::KeyD);
+        controls.update(&keys, None, 0.2);
+        assert!(controls.steer() < 0.0);
+        keys.release_all();
+        controls.update(&keys, None, 0.2);
+        assert_eq!(controls.steer(), 0.0);
+        assert_eq!(controls.throttle(), 0.0);
     }
 }

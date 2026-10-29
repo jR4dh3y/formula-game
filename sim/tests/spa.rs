@@ -9,7 +9,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 fn assets() -> Option<PathBuf> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets");
+    let root = std::env::var_os("F1_TEST_ASSETS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets"));
     root.join("tracks/spa/track.json").exists().then_some(root)
 }
 

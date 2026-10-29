@@ -1,38 +1,98 @@
-//! Heads-up display drawn into the engine's HUD canvas each frame.
+//! Race HUD drawn through egui in Bevy.
 
 use crate::camera::Mode;
+use crate::canvas::{rgba, Align, Hud};
 use crate::Session;
-use dhool_pro::math::Color;
-use dhool_pro::{Align, FontId, Hud, HudFont};
+use bevy::prelude::*;
+use bevy_egui::{
+    egui::{self, Color32 as Color, FontFamily},
+    EguiContexts,
+};
 use racecraft_sim::car::powertrain::ShiftRefusal;
 use racecraft_sim::race::{Phase, RaceEvent};
 use racecraft_sim::Track;
 
-#[derive(Clone, Copy)]
+#[derive(Resource)]
 pub struct HudStyle {
-    regular: FontId,
-    bold: FontId,
+    regular: FontFamily,
+    bold: FontFamily,
 }
 
-pub fn create() -> Result<(Hud, HudStyle), String> {
-    let mut hud = Hud::new();
-    let regular = hud.add_font(HudFont::from_bytes(include_bytes!(
-        "../fonts/TitilliumWeb-SemiBold.ttf"
-    ))?);
-    let bold = hud.add_font(HudFont::from_bytes(include_bytes!(
-        "../fonts/TitilliumWeb-Bold.ttf"
-    ))?);
-    Ok((hud, HudStyle { regular, bold }))
+const PANEL: Color = Color::from_rgba_premultiplied(4, 4, 6, 184);
+const WHITE: Color = Color::WHITE;
+const DIM: Color = Color::from_rgb(184, 191, 204);
+const ACCENT: Color = Color::from_rgb(237, 33, 43);
+const PURPLE: Color = Color::from_rgb(184, 92, 255);
+const GREEN: Color = Color::from_rgb(64, 230, 115);
+const AMBER: Color = Color::from_rgb(255, 184, 38);
+const BLUE: Color = Color::from_rgb(77, 153, 255);
+
+pub fn setup(mut commands: Commands) {
+    commands.insert_resource(HudStyle {
+        regular: FontFamily::Name("regular".into()),
+        bold: FontFamily::Name("bold".into()),
+    });
 }
 
-const PANEL: Color = Color::new(0.02, 0.025, 0.035, 0.72);
-const WHITE: Color = Color::new(1.0, 1.0, 1.0, 1.0);
-const DIM: Color = Color::new(0.72, 0.75, 0.8, 1.0);
-const ACCENT: Color = Color::new(0.93, 0.13, 0.17, 1.0);
-const PURPLE: Color = Color::new(0.72, 0.36, 1.0, 1.0);
-const GREEN: Color = Color::new(0.25, 0.9, 0.45, 1.0);
-const AMBER: Color = Color::new(1.0, 0.72, 0.15, 1.0);
-const BLUE: Color = Color::new(0.3, 0.6, 1.0, 1.0);
+pub fn update(
+    mut contexts: EguiContexts,
+    style: Res<HudStyle>,
+    mut session: ResMut<Session>,
+    time: Res<Time>,
+    mut initialized: Local<bool>,
+) -> Result {
+    let context = contexts.ctx_mut()?;
+    if !*initialized {
+        let mut fonts = egui::FontDefinitions::empty();
+        for (name, data) in [
+            (
+                "regular",
+                include_bytes!("../fonts/TitilliumWeb-SemiBold.ttf").as_slice(),
+            ),
+            (
+                "bold",
+                include_bytes!("../fonts/TitilliumWeb-Bold.ttf").as_slice(),
+            ),
+        ] {
+            fonts
+                .font_data
+                .insert(name.into(), egui::FontData::from_static(data).into());
+            fonts
+                .families
+                .insert(FontFamily::Name(name.into()), vec![name.into()]);
+        }
+        // egui's defaults can still refer to these two built-in family names.
+        fonts
+            .families
+            .insert(FontFamily::Proportional, vec!["regular".into()]);
+        fonts
+            .families
+            .insert(FontFamily::Monospace, vec!["regular".into()]);
+        context.set_fonts(fonts);
+        *initialized = true;
+        return Ok(());
+    }
+    let mut hud = Hud {
+        painter: context.layer_painter(egui::LayerId::new(
+            egui::Order::Background,
+            egui::Id::new("race-hud"),
+        )),
+        size: context.content_rect().size(),
+    };
+    if session.ready {
+        draw(&mut hud, &style, &mut session, time.delta_secs());
+    } else {
+        hud.text(
+            &style.bold,
+            32.0,
+            (hud.width() * 0.5, hud.height() * 0.45),
+            Align::Center,
+            WHITE,
+            "LOADING TRACK AND CARS",
+        );
+    }
+    Ok(())
+}
 
 /// Track outline scaled into a unit box, for the minimap.
 pub struct Minimap {
@@ -155,19 +215,21 @@ fn follow_events(session: &mut Session) {
 }
 
 pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
-    if hud.width() == 0 {
+    if hud.width() == 0.0 {
         return;
     }
     follow_events(session);
+    if session.race.phase == Phase::Finished {
+        session.messages.active.clear();
+    }
     for message in &mut session.messages.active {
         message.2 -= dt;
     }
     session.messages.active.retain(|message| message.2 > 0.0);
 
-    hud.clear();
-    let scale = hud.height() as f32 / 1080.0;
-    let width = hud.width() as f32;
-    let height = hud.height() as f32;
+    let scale = hud.height() / 1080.0;
+    let width = hud.width();
+    let height = hud.height();
     let race = &session.race;
     let player = &race.entrants[session.player];
     let car = &player.car;
@@ -179,7 +241,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     hud.fill_rect(tower_x, y, 300.0 * scale, row * 1.5, ACCENT);
     let lap = (player.timing.laps_completed + 1).min(race.laps);
     hud.text(
-        style.bold,
+        &style.bold,
         26.0 * scale,
         (tower_x + 12.0 * scale, y + 6.0 * scale),
         Align::Left,
@@ -188,7 +250,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     );
     let position = race.position_of(session.player);
     hud.text(
-        style.bold,
+        &style.bold,
         26.0 * scale,
         (tower_x + 288.0 * scale, y + 6.0 * scale),
         Align::Right,
@@ -206,13 +268,13 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             300.0 * scale,
             row,
             if mine {
-                Color::new(0.25, 0.27, 0.32, 0.85)
+                rgba(0.25, 0.27, 0.32, 0.85)
             } else {
                 PANEL
             },
         );
         hud.text(
-            style.bold,
+            &style.bold,
             20.0 * scale,
             (tower_x + 10.0 * scale, y + 3.0 * scale),
             Align::Left,
@@ -220,9 +282,9 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             &format!("{:>2}", rank + 1),
         );
         let team = if entrant.car.spec.name == "RB22" {
-            Color::new(0.2, 0.3, 0.9, 1.0)
+            rgba(0.2, 0.3, 0.9, 1.0)
         } else {
-            Color::new(0.9, 0.75, 0.1, 1.0)
+            rgba(0.9, 0.75, 0.1, 1.0)
         };
         hud.fill_rect(
             tower_x + 40.0 * scale,
@@ -232,7 +294,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             team,
         );
         hud.text(
-            style.regular,
+            &style.regular,
             20.0 * scale,
             (tower_x + 52.0 * scale, y + 3.0 * scale),
             Align::Left,
@@ -259,7 +321,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             }
         };
         hud.text(
-            style.regular,
+            &style.regular,
             18.0 * scale,
             (tower_x + 290.0 * scale, y + 4.0 * scale),
             Align::Right,
@@ -299,7 +361,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     ];
     for (label, value, color) in lines {
         hud.text(
-            style.regular,
+            &style.regular,
             18.0 * scale,
             (tower_x + 12.0 * scale, y + 5.0 * scale),
             Align::Left,
@@ -307,7 +369,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             label,
         );
         hud.text(
-            style.bold,
+            &style.bold,
             22.0 * scale,
             (tower_x + 288.0 * scale, y + 2.0 * scale),
             Align::Right,
@@ -326,7 +388,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             40.0 * scale,
             spacing * 4.0 + 90.0 * scale,
             90.0 * scale,
-            Color::new(0.0, 0.0, 0.0, 0.85),
+            rgba(0.0, 0.0, 0.0, 0.85),
         );
         for light in 0..5 {
             let lit = light < lights;
@@ -334,9 +396,9 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 (left + spacing * light as f32, 85.0 * scale),
                 24.0 * scale,
                 if lit {
-                    Color::new(1.0, 0.08, 0.06, 1.0)
+                    rgba(1.0, 0.08, 0.06, 1.0)
                 } else {
-                    Color::new(0.18, 0.04, 0.04, 1.0)
+                    rgba(0.18, 0.04, 0.04, 1.0)
                 },
             );
         }
@@ -344,11 +406,11 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     if let Some(corner) = race.track.corner_near(car.track_position.s) {
         if !matches!(race.phase, Phase::Countdown { .. }) {
             hud.text(
-                style.regular,
+                &style.regular,
                 24.0 * scale,
                 (width * 0.5, 30.0 * scale),
                 Align::Center,
-                Color::new(1.0, 1.0, 1.0, 0.85),
+                rgba(1.0, 1.0, 1.0, 0.85),
                 &corner.name.to_uppercase(),
             );
         }
@@ -356,17 +418,17 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     let mut banner_y = height * 0.28;
     for (text, color, remaining) in &session.messages.active {
         let fade = remaining.min(0.4) / 0.4;
-        let color = Color::new(color.r, color.g, color.b, color.a * fade);
-        let text_width = hud.text_width(style.bold, 40.0 * scale, text);
+        let color = color.gamma_multiply(fade);
+        let text_width = hud.text_width(&style.bold, 40.0 * scale, text);
         hud.fill_rect(
             width * 0.5 - text_width * 0.5 - 20.0 * scale,
             banner_y,
             text_width + 40.0 * scale,
             56.0 * scale,
-            Color::new(0.0, 0.0, 0.0, 0.55 * fade),
+            rgba(0.0, 0.0, 0.0, 0.55 * fade),
         );
         hud.text(
-            style.bold,
+            &style.bold,
             40.0 * scale,
             (width * 0.5, banner_y + 2.0 * scale),
             Align::Center,
@@ -376,9 +438,9 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         banner_y += 64.0 * scale;
     }
     if session.paused {
-        hud.fill_rect(0.0, 0.0, width, height, Color::new(0.0, 0.0, 0.0, 0.45));
+        hud.fill_rect(0.0, 0.0, width, height, rgba(0.0, 0.0, 0.0, 0.45));
         hud.text(
-            style.bold,
+            &style.bold,
             72.0 * scale,
             (width * 0.5, height * 0.4),
             Align::Center,
@@ -386,7 +448,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             "PAUSED",
         );
         hud.text(
-            style.regular,
+            &style.regular,
             26.0 * scale,
             (width * 0.5, height * 0.4 + 90.0 * scale),
             Align::Center,
@@ -423,7 +485,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         } else if lit {
             color
         } else {
-            Color::new(0.15, 0.15, 0.18, 1.0)
+            rgba(0.15, 0.15, 0.18, 1.0)
         };
         hud.circle(
             (
@@ -440,7 +502,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         gear => gear.to_string(),
     };
     hud.text(
-        style.bold,
+        &style.bold,
         110.0 * scale,
         (px + 90.0 * scale, py + 36.0 * scale),
         Align::Center,
@@ -449,7 +511,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     );
     let kmh = (car.speed() * 3.6).round() as i32;
     hud.text(
-        style.bold,
+        &style.bold,
         72.0 * scale,
         (px + 330.0 * scale, py + 44.0 * scale),
         Align::Right,
@@ -457,7 +519,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         &kmh.to_string(),
     );
     hud.text(
-        style.regular,
+        &style.regular,
         22.0 * scale,
         (px + 340.0 * scale, py + 86.0 * scale),
         Align::Left,
@@ -465,7 +527,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         "KM/H",
     );
     hud.text(
-        style.regular,
+        &style.regular,
         20.0 * scale,
         (px + 330.0 * scale, py + 126.0 * scale),
         Align::Right,
@@ -480,7 +542,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         bar_y,
         bar_w,
         10.0 * scale,
-        Color::new(0.15, 0.15, 0.18, 1.0),
+        rgba(0.15, 0.15, 0.18, 1.0),
     );
     hud.fill_rect(
         px + 16.0 * scale,
@@ -494,7 +556,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         bar_y,
         bar_w,
         10.0 * scale,
-        Color::new(0.15, 0.15, 0.18, 1.0),
+        rgba(0.15, 0.15, 0.18, 1.0),
     );
     hud.fill_rect(
         px + 32.0 * scale + bar_w,
@@ -525,7 +587,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             ShiftRefusal::TooFast => "TOO FAST",
         };
         hud.text(
-            style.bold,
+            &style.bold,
             26.0 * scale,
             (px + 90.0 * scale, py + 150.0 * scale),
             Align::Center,
@@ -541,7 +603,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     let compound = car.setup.compound;
     let properties = compound.properties();
     hud.text(
-        style.bold,
+        &style.bold,
         22.0 * scale,
         (cx + 14.0 * scale, cy + 8.0 * scale),
         Align::Left,
@@ -560,7 +622,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         };
         let row_y = cy + 44.0 * scale + axle as f32 * 34.0 * scale;
         hud.text(
-            style.regular,
+            &style.regular,
             20.0 * scale,
             (cx + 14.0 * scale, row_y),
             Align::Left,
@@ -590,7 +652,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             }
         }
         hud.text(
-            style.bold,
+            &style.bold,
             22.0 * scale,
             (cx + 230.0 * scale, row_y),
             Align::Right,
@@ -598,7 +660,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             &format!("{:.0}°C", tyre.temperature),
         );
         hud.text(
-            style.regular,
+            &style.regular,
             20.0 * scale,
             (cx + 326.0 * scale, row_y + 2.0 * scale),
             Align::Right,
@@ -608,7 +670,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     }
     let meter = |hud: &mut Hud, label: &str, value: f64, max: f64, y: f32, color: Color| {
         hud.text(
-            style.regular,
+            &style.regular,
             18.0 * scale,
             (cx + 14.0 * scale, y),
             Align::Left,
@@ -622,7 +684,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             y + 8.0 * scale,
             bar_w,
             8.0 * scale,
-            Color::new(0.15, 0.15, 0.18, 1.0),
+            rgba(0.15, 0.15, 0.18, 1.0),
         );
         hud.fill_rect(
             bar_x,
@@ -649,7 +711,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
         AMBER,
     );
     hud.text(
-        style.regular,
+        &style.regular,
         18.0 * scale,
         (cx + 14.0 * scale, cy + 162.0 * scale),
         Align::Left,
@@ -688,7 +750,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
     for index in 0..points.len() {
         let a = map(points[index]);
         let b = map(points[(index + 1) % points.len()]);
-        hud.line(a, b, 3.0 * scale, Color::new(0.8, 0.82, 0.86, 0.9));
+        hud.line(a, b, 3.0 * scale, rgba(0.8, 0.82, 0.86, 0.9));
     }
     let start = map(points[0]);
     hud.fill_rect(
@@ -721,10 +783,10 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             top,
             panel_w,
             (90.0 + rows * 34.0) * scale,
-            Color::new(0.02, 0.025, 0.035, 0.9),
+            rgba(0.02, 0.025, 0.035, 0.9),
         );
         hud.text(
-            style.bold,
+            &style.bold,
             40.0 * scale,
             (width * 0.5, top + 14.0 * scale),
             Align::Center,
@@ -740,7 +802,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
                 WHITE
             };
             hud.text(
-                style.bold,
+                &style.bold,
                 24.0 * scale,
                 (left + 24.0 * scale, row_y),
                 Align::Left,
@@ -749,7 +811,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, dt: f32) {
             );
             let best = entrant.timing.best_lap.map(format_time).unwrap_or_default();
             hud.text(
-                style.regular,
+                &style.regular,
                 22.0 * scale,
                 (left + panel_w - 24.0 * scale, row_y + 2.0 * scale),
                 Align::Right,

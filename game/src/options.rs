@@ -3,6 +3,7 @@
 use racecraft_sim::{Compound, Setup};
 use std::path::PathBuf;
 
+#[derive(bevy::prelude::Resource)]
 pub struct Options {
     pub assets: PathBuf,
     pub track: String,
@@ -52,14 +53,31 @@ impl Options {
             let mut value = || args.next().ok_or(format!("{flag} needs a value"));
             let number = |text: String| {
                 text.parse::<f64>()
-                    .map_err(|_| format!("bad number: {text}"))
+                    .ok()
+                    .filter(|n| n.is_finite())
+                    .ok_or_else(|| format!("bad number: {text}"))
             };
             match flag.as_str() {
                 "--assets" => options.assets = PathBuf::from(value()?),
                 "--track" => options.track = value()?,
-                "--laps" => options.laps = number(value()?)?.max(1.0) as u32,
-                "--opponents" => options.opponents = number(value()?)?.clamp(0.0, 15.0) as usize,
-                "--grid" => options.grid_slot = number(value()?)?.max(1.0) as usize,
+                "--laps" => {
+                    options.laps = value()?
+                        .parse::<u32>()
+                        .map_err(|_| "laps must be a positive integer")?
+                        .max(1)
+                }
+                "--opponents" => {
+                    options.opponents = value()?
+                        .parse::<usize>()
+                        .map_err(|_| "opponents must be an integer")?
+                        .min(15)
+                }
+                "--grid" => {
+                    options.grid_slot = value()?
+                        .parse::<usize>()
+                        .map_err(|_| "grid must be an integer")?
+                        .max(1)
+                }
                 "--front-wing" => options.setup.front_wing = number(value()?)?,
                 "--rear-wing" => options.setup.rear_wing = number(value()?)?,
                 "--tyres" => {
@@ -75,10 +93,21 @@ impl Options {
                 "--size" => {
                     let text = value()?;
                     let (w, h) = text.split_once('x').ok_or("size must be WxH")?;
-                    options.width = number(w.to_string())? as u32;
-                    options.height = number(h.to_string())? as u32;
+                    options.width = w.parse::<u32>().map_err(|_| "width must be an integer")?;
+                    options.height = h.parse::<u32>().map_err(|_| "height must be an integer")?;
+                    if options.width == 0 || options.height == 0 {
+                        return Err("window size must be nonzero".into());
+                    }
                 }
-                "--frames" => options.frames = Some(number(value()?)? as u64),
+                "--frames" => {
+                    let frames = value()?
+                        .parse::<u64>()
+                        .map_err(|_| "frames must be a positive integer")?;
+                    if frames == 0 {
+                        return Err("frames must be nonzero".into());
+                    }
+                    options.frames = Some(frames);
+                }
                 "--capture" => options.capture = Some(PathBuf::from(value()?)),
                 "--help" | "-h" => return Err("help".to_string()),
                 other => return Err(format!("unknown option {other}")),
@@ -86,6 +115,63 @@ impl Options {
         }
         options.setup = options.setup.clamped();
         options.grid_slot = options.grid_slot.min(options.opponents + 1);
+        if options.capture.is_some() && options.frames.is_none() {
+            return Err("--capture requires --frames".into());
+        }
         Ok(options)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &[&str]) -> Result<Options, String> {
+        Options::parse(args.iter().map(|arg| (*arg).to_owned()))
+    }
+
+    #[test]
+    fn setup_and_grid_are_applied_to_the_selected_field() {
+        let options = parse(&[
+            "--opponents",
+            "2",
+            "--grid",
+            "6",
+            "--laps",
+            "5",
+            "--front-wing",
+            "9",
+            "--rear-wing",
+            "2",
+            "--tyres",
+            "hard",
+            "--auto-gears",
+            "--assists",
+            "0.4",
+        ])
+        .unwrap();
+        assert_eq!(options.grid_slot, 3);
+        assert_eq!(options.opponents, 2);
+        assert_eq!(options.laps, 5);
+        assert_eq!(options.setup.front_wing, 9.0);
+        assert_eq!(options.setup.rear_wing, 2.0);
+        assert_eq!(options.setup.compound, Compound::Hard);
+        assert!(options.automatic_gears);
+        assert_eq!(options.assist_level, 0.4);
+    }
+
+    #[test]
+    fn rejects_unusable_window_capture_and_nonfinite_setup() {
+        for args in [
+            vec!["--size", "0x900"],
+            vec!["--size", "800xNaN"],
+            vec!["--frames", "0"],
+            vec!["--capture", "out.png"],
+            vec!["--front-wing", "NaN"],
+            vec!["--assists", "inf"],
+            vec!["--opponents", "1.5"],
+        ] {
+            assert!(parse(&args).is_err(), "accepted {args:?}");
+        }
     }
 }

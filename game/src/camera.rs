@@ -1,7 +1,7 @@
-//! Chase, T-cam and trackside cameras.
+//! Chase, far chase, T-cam and nose cameras.
 
-use dhool_pro::math::Vec3;
-use dhool_pro::World;
+use crate::Session;
+use bevy::prelude::*;
 use glam::DVec3;
 use racecraft_sim::Race;
 
@@ -73,7 +73,14 @@ impl ChaseCamera {
         self.target = target;
     }
 
-    pub fn update(&mut self, world: &mut World, race: &Race, player: usize, dt: f32) {
+    pub fn update(
+        &mut self,
+        transform: &mut Transform,
+        projection: &mut Projection,
+        race: &Race,
+        player: usize,
+        dt: f32,
+    ) {
         let dt = dt as f64;
         let car = &race.entrants[player].car;
         let onboard = matches!(self.mode, Mode::TCam | Mode::Nose);
@@ -103,10 +110,10 @@ impl ChaseCamera {
             .fold(0.0, f64::max);
         let jitter =
             (shake + kerb * 2.0 * (car.speed() / 40.0).min(1.0)) * (race.time * 57.0).sin();
-        if let Some((_, rig)) = world.active_camera_mut() {
-            rig.camera.position = to_vec3(self.position + DVec3::Y * jitter * 0.3);
-            rig.camera.target = to_vec3(self.target);
-            rig.camera.vertical_fov_radians = match self.mode {
+        *transform = Transform::from_translation(to_vec3(self.position + DVec3::Y * jitter * 0.3))
+            .looking_at(to_vec3(self.target), Vec3::Y);
+        if let Projection::Perspective(perspective) = projection {
+            perspective.fov = match self.mode {
                 Mode::TCam | Mode::Nose => 70.0_f32.to_radians(),
                 _ => (60.0 + (car.speed() as f32 / 90.0).min(1.0) * 6.0).to_radians(),
             };
@@ -116,4 +123,26 @@ impl ChaseCamera {
 
 fn to_vec3(value: DVec3) -> Vec3 {
     Vec3::new(value.x as f32, value.y as f32, value.z as f32)
+}
+
+pub fn update(
+    mut session: ResMut<Session>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    time: Res<Time>,
+) {
+    let Session {
+        race,
+        player,
+        camera: rig,
+        ..
+    } = &mut *session;
+    for (mut transform, mut projection) in &mut camera {
+        rig.update(
+            &mut transform,
+            &mut projection,
+            race,
+            *player,
+            time.delta_secs(),
+        );
+    }
 }
