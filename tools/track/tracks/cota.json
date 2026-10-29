@@ -34,8 +34,7 @@
   "wall": [
     "twall*",
     "grdr_*",
-    "pitwall01",
-    "tempwall"
+    "pitwall01"
   ],
   "source": "User-supplied Sketchfab/Assetto-style visual model; see upstream archive license",
   "sun_direction": [
@@ -137,6 +136,19 @@
     ]
   ],
   "omit": [
-    "shadow"
+    "shadow",
+    "tempwall",
+    "cmwldhl"
+  ],
+  "omit_boxes": [
+    {
+      "material": "grassc",
+      "dimensions": [
+        1.416,
+        1.029,
+        1.407
+      ],
+      "tolerance": 0.05
+    }
   ]
 }

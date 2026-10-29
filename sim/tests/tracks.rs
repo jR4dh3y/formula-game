@@ -104,7 +104,3 @@ fn bahrain() {
 fn cota() {
     drive("cota", 5513.0);
 }
-#[test]
-fn nurburgring_gp() {
-    drive("nurburgring-gp", 5148.0);
-}

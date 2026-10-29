@@ -10,7 +10,8 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
-from convert_glb import walls_from
+from centerline import extract as extract_centerline
+from convert_glb import remove_placeholders, walls_from
 from extract_zip import extract
 from glb import GlbMaterial, GlbMesh, write_glb
 from PIL import Image
@@ -51,6 +52,64 @@ class AssetToolsTest(unittest.TestCase):
                 self.assertEqual(output.stat().st_mode & 0o111, 0)
             finally:
                 shutil.rmtree(destination)
+
+    def test_centerline_extracts_closed_road_without_painted_edges(self):
+        angle = np.arange(128) * (2 * np.pi / 128)
+        inner = np.column_stack([45 * np.cos(angle), np.zeros(128), 45 * np.sin(angle)])
+        outer = np.column_stack([55 * np.cos(angle), np.zeros(128), 55 * np.sin(angle)])
+        triangles = []
+        for i in range(128):
+            j = (i + 1) % 128
+            triangles.extend(
+                [[inner[i], outer[i], inner[j]], [outer[i], outer[j], inner[j]]]
+            )
+        with tempfile.TemporaryDirectory() as root:
+            points, widths = extract_centerline(
+                np.array(triangles),
+                {"length": 2 * np.pi * 50, "start": [50, 0], "direction": [0, 1]},
+                Path(root) / "debug.png",
+            )
+            self.assertTrue(np.isfinite(points).all())
+            self.assertTrue((widths >= 3).all())
+            self.assertLess(
+                abs(
+                    np.linalg.norm(np.roll(points, -1, axis=0) - points, axis=1).sum()
+                    / (2 * np.pi * 50)
+                    - 1
+                ),
+                0.02,
+            )
+
+    def test_grid_cube_removal_preserves_surrounding_ground(self):
+        dimensions = np.array([1.416, 1.029, 1.407])
+        cube = (
+            np.array([[x, y, z] for x in [0, 1] for y in [0, 1] for z in [0, 1]])
+            * dimensions
+        )
+        positions = np.vstack([cube, [[10, 0, 0], [12, 0, 0], [10, 0, 2]]])
+        faces = np.array(
+            [
+                [0, 1, 3],
+                [0, 3, 2],
+                [4, 6, 7],
+                [4, 7, 5],
+                [0, 4, 5],
+                [0, 5, 1],
+                [2, 3, 7],
+                [2, 7, 6],
+                [0, 2, 6],
+                [0, 6, 4],
+                [1, 5, 7],
+                [1, 7, 3],
+                [8, 9, 10],
+            ]
+        )
+        rules = [{"material": "grassc", "dimensions": dimensions.tolist()}]
+        actual = remove_placeholders(positions, faces, "grassc", rules)
+        np.testing.assert_array_equal(actual, [[8, 9, 10]])
+        np.testing.assert_array_equal(
+            remove_placeholders(positions, faces, "road", rules), faces
+        )
 
     def test_wall_height_gate_keeps_kerb_lips_drivable(self):
         kerb = np.array([[0, 0, 0], [2, 0, 0], [2, 0.2, 0]])

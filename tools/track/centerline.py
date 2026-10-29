@@ -140,11 +140,13 @@ def extract(triangles, config, debug, route=None, edges=None):
         # XOR cycles enumerate alternative connected layouts without choosing pit lanes
         # by their material name. The measured lap length selects a candidate; no scale
         # fitting is performed. Config exclusions resolve ambiguous layouts.
-        edges = [{tuple(sorted(e)) for e in zip(c, c[1:] + c[:1])} for c in cycles[:12]]
+        cycle_edges = [
+            {tuple(sorted(e)) for e in zip(c, c[1:] + c[:1])} for c in cycles[:12]
+        ]
         best = None
-        for bits in itertools.product((False, True), repeat=len(edges)):
+        for bits in itertools.product((False, True), repeat=len(cycle_edges)):
             chosen = set()
-            for enabled, es in zip(bits, edges):
+            for enabled, es in zip(bits, cycle_edges):
                 if enabled:
                     chosen.symmetric_difference_update(es)
             if not chosen:
@@ -183,11 +185,15 @@ def extract(triangles, config, debug, route=None, edges=None):
     points = resample(points, 3.0)
     physical, _ = road_grid(triangles, resolution, close=False)
     physical_origin = _
-    for polygon in config.get('exclude',[]):
-        canvas=Image.fromarray(physical)
-        draw=ImageDraw.Draw(canvas)
-        draw.polygon([tuple((np.array(p)-physical_origin)/resolution) for p in polygon],fill=0)
-        physical=np.asarray(canvas)!=0
+    for polygon in config.get("exclude", []):
+        canvas = Image.fromarray(physical)
+        draw = ImageDraw.Draw(canvas)
+        draw.polygon(
+            [tuple((np.array(p) - physical_origin) / resolution) for p in polygon],
+            fill=0,
+        )
+        physical = np.asarray(canvas) != 0
+    source_distance = distance_transform_edt(physical) * resolution
     physical = binary_closing(physical, iterations=config.get("gap_closing", 1))
     physical = remove_small_holes(physical, max_size=16)
     if edges is not None:
@@ -267,7 +273,7 @@ def extract(triangles, config, debug, route=None, edges=None):
         heights = gaussian_filter1d(heights, 1.5, mode="wrap")
     points3 = np.column_stack([points[:, 0], heights, points[:, 1]])
     pixels = np.rint((points - physical_origin) / resolution).astype(int)
-    widths = distance[pixels[:, 1], pixels[:, 0]]
+    widths = np.maximum(source_distance[pixels[:, 1], pixels[:, 0]], 1.5)
     widths = np.minimum(widths, config.get("max_half_width", float("inf")))
     render_debug(debug, mask, origin, resolution, points, config)
     if abs(length / config["length"] - 1) > 0.02:

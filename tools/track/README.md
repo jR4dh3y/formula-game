@@ -32,7 +32,7 @@ Without `SPA_SOURCE`, the script clones the upstream `v0.9.2` tag from
 is `4cd1486edd58de13f6c3975a27d479b658e70539`.
 
 The optional argument is `all`, `spa`, `cars`, `tracks`, or one configured track
-name: `silverstone`, `bahrain`, `cota`, `nurburgring-gp`. For example:
+name: `silverstone`, `bahrain`, `cota`. For example:
 
 ```sh
 ZIP_DIR=/home/radhey/code/f1-the-game tools/build_assets.sh silverstone
@@ -92,18 +92,14 @@ widths. Bahrain's numbered materials were checked against texture sheets and
 geometry. `Mtl_73` is road, `Mtl_92/93` are other asphalt, and the pit branch is
 explicitly excluded from route extraction. COTA's `fillred` and line materials
 are asphalt paint, not missing ground. Its baked `shadow` polygons are omitted
-because the renderer draws dynamic shadows.
+because the renderer draws dynamic shadows. Temporary barriers and disconnected
+1 m authoring cubes on the starting grid are removed by explicit material and
+component-size rules; the surrounding terrain is retained.
 
-The Nürburgring 24H model needs coarse route hints to disambiguate service roads,
-runoff and layout variants. Painted road-edge geometry refines that route. Road
-heights come from a local plane fitted to those edges, avoiding jumps onto bridge
-decks. Small road omissions hidden under bridges are filled for collision only.
-The debug map and AI lap are required checks after changing these hints.
-
-Nordschleife is deliberately not enabled. The supplied model has 6,569,017
-triangles and roughly 18.7 km horizontal bounds on each axis. A single 0.5 m road
-raster is too large for the 14 GiB host. It needs tiled, elevation-aware route
-extraction and a separate visual budget review before adding it to the build.
+Nürburgring is deferred at the user's request. Its unfinished GP configuration
+is kept in `deferred/` for future work and is excluded from the build and menu.
+The GP prototype still needs road/collision and full-lap validation. Nordschleife
+also needs tiled extraction to stay within this machine's memory budget.
 
 ## Verify generated assets
 
@@ -125,5 +121,5 @@ and inspect a GPU capture:
 ./target/release/f1-the-game --track silverstone --frames 300 --capture /tmp/f1-silverstone.png
 ```
 
-The current engine capture hides HUD overlays and writes frame 30. It still
-presents all requested frames. Use a window screenshot for menu verification.
+The engine capture hides HUD overlays and saves the final requested frame.
+Menu captures include the setup HUD.

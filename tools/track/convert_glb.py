@@ -73,6 +73,36 @@ def walls_from(triangles, points):
     return np.unique(np.round(segments, 2), axis=0).astype("f4").reshape(-1, 4)
 
 
+def remove_placeholders(positions, faces, material, rules):
+    """Remove configured disconnected authoring cubes, preserving terrain."""
+    matching = [rule for rule in rules if matches(material, [rule["material"]])]
+    if not matching:
+        return faces
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+
+    vertices, inverse = np.unique(np.round(positions, 5), axis=0, return_inverse=True)
+    triangles = inverse[faces]
+    a = triangles.reshape(-1)
+    b = np.roll(triangles, -1, axis=1).reshape(-1)
+    graph = coo_matrix((np.ones(len(a)), (a, b)), shape=(len(vertices), len(vertices)))
+    count, labels = connected_components(graph, directed=False)
+    omitted = set()
+    for index in range(count):
+        component = vertices[labels == index]
+        if len(component) != 8:
+            continue
+        dimensions = np.ptp(component, axis=0)
+        if any(
+            np.allclose(
+                dimensions, rule["dimensions"], atol=rule.get("tolerance", 0.05), rtol=0
+            )
+            for rule in matching
+        ):
+            omitted.add(index)
+    return faces[~np.isin(labels[triangles[:, 0]], list(omitted))]
+
+
 def simplify(p, n, u, f, target):
     if target >= len(f):
         return p, n, u, f
@@ -143,12 +173,16 @@ def convert(config_path, source, destination, centerline_only=False):
         image = (
             None if centerline_only else model.image(m, config.get("max_texture", 1024))
         )
-        alpha = m.get("alphaMode") == "MASK"
-        # Assetto billboard atlases sometimes arrive as BLEND. Preserve their
-        # transparent texels as cutouts instead of turning trees/fences opaque.
+        mode = m.get("alphaMode", "OPAQUE")
+        alpha = mode == "MASK"
+        # glTF OPAQUE explicitly ignores texture alpha (these asphalt maps
+        # store auxiliary data there). Only BLEND billboards need conversion.
         if image is not None and image.mode == "RGBA":
-            a = np.asarray(image.getchannel("A"))
-            alpha = alpha or bool((a < 128).mean() > 0.01)
+            if mode == "OPAQUE":
+                image = image.convert("RGB")
+            elif mode == "BLEND":
+                a = np.asarray(image.getchannel("A"))
+                alpha = bool((a < 128).mean() > 0.01)
         materials.append(
             GlbMaterial(
                 name=("ground:" if sid is not None else "") + name,
@@ -184,6 +218,9 @@ def convert(config_path, source, destination, centerline_only=False):
     for m, p, n, u, f in model.primitives(config.get("scale", 1)):
         name = source_materials[m].get("name", "")
         if matches(name, config.get("omit", [])):
+            continue
+        f = remove_placeholders(p, f, name, config.get("omit_boxes", []))
+        if not len(f):
             continue
         sid = surface(name, config)
         triangles = p[f]
@@ -227,7 +264,7 @@ def convert(config_path, source, destination, centerline_only=False):
     steps = np.linalg.norm(np.roll(points, -1, axis=0) - points, axis=1)
     length = float(steps.sum())
     if abs(length / config["length"] - 1) > 0.02:
-        raise ValueError("final 3D lap length outside tolerance")
+        raise ValueError(f"final 3D lap length {length:.1f} outside tolerance")
     corners = [
         {"name": name, "distance": round(float(distance), 1)}
         for name, distance in config.get("corners", [])
