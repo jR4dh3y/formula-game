@@ -1,0 +1,2 @@
+# Frozen history keeps original bytes, including vendor-license line endings.
+archive/custom-engine/** -whitespace
