@@ -94,9 +94,9 @@ pub fn load(options: &Options) -> Result<Loaded, String> {
             sky::daylight([sun.x, sun.y, sun.z]),
             EnvironmentProfile {
                 exposure: ExposureProfile {
-                    min: 0.4,
+                    min: 0.85,
                     max: 2.5,
-                    compensation: 0.0,
+                    compensation: 2.0,
                     white_balance_strength: 0.1,
                 },
                 ..EnvironmentProfile::dry_daylight()

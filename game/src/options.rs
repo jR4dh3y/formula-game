@@ -16,6 +16,7 @@ pub struct Options {
     pub height: u32,
     pub frames: Option<u64>,
     pub capture: Option<PathBuf>,
+    pub profile: bool,
 }
 
 impl Options {
@@ -31,6 +32,7 @@ impl Options {
   --auto-gears        let the car shift for you
   --assists 0-1       driving aid strength (default: 0.6)
   --size WxH          window size (default: 1600x900)
+  --profile           print CPU and GPU frame timings
   --frames N --capture FILE   render N frames, save the last one, exit";
 
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
@@ -47,6 +49,7 @@ impl Options {
             height: 900,
             frames: None,
             capture: None,
+            profile: false,
         };
         while let Some(flag) = args.next() {
             let mut value = || args.next().ok_or(format!("{flag} needs a value"));
@@ -80,6 +83,7 @@ impl Options {
                 }
                 "--frames" => options.frames = Some(number(value()?)? as u64),
                 "--capture" => options.capture = Some(PathBuf::from(value()?)),
+                "--profile" => options.profile = true,
                 "--help" | "-h" => return Err("help".to_string()),
                 other => return Err(format!("unknown option {other}")),
             }

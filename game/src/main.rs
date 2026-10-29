@@ -153,6 +153,8 @@ fn run(options: Options) -> Result<(), String> {
             max_frames: options.frames,
             capture_path: options.capture.clone(),
             shadow_distance: 90.0,
+            velocity_compensation_strength: 0.0,
+            profile_gpu: options.profile,
             ..LiveOptions::default()
         },
     )
