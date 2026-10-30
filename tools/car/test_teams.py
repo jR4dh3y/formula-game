@@ -10,18 +10,18 @@ from pathlib import Path
 
 TEAMS_PATH = Path(__file__).resolve().parent / "teams.json"
 
-# 2022 constructors' order, with each team's race drivers as (abbr, number).
+# 2022 constructors' order, with each team's race drivers as (name, abbr, number).
 EXPECTED_GRID = {
-    "redbull": [("VER", 1), ("PER", 11)],
-    "ferrari": [("LEC", 16), ("SAI", 55)],
-    "mercedes": [("HAM", 44), ("RUS", 63)],
-    "alpine": [("OCO", 31), ("ALO", 14)],
-    "mclaren": [("NOR", 4), ("RIC", 3)],
-    "alfaromeo": [("BOT", 77), ("ZHO", 24)],
-    "astonmartin": [("VET", 5), ("STR", 18)],
-    "haas": [("MAG", 20), ("MSC", 47)],
-    "alphatauri": [("GAS", 10), ("TSU", 22)],
-    "williams": [("ALB", 23), ("LAT", 6)],
+    "redbull": [("Max Verstappen", "VER", 1), ("Sergio Perez", "PER", 11)],
+    "ferrari": [("Charles Leclerc", "LEC", 16), ("Carlos Sainz", "SAI", 55)],
+    "mercedes": [("Lewis Hamilton", "HAM", 44), ("George Russell", "RUS", 63)],
+    "alpine": [("Esteban Ocon", "OCO", 31), ("Fernando Alonso", "ALO", 14)],
+    "mclaren": [("Lando Norris", "NOR", 4), ("Daniel Ricciardo", "RIC", 3)],
+    "alfaromeo": [("Valtteri Bottas", "BOT", 77), ("Zhou Guanyu", "ZHO", 24)],
+    "astonmartin": [("Sebastian Vettel", "VET", 5), ("Lance Stroll", "STR", 18)],
+    "haas": [("Kevin Magnussen", "MAG", 20), ("Mick Schumacher", "MSC", 47)],
+    "alphatauri": [("Pierre Gasly", "GAS", 10), ("Yuki Tsunoda", "TSU", 22)],
+    "williams": [("Alexander Albon", "ALB", 23), ("Nicholas Latifi", "LAT", 6)],
 }
 
 HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -61,7 +61,7 @@ class TeamsContractTest(unittest.TestCase):
         self.assertEqual(sum(len(t["drivers"]) for t in self.teams), 20)
         for team in self.teams:
             with self.subTest(team=team["id"]):
-                got = [(d["abbr"], d["number"]) for d in team["drivers"]]
+                got = [(d["name"], d["abbr"], d["number"]) for d in team["drivers"]]
                 self.assertEqual(got, EXPECTED_GRID[team["id"]])
 
     def test_ids_and_numbers_unique(self):

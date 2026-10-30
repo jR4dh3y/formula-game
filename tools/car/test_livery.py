@@ -63,6 +63,14 @@ class LiveryTests(unittest.TestCase):
         self.assertGreater(result.max(),0)
         self.assertFalse(np.allclose(result[0],result[0,::-1]))
 
+    def test_side_projection_excludes_top_and_inward_faces(self):
+        from unittest.mock import patch
+        p = np.array([[.5,.5,0.],[-.5,.5,0.],[.5,.5,0.],[.5,.5,0.]])
+        n = np.array([[1.,0.,0.],[-1.,0.,0.],[0.,1.,0.],[-1.,0.,0.]])
+        with patch.object(livery, 'text_mask', return_value=np.ones((2,2))):
+            result = livery.project_text(np.zeros_like(p),p,n,'X',np.ones(3),None,0,.5,1,.2,.3)
+        np.testing.assert_array_equal(result, [[1,1,1],[1,1,1],[0,0,0],[0,0,0]])
+
     def test_every_roster_style_and_helmet_is_supported(self):
         import json
         data = json.loads((Path(__file__).with_name('teams.json')).read_text())

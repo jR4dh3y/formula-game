@@ -88,7 +88,7 @@ def project_text(rgb, position, normal, text, ink, font, centre_z, centre_y, wid
     # +X viewer sees rearward (negative glTF Z) as screen-right; -X is opposite.
     u = .5-np.sign(x)*(z-centre_z)/width
     v = .5-(y-centre_y)/height
-    visible = (np.abs(x)>min_x) & (np.sign(x)*normal[...,0]>-.05) & (u>=0)&(u<1)&(v>=0)&(v<1)
+    visible = (np.abs(x)>min_x) & (np.sign(x)*normal[...,0]>.05) & (u>=0)&(u<1)&(v>=0)&(v<1)
     ix = np.clip((u*bitmap.shape[1]).astype(int),0,bitmap.shape[1]-1)
     iy = np.clip((v*bitmap.shape[0]).astype(int),0,bitmap.shape[0]-1)
     alpha = (bitmap[iy,ix]*visible)[...,None]

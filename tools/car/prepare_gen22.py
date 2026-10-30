@@ -496,7 +496,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     args.bake.mkdir(parents=True, exist_ok=True)
     if args.export_only or args.rebake:
-        nodes = {name:bpy.data.objects[name] for name in NODES}
+        nodes = {name:bpy.data.objects[name] for name in NODES if name in bpy.data.objects}
         metadata = json.loads((args.output/'car.json').read_text())
         for text in list(bpy.data.texts): bpy.data.texts.remove(text)
         if args.rebake:

@@ -53,11 +53,11 @@ def inspect(path, meta):
     for name in ('driver','helmet'):
         for primitive in doc['meshes'][nodes[name]['mesh']]['primitives']:
             assert len(primitive.get('targets',[]))==poses,(name,len(primitive.get('targets',[])))
-            if name == 'driver':
-                for target in primitive['targets']:
-                    position = doc['accessors'][target['POSITION']]
-                    # A target count alone can pass even if decimation erased the motion.
-                    assert max(abs(v) for key in ('min','max') for v in position[key]) > .001, 'empty driver pose'
+            checked = poses if name == 'driver' else len(meta['driver_poses'])
+            for target in primitive['targets'][:checked]:
+                position = doc['accessors'][target['POSITION']]
+                # A target count alone can pass even if decimation erased the motion.
+                assert max(abs(v) for key in ('min','max') for v in position[key]) > .001, (name, 'empty pose')
     assert meta['paddles']['up_angle']<0<meta['paddles']['down_angle']
     materials = [m['name'] for m in doc['materials']]
     assert MATERIALS <= set(materials),MATERIALS-set(materials)
@@ -135,19 +135,18 @@ def reimport(path, expected):
         print('REIMPORT',obj.name,'location',list(obj.location),'rotation',list(obj.rotation_quaternion),'scale',list(obj.scale),'triangles',count)
         assert all(len(p.vertices)==3 for p in obj.data.polygons)
     assert actual==expected,(actual,expected)
-    if path.name=='car.glb':
-        import importlib.util
-        spec=importlib.util.spec_from_file_location('gen22_prepare',Path(__file__).with_name('prepare_gen22.py'))
-        helper=importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
-        for name,material in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
-            obj=bpy.data.objects[name]
-            folded=helper.overlapping_uv_faces(obj,material)
-            assert not folded,(name,'exported UV overlaps',len(folded))
-            coordinates=[obj.data.uv_layers.active.data[i].uv for face in obj.data.polygons
-                         if obj.data.materials[face.material_index].name==material for i in face.loop_indices]
-            low=min(min(uv) for uv in coordinates); high=max(max(uv) for uv in coordinates)
-            assert low>=8/2048-1e-5 and high<=1-8/2048+1e-5,(name,'atlas border padding',low,high)
-            print('REIMPORT ATLAS',material,'overlaps',len(folded),'border pixels',round(min(low,1-high)*2048,2))
+    import importlib.util
+    spec=importlib.util.spec_from_file_location('gen22_prepare',Path(__file__).with_name('prepare_gen22.py'))
+    helper=importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
+    for name,material in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
+        obj=bpy.data.objects[name]
+        folded=helper.overlapping_uv_faces(obj,material)
+        assert not folded,(name,'exported UV overlaps',len(folded))
+        coordinates=[obj.data.uv_layers.active.data[i].uv for face in obj.data.polygons
+                     if obj.data.materials[face.material_index].name==material for i in face.loop_indices]
+        low=min(min(uv) for uv in coordinates); high=max(max(uv) for uv in coordinates)
+        assert low>=8/2048-1e-5 and high<=1-8/2048+1e-5,(name,'atlas border padding',low,high)
+        print('REIMPORT ATLAS',material,'overlaps',len(folded),'border pixels',round(min(low,1-high)*2048,2))
     for image in bpy.data.images:
         if image.source=='VIEWER': continue
         print('REIMPORT TEXTURE',image.name,list(image.size))
@@ -166,22 +165,22 @@ def main():
         if 'bpy' in sys.modules: reimport(path,expected)
     # Team images are external and must be complete, square sRGB atlases.
     teams_path = args.directory/'teams.json'
-    if teams_path.exists():
-        teams = json.loads(teams_path.read_text())
-        for team in teams['teams']:
-            paths = [Path('paint.png'),Path('suit.png')]+[Path(d['id'])/'helmet.png' for d in team['drivers']]
-            for file in paths:
-                path = args.directory/'liveries'/team['id']/file
-                assert path.is_file(),path
-                if 'bpy' in sys.modules:
-                    import bpy
-                    image = bpy.data.images.load(str(path.resolve()),check_existing=False)
-                    assert list(image.size)==[2048,2048],path
-                    bpy.data.images.remove(image)
-                else:
-                    from PIL import Image
-                    with Image.open(path) as image: assert image.size==(2048,2048),path
-        print('LIVERIES',len(teams['teams']),'teams verified')
+    assert teams_path.is_file(), teams_path
+    teams = json.loads(teams_path.read_text())
+    for team in teams['teams']:
+        paths = [Path('paint.png'),Path('suit.png')]+[Path(d['id'])/'helmet.png' for d in team['drivers']]
+        for file in paths:
+            path = args.directory/'liveries'/team['id']/file
+            assert path.is_file(),path
+            if 'bpy' in sys.modules:
+                import bpy
+                image = bpy.data.images.load(str(path.resolve()),check_existing=False)
+                assert list(image.size)==[2048,2048],path
+                bpy.data.images.remove(image)
+            else:
+                from PIL import Image
+                with Image.open(path) as image: assert image.size==(2048,2048),path
+    print('LIVERIES',len(teams['teams']),'teams verified')
     print('GEN22 CONTRACT PASS')
 
 
