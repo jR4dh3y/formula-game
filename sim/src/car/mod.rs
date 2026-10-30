@@ -42,6 +42,9 @@ pub struct Assists {
     /// Mild slide recovery, 0..1.
     pub stability: f64,
     pub automatic_gears: bool,
+    /// Lets this driver open DRS anywhere, not only where it is earned.
+    #[serde(default)]
+    pub drs_anywhere: bool,
 }
 
 impl Default for Assists {
@@ -52,6 +55,7 @@ impl Default for Assists {
             traction: 0.6,
             stability: 0.5,
             automatic_gears: false,
+            drs_anywhere: false,
         }
     }
 }

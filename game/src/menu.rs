@@ -855,6 +855,8 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                     traction: 1.,
                     stability: 1.,
                     automatic_gears: true,
+                    // A mode, not an aid: presets leave it alone.
+                    drs_anywhere: aids.drs_anywhere,
                 };
             }
             let balanced = ui.button("Balanced");
@@ -867,6 +869,8 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                     traction: 0.6,
                     stability: 0.5,
                     automatic_gears: true,
+                    // A mode, not an aid: presets leave it alone.
+                    drs_anywhere: aids.drs_anywhere,
                 };
             }
             let unassisted = ui.button("Unassisted");
@@ -879,6 +883,8 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                     traction: 0.,
                     stability: 0.,
                     automatic_gears: false,
+                    // A mode, not an aid: presets leave it alone.
+                    drs_anywhere: aids.drs_anywhere,
                 };
             }
             [beginner.rect, balanced.rect, unassisted.rect]
@@ -889,6 +895,10 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
         ui.checkbox(&mut aids.automatic_gears, "Automatic gears")
             .on_hover_text("Manual shifts: E / Shift up, Q / Ctrl down.");
         ui.checkbox(&mut frontend.show_racing_line, "Racing line");
+        ui.checkbox(&mut aids.drs_anywhere, "DRS anywhere").on_hover_text(
+            "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
+             AI cars keep to the race rules.",
+        );
     });
     ui.add_space(8.);
     let count = if ui.available_width() >= 1000. { 2 } else { 1 };

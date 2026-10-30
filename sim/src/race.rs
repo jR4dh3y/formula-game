@@ -268,7 +268,9 @@ impl Race {
                 entrant.car.track_position.s,
                 qualifies,
             );
-            entrant.car.drs.available = open && racing && entrant.car.spec.aero.has_drs();
+            let anywhere = entrant.car.assists.drs_anywhere;
+            entrant.car.drs.available =
+                (open || anywhere) && racing && entrant.car.spec.aero.has_drs();
         }
     }
 
