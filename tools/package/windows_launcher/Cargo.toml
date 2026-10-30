@@ -1,0 +1,16 @@
+[package]
+name = "racecraft-windows-launcher"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Packaging utility, separate from the game/simulation workspace.
+[workspace]
+
+[dependencies]
+flate2 = "=1.1.9"
+
+[profile.release]
+opt-level = "s"
+strip = true
+debug = false
