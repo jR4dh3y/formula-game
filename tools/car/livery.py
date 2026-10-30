@@ -123,7 +123,7 @@ def suit(team, atlas, font):
     colors = team['suit']
     output = np.broadcast_to(color(colors['primary']),p.shape).copy()
     # Contrast shoulder caps, arm stripes and a central zip. All follow posed geometry.
-    output[(np.abs(p[...,0])>.11)&(p[...,1]>.48)] = color(colors['secondary'])
+    output[(np.abs(p[...,0])>.11)&(p[...,1]>.70)] = color(colors['secondary'])
     output[(np.abs(p[...,0])>.16)&(np.abs(p[...,1]-.55)<.018)] = color(colors['accent'])
     output[np.abs(p[...,0])<.006] = color(colors['secondary'])
     return project_text(output,p,atlas['normal'],team['short'],color(colors['accent']),font,.62,.54,.25,.065,.02)
@@ -176,7 +176,7 @@ def main():
         print('LIVERY',team['short'],flush=True)
     args.output.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(args.teams,args.output/'teams.json')
-    apply_overrides(args.output, args.overrides, data)
+    apply_overrides(args.output, args.overrides, data, args.bake / 'paint.npz')
 
 
 if __name__ == '__main__': main()

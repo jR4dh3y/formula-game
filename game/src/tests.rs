@@ -56,7 +56,6 @@ pub(super) fn session() -> Session {
     Session {
         identities: vec![None],
         rig: default(),
-        drs_open: false,
         guidance: driving::Guidance::new(&race, 0),
         corner_braking: 0.,
         show_racing_line: false,
@@ -160,7 +159,7 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
     let mut app = App::new();
     let mut state = session();
     state.rig.drs.open_angle = -0.25;
-    state.drs_open = true;
+    state.race.entrants[0].car.drs.flap = 1.0;
     state.race.entrants[0].car.steer_angle = 0.2;
     state.race.entrants[0].car.wheels[0].rotation = 1.7;
     state.race.entrants[0].car.wheels[0].ground_height = 0.1;
@@ -237,7 +236,10 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
             .rotation
             .abs_diff_eq(rest.rotation * rotation, 1e-5));
     }
-    app.world_mut().resource_mut::<Session>().drs_open = false;
+    app.world_mut().resource_mut::<Session>().race.entrants[0]
+        .car
+        .drs
+        .flap = 0.0;
     app.update();
     assert_eq!(*app.world().get::<Transform>(entities[2]).unwrap(), rest);
 }
@@ -313,9 +315,8 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
 }
 
 #[test]
-fn drs_flap_control_opens_in_racing_and_braking_closes_it() {
+fn drs_key_requests_the_flap_only_while_racing() {
     let mut state = session();
-    state.rig.drs.open_angle = -0.25;
     state.race.phase = racecraft_sim::Phase::Racing;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -326,26 +327,10 @@ fn drs_flap_control_opens_in_racing_and_braking_closes_it() {
         .resource_mut::<ButtonInput<KeyCode>>()
         .press(KeyCode::KeyF);
     app.update();
-    assert!(app.world().resource::<Session>().drs_open);
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .reset_all();
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(KeyCode::KeyS);
-    app.update();
-    assert!(!app.world().resource::<Session>().drs_open);
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .reset_all();
-    app.world_mut().resource_mut::<Session>().drs_open = true;
-    let mut gamepad = Gamepad::default();
-    gamepad.analog_mut().set(GamepadButton::LeftTrigger2, 0.3);
-    let pad = app.world_mut().spawn(gamepad).id();
-    app.update();
-    assert!(!app.world().resource::<Session>().drs_open);
-    app.world_mut().despawn(pad);
-    app.world_mut().resource_mut::<Session>().screen = menu::Screen::Paused;
+    let mut session = app.world_mut().resource_mut::<Session>();
+    assert!(session.controls.car_input().drs);
+    assert!(!session.controls.car_input().drs);
+    session.screen = menu::Screen::Paused;
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()
         .reset_all();
@@ -353,7 +338,13 @@ fn drs_flap_control_opens_in_racing_and_braking_closes_it() {
         .resource_mut::<ButtonInput<KeyCode>>()
         .press(KeyCode::KeyF);
     app.update();
-    assert!(!app.world().resource::<Session>().drs_open);
+    assert!(
+        !app.world_mut()
+            .resource_mut::<Session>()
+            .controls
+            .car_input()
+            .drs
+    );
 }
 
 #[test]
@@ -1057,4 +1048,99 @@ fn probe_assertions(
             info!("Render probe screenshot: {}", path.display());
         },
     );
+}
+
+/// Fixed grid views of the shipped player/opponent assets for texture review.
+#[test]
+#[ignore = "requires a Vulkan display and F1_TEST_ASSETS"]
+fn rendered_livery_review() {
+    let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS");
+    let team = std::env::var("F1_TEST_TEAM").unwrap_or_else(|_| "mclaren".into());
+    let options = Options::parse(
+        [
+            "--assets", &root, "--team", &team, "--car", "gen22", "--size", "1600x900", "--camera",
+            "cockpit", "--mute", "--frames", "10000",
+        ]
+        .into_iter()
+        .map(str::to_owned),
+    )
+    .unwrap();
+    let mut app = build_app(options).unwrap();
+    {
+        let mut session = app.world_mut().resource_mut::<Session>();
+        let identity = session.identities[session.player].clone();
+        for entry in &mut session.identities {
+            *entry = identity.clone();
+        }
+    }
+    app.add_systems(Update, livery_review.after(camera::update));
+    assert!(app.run().is_success());
+}
+
+fn livery_review(
+    mut commands: Commands,
+    mut session: ResMut<Session>,
+    mut cameras: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    mut frame: Local<u32>,
+    mut captured: Local<usize>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if !session.ready {
+        return;
+    }
+    session.paused = true;
+    *frame += 1;
+    let stage = (*frame / 60).min(7);
+    if stage > 0 {
+        session.camera.mode = camera::Mode::Chase;
+        let entrant = if stage < 5 { session.player } else { 0 };
+        let pose = pose::Pose::of(&session.race.entrants[entrant].car);
+        let offset = match stage {
+            1 | 5 => Vec3::new(4., 2.4, 5.),
+            2 | 6 => Vec3::new(5.5, 2.4, 0.),
+            3 => Vec3::new(-5.5, 2.4, 0.),
+            _ => Vec3::new(4., 2.4, -5.),
+        };
+        let rotation = Quat::from_rotation_y(pose.yaw as f32);
+        let origin = pose.origin.as_vec3();
+        for (mut camera, mut projection) in &mut cameras {
+            if let Projection::Perspective(lens) = &mut *projection {
+                lens.fov = 45_f32.to_radians();
+            }
+            *camera = Transform::from_translation(origin + rotation * offset)
+                .looking_at(origin + Vec3::Y * 0.5, Vec3::Y);
+        }
+    }
+    if *frame % 60 == 50 && stage < 8 {
+        let output =
+            std::path::PathBuf::from(std::env::var("F1_TEST_OUTPUT").expect("set F1_TEST_OUTPUT"));
+        std::fs::create_dir_all(&output).unwrap();
+        let names = [
+            "cockpit",
+            "front",
+            "left",
+            "right",
+            "rear",
+            "opponent-front",
+            "opponent-side",
+            "opponent-rear",
+        ];
+        let path = output.join(format!("{}.png", names[stage as usize]));
+        commands.spawn(Screenshot::primary_window()).observe(
+            move |event: On<ScreenshotCaptured>| {
+                event
+                    .image
+                    .clone()
+                    .try_into_dynamic()
+                    .unwrap()
+                    .save(&path)
+                    .unwrap();
+            },
+        );
+        *captured += 1;
+    }
+    if *frame == 490 {
+        assert_eq!(*captured, 8);
+        exit.write(AppExit::Success);
+    }
 }

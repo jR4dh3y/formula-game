@@ -24,6 +24,9 @@ pub struct CarInput {
     pub brake: f64,
     pub shift_up: bool,
     pub shift_down: bool,
+    /// Asks to open DRS; it opens only where the race allows it.
+    #[serde(default)]
+    pub drs: bool,
 }
 
 /// Driving aids. They help with control, never with racecraft, and are
@@ -50,6 +53,29 @@ impl Default for Assists {
             stability: 0.5,
             automatic_gears: false,
         }
+    }
+}
+
+/// The rear-wing flap. The race sets `available`; the driver opens it, and
+/// braking or leaving the zone closes it.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Drs {
+    pub available: bool,
+    pub open: bool,
+    /// Flap position, 0 closed to 1 fully open.
+    pub flap: f64,
+}
+
+impl Drs {
+    fn update(&mut self, request: bool, brake: f64, dt: f64) {
+        if !self.available || brake > 0.05 {
+            self.open = false;
+        } else if request {
+            self.open = true;
+        }
+        let target = if self.open { 1.0 } else { 0.0 };
+        let rate = dt / crate::drs::ACTUATION;
+        self.flap += (target - self.flap).clamp(-rate, rate);
     }
 }
 
@@ -140,6 +166,7 @@ pub struct Car {
     pub tyres: [AxleTyres; 2],
     pub wheels: [WheelState; 4],
     pub aero: AeroInfluence,
+    pub drs: Drs,
     pub downforce: f64,
     pub track_position: TrackPosition,
     /// Smoothed body-frame acceleration (forward, left), m/s².
@@ -213,6 +240,7 @@ impl Car {
                 ..WheelState::default()
             }; 4],
             aero: AeroInfluence::default(),
+            drs: Drs::default(),
             downforce: 0.0,
             track_position,
             acceleration: DVec2::ZERO,
@@ -304,16 +332,19 @@ impl Car {
         let response = 30.0 - 18.0 * self.assists.steering;
         self.steer_angle += (target - self.steer_angle) * (dt * response).min(1.0);
 
-        // Aerodynamics.
+        // Aerodynamics. An open DRS flap stalls part of the rear wing.
+        self.drs.update(input.drs, brake, dt);
         let dynamic_pressure = 0.5 * AIR_DENSITY * speed * speed;
         let front_downforce = dynamic_pressure
             * self.setup.front_lift_area(&spec.aero)
             * self.aero.front_downforce_scale;
         let rear_downforce = dynamic_pressure
-            * self.setup.rear_lift_area(&spec.aero)
+            * (self.setup.rear_lift_area(&spec.aero) - spec.aero.drs_lift * self.drs.flap)
             * self.aero.rear_downforce_scale;
         self.downforce = front_downforce + rear_downforce;
-        let drag = dynamic_pressure * self.setup.drag_area(&spec.aero) * self.aero.drag_scale;
+        let drag = dynamic_pressure
+            * (self.setup.drag_area(&spec.aero) - spec.aero.drs_drag * self.drs.flap)
+            * self.aero.drag_scale;
 
         // Vertical loads with quasi-static weight transfer.
         let weight =
@@ -731,6 +762,70 @@ mod tests {
             car.speed()
         };
         assert!(top_speed(0.85) > top_speed(1.0) + 1.0);
+    }
+
+    #[test]
+    fn drs_opens_only_when_available_and_braking_closes_it() {
+        let track = oval_track();
+        let mut car = car_on(&track);
+        let request = CarInput {
+            throttle: 1.0,
+            drs: true,
+            ..CarInput::default()
+        };
+        run(&mut car, &track, request, 0.5);
+        assert!(
+            !car.drs.open && car.drs.flap == 0.0,
+            "opened outside a zone"
+        );
+        car.drs.available = true;
+        run(&mut car, &track, request, crate::drs::ACTUATION + 0.01);
+        assert!(car.drs.open && car.drs.flap == 1.0);
+        // The flap stays open without holding the button, until the brakes go on.
+        let cruise = CarInput {
+            throttle: 1.0,
+            ..CarInput::default()
+        };
+        run(&mut car, &track, cruise, 0.1);
+        assert!(car.drs.open);
+        let brake = CarInput {
+            brake: 0.5,
+            ..CarInput::default()
+        };
+        run(&mut car, &track, brake, crate::drs::ACTUATION + 0.01);
+        assert!(!car.drs.open && car.drs.flap == 0.0);
+        // Re-opening needs a fresh request.
+        run(&mut car, &track, cruise, 0.1);
+        assert!(!car.drs.open);
+    }
+
+    #[test]
+    fn open_drs_raises_top_speed_and_costs_rear_downforce() {
+        let track = oval_track();
+        let flat_out = |drs| CarInput {
+            throttle: 1.0,
+            drs,
+            ..CarInput::default()
+        };
+        let run_flat = |drs: bool| {
+            let mut car = car_on(&track);
+            car.velocity = car.forward() * 60.0;
+            car.powertrain.gear = 6;
+            car.drs.available = drs;
+            for _ in 0..12 {
+                let (position, yaw) = track.grid_slot(0);
+                car.position = position;
+                car.yaw = yaw;
+                car.yaw_rate = 0.0;
+                car.velocity = car.forward() * car.speed();
+                run(&mut car, &track, flat_out(drs), 1.0);
+            }
+            (car.speed(), car.downforce / car.speed().powi(2))
+        };
+        let (closed, closed_downforce) = run_flat(false);
+        let (open, open_downforce) = run_flat(true);
+        assert!(open > closed + 1.5, "{closed} -> {open} m/s");
+        assert!(open_downforce < closed_downforce * 0.95);
     }
 }
 

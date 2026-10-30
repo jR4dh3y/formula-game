@@ -86,9 +86,10 @@ fn calibrate(name: &str, material: &mut StandardMaterial) {
         material.clearcoat = 0.;
     } else if name == "paint" {
         material.metallic = 0.;
-        material.perceptual_roughness = 0.38;
-        material.reflectance = 0.4;
-        material.clearcoat = 0.35;
+        // The shared atlas includes exposed carbon as well as coloured paint.
+        material.perceptual_roughness = 0.48;
+        material.reflectance = 0.22;
+        material.clearcoat = 0.;
         material.clearcoat_perceptual_roughness = 0.2;
     } else if matches!(name.as_str(), "suit" | "helmet_paint" | "rubber" | "brake") {
         material.metallic = 0.;
@@ -127,6 +128,19 @@ fn calibrate(name: &str, material: &mut StandardMaterial) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mixed_paint_atlas_keeps_carbon_free_of_uniform_clearcoat() {
+        let mut material = StandardMaterial {
+            clearcoat: 1.,
+            ..default()
+        };
+        let color = material.base_color;
+        calibrate("paint", &mut material);
+        assert_eq!(material.clearcoat, 0.);
+        assert_eq!(material.base_color, color);
+        assert!(material.reflectance < 0.3);
+    }
 
     #[test]
     fn paint_is_dielectric_and_rubber_stays_matte_without_replacing_livery() {

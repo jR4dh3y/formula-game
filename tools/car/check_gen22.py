@@ -138,7 +138,7 @@ def reimport(path, expected):
     import importlib.util
     spec=importlib.util.spec_from_file_location('gen22_prepare',Path(__file__).with_name('prepare_gen22.py'))
     helper=importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
-    for name,material in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
+    for name,material in [('body','paint'),('drs_flap','paint'),('driver','suit'),('helmet','helmet_paint')]:
         obj=bpy.data.objects[name]
         folded=helper.overlapping_uv_faces(obj,material)
         assert not folded,(name,'exported UV overlaps',len(folded))

@@ -20,6 +20,7 @@ pub struct Controls {
     brake: f64,
     shift_up: bool,
     shift_down: bool,
+    drs: bool,
 }
 
 #[derive(Default)]
@@ -70,18 +71,6 @@ pub fn update(
     if session.screen != Screen::Racing {
         session.controls = Controls::default();
         return;
-    }
-    // This is the flap presentation control; race-zone eligibility and DRS
-    // aerodynamic effects are not implemented yet.
-    if keys.just_pressed(KeyCode::KeyF) && session.rig.drs.open_angle != 0. {
-        session.drs_open ^= true;
-    }
-    if session.controls.brake > 0.02
-        || keys.pressed(KeyCode::KeyS)
-        || keys.pressed(KeyCode::ArrowDown)
-        || session.race.phase != racecraft_sim::Phase::Racing
-    {
-        session.drs_open = false;
     }
     for (key, mode) in [
         (KeyCode::Digit1, Mode::Cockpit),
@@ -157,6 +146,8 @@ impl Controls {
         self.shift_down |= pressed(&[KeyCode::KeyQ, KeyCode::ControlLeft, KeyCode::ControlRight])
             || pad_pressed(GamepadButton::LeftTrigger)
             || pad_pressed(GamepadButton::West);
+        // Opens DRS where the race allows it; braking closes it.
+        self.drs |= pressed(&[KeyCode::KeyF]) || pad_pressed(GamepadButton::East);
 
         Actions {
             menu: pressed(&[KeyCode::Escape]),
@@ -174,9 +165,11 @@ impl Controls {
             brake: self.brake,
             shift_up: self.shift_up,
             shift_down: self.shift_down,
+            drs: self.drs,
         };
         self.shift_up = false;
         self.shift_down = false;
+        self.drs = false;
         command
     }
 
@@ -211,6 +204,11 @@ mod tests {
         controls.update(&keys, None, 0.01);
         assert!(controls.car_input().shift_down);
         assert!(!controls.car_input().shift_down);
+        keys.clear();
+        keys.press(KeyCode::KeyF);
+        controls.update(&keys, None, 0.01);
+        assert!(controls.car_input().drs);
+        assert!(!controls.car_input().drs);
     }
 
     #[test]

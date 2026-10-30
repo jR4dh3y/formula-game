@@ -122,6 +122,15 @@ pub struct AeroSpec {
     pub drag_area: f64,
     pub front_wing_drag: f64,
     pub rear_wing_drag: f64,
+    /// CdA and rear ClA removed by a fully open DRS flap; zero without DRS.
+    pub drs_drag: f64,
+    pub drs_lift: f64,
+}
+
+impl AeroSpec {
+    pub fn has_drs(&self) -> bool {
+        self.drs_drag > 0.0
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -282,6 +291,9 @@ impl CarSpec {
                 drag_area: 0.98,
                 front_wing_drag: 0.022,
                 rear_wing_drag: 0.042,
+                // About 10% of the car's drag: roughly +12 km/h at the end of Kemmel.
+                drs_drag: 0.13,
+                drs_lift: 0.4,
             },
             tyre_friction: 1.72,
             peak_slip_angle: 0.095,
@@ -320,6 +332,9 @@ impl CarSpec {
                 drag_area: 0.9,
                 front_wing_drag: 0.022,
                 rear_wing_drag: 0.042,
+                // DRS arrived in 2011.
+                drs_drag: 0.0,
+                drs_lift: 0.0,
             },
             tyre_friction: 1.75,
             peak_slip_angle: 0.09,

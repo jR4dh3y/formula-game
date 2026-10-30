@@ -150,3 +150,36 @@ fn ai_field_races_spa() {
     assert!((95.0..150.0).contains(&best), "best lap {best:.1}s");
     assert!(top_speed * 3.6 > 290.0, "top speed {:.0}", top_speed * 3.6);
 }
+
+#[test]
+fn drs_zones_follow_the_pit_and_kemmel_straights() {
+    let Some(root) = assets() else { return };
+    let track = racecraft_sim::Track::load(root.join("tracks/spa")).unwrap();
+    let zones = racecraft_sim::drs::zones(&track);
+    for zone in &zones {
+        let near = |s| track.corner_near(s).map(|c| c.name.clone());
+        eprintln!(
+            "zone {:.0}..{:.0} ({:.0} m), detection {:.0} near {:?} -> {:?}",
+            zone.start,
+            zone.end,
+            zone.length(&track),
+            zone.detection,
+            near(zone.start),
+            near(zone.end)
+        );
+    }
+    // Kemmel into Les Combes, then the pit straight from the Bus Stop to La Source.
+    let ends: Vec<_> = zones
+        .iter()
+        .map(|zone| track.corner_near(zone.end + 120.0).map(|c| c.name.clone()))
+        .collect();
+    assert_eq!(zones.len(), 2, "{zones:?}");
+    assert!(
+        ends[0]
+            .as_deref()
+            .is_some_and(|name| name.starts_with("Les Combes")),
+        "{ends:?}"
+    );
+    assert_eq!(ends[1].as_deref(), Some("La Source"), "{ends:?}");
+    assert!(zones[0].length(&track) > 800.0 && zones[1].length(&track) > 250.0);
+}

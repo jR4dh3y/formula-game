@@ -6,6 +6,68 @@ pub(super) fn draw(hud: &Hud, style: &HudStyle, session: &Session, layout: Layou
         Layout::Segments => segments(hud, style, session, scale),
         Layout::Gauges => gauges(hud, style, session, scale),
     }
+    drs_badge(hud, style, session, layout, scale);
+}
+
+/// What the DRS badge shows for the player's car.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum DrsLamp {
+    /// The car has DRS but may not open it here.
+    Off,
+    /// In a zone with DRS earned: press to open.
+    Ready,
+    Open,
+}
+
+impl DrsLamp {
+    pub(super) fn of(session: &Session) -> Option<Self> {
+        let car = &session.race.entrants[session.player].car;
+        if !car.spec.aero.has_drs() || session.race.drs_zones.is_empty() {
+            return None;
+        }
+        Some(if car.drs.flap > 0.0 {
+            Self::Open
+        } else if car.drs.available {
+            Self::Ready
+        } else {
+            Self::Off
+        })
+    }
+}
+
+/// A DRS plate above the right-hand cluster: dark when unavailable, outlined
+/// green when it can be opened, solid green while the flap is open.
+fn drs_badge(hud: &Hud, style: &HudStyle, session: &Session, layout: Layout, scale: f32) {
+    let Some(lamp) = DrsLamp::of(session) else {
+        return;
+    };
+    // Cluster heights match `segments` (240) and `gauges` (2 × 165 + 24).
+    let (right, cluster) = match layout {
+        Layout::Segments => (24. * scale, 240. * scale),
+        Layout::Gauges => (28. * scale, 330. * scale),
+    };
+    let (w, h) = (96. * scale, 34. * scale);
+    let x = hud.width() - right - w;
+    let y = hud.height() - 24. * scale - cluster - 10. * scale - h;
+    let radius = 6. * scale;
+    let dim = Color::from_rgb(20, 22, 23);
+    let (fill, ink) = match lamp {
+        DrsLamp::Off => (dim, Color::from_gray(80)),
+        DrsLamp::Ready => (dim, GREEN),
+        DrsLamp::Open => (GREEN, Color::from_rgb(8, 9, 10)),
+    };
+    hud.fill_round(x, y, w, h, radius, fill);
+    if lamp == DrsLamp::Ready {
+        hud.stroke_round(x, y, w, h, radius, 2.5 * scale, GREEN);
+    }
+    hud.text_mid(
+        &style.bold,
+        20. * scale,
+        (x + w * 0.5, y + h * 0.5),
+        Align::Center,
+        ink,
+        "DRS",
+    );
 }
 
 fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
@@ -904,5 +966,29 @@ fn tyre_dials(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
             color,
             scale,
         );
+    }
+}
+
+#[cfg(test)]
+mod drs_tests {
+    use super::*;
+    use racecraft_sim::drs::Zone;
+
+    #[test]
+    fn drs_lamp_tracks_the_players_flap() {
+        let mut session = crate::tests::session();
+        let player = session.player;
+        // A circuit without zones shows no badge at all.
+        assert_eq!(DrsLamp::of(&session), None);
+        session.race.drs_zones = vec![Zone {
+            detection: 0.,
+            start: 10.,
+            end: 100.,
+        }];
+        assert_eq!(DrsLamp::of(&session), Some(DrsLamp::Off));
+        session.race.entrants[player].car.drs.available = true;
+        assert_eq!(DrsLamp::of(&session), Some(DrsLamp::Ready));
+        session.race.entrants[player].car.drs.flap = 0.4;
+        assert_eq!(DrsLamp::of(&session), Some(DrsLamp::Open));
     }
 }

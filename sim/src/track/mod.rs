@@ -343,21 +343,28 @@ impl Track {
 #[cfg(test)]
 fn oval_with_walls(walls: Vec<Wall>) -> Track {
     // 200 m straights joined by 60 m radius semicircles, 6 m half width.
+    stadium(200.0, 60.0, walls)
+}
+
+/// Two `straight`-metre straights joined by semicircles of `radius`.
+#[cfg(test)]
+pub(crate) fn stadium(straight: f64, radius: f64, walls: Vec<Wall>) -> Track {
     let mut centerline = Vec::new();
-    let radius = 60.0;
-    for i in 0..100 {
-        centerline.push([i as f64 * 2.0 - 100.0, 0.0, -radius]);
+    let half = straight / 2.0;
+    let points = (straight / 2.0) as usize;
+    for i in 0..points {
+        centerline.push([i as f64 * 2.0 - half, 0.0, -radius]);
     }
     for i in 0..95 {
         let angle = -std::f64::consts::FRAC_PI_2 + i as f64 / 95.0 * std::f64::consts::PI;
-        centerline.push([100.0 + radius * angle.cos(), 0.0, radius * angle.sin()]);
+        centerline.push([half + radius * angle.cos(), 0.0, radius * angle.sin()]);
     }
-    for i in 0..100 {
-        centerline.push([100.0 - i as f64 * 2.0, 0.0, radius]);
+    for i in 0..points {
+        centerline.push([half - i as f64 * 2.0, 0.0, radius]);
     }
     for i in 0..95 {
         let angle = std::f64::consts::FRAC_PI_2 + i as f64 / 95.0 * std::f64::consts::PI;
-        centerline.push([-100.0 + radius * angle.cos(), 0.0, radius * angle.sin()]);
+        centerline.push([-half + radius * angle.cos(), 0.0, radius * angle.sin()]);
     }
     let half_width = vec![6.0; centerline.len()];
     let file = TrackFile {

@@ -575,13 +575,11 @@ pub fn sync_cars(
             // Driver looks along local +Z: left (+X) moves down for an anticlockwise turn.
             RigKind::Steering => Quat::from_rotation_z(-pose.steer as f32 * 6.),
             RigKind::Upright => Quat::from_rotation_y(pose.steer as f32),
-            RigKind::Drs => {
-                Quat::from_rotation_x(if session.drs_open && part.entrant == session.player {
-                    session.rig.drs.open_angle
-                } else {
-                    0.
-                })
-            }
+            // Every car's flap follows its own simulated DRS actuator.
+            RigKind::Drs => Quat::from_rotation_x(
+                session.rig.drs.open_angle
+                    * session.race.entrants[part.entrant].car.drs.flap as f32,
+            ),
         };
         if matches!(part.kind, RigKind::Upright) {
             let car = &session.race.entrants[part.entrant].car;

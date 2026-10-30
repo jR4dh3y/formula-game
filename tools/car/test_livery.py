@@ -71,6 +71,15 @@ class LiveryTests(unittest.TestCase):
             result = livery.project_text(np.zeros_like(p),p,n,'X',np.ones(3),None,0,.5,1,.2,.3)
         np.testing.assert_array_equal(result, [[1,1,1],[1,1,1],[0,0,0],[0,0,0]])
 
+    def test_sleeves_keep_primary_team_colour_below_shoulder_caps(self):
+        import json
+        team = next(t for t in json.loads((Path(__file__).with_name('teams.json')).read_text())['teams'] if t['id'] == 'mclaren')
+        points = np.array([[[.20, .64, .80], [.20, .76, .80]]])
+        atlas = dict(position=points, normal=np.zeros_like(points))
+        output = livery.suit(team, atlas, livery.ROOT/'game/fonts/TitilliumWeb-Bold.ttf')
+        np.testing.assert_array_equal(output[0, 0], livery.color(team['suit']['primary']))
+        np.testing.assert_array_equal(output[0, 1], livery.color(team['suit']['secondary']))
+
     def test_every_roster_style_and_helmet_is_supported(self):
         import json
         data = json.loads((Path(__file__).with_name('teams.json')).read_text())

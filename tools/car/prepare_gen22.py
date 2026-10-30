@@ -16,6 +16,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import driver_steer  # noqa: E402
+import author_uv  # noqa: E402
 
 ATLAS = 2048
 NODES = ('body', 'wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr',
@@ -40,16 +41,91 @@ def gltf(v):
     return [round(v[0], 6), round(v[2], 6), round(-v[1], 6)]
 
 
-def decimate(obj, target):
+def decimate(obj, target, preserve_atlas=False):
     count = triangles(obj)
+    # Keep narrow DRS strips and all driver/helmet pose and atlas data exact.
+    if preserve_atlas and obj.name in ('drs_flap', 'driver', 'helmet'):
+        return
     if count <= target:
         return
     select([obj])
-    mod = obj.modifiers.new('Silhouette budget', 'DECIMATE')
-    mod.ratio = target / count
-    mod.use_collapse_triangulate = True
-    # UV seams and material boundaries remain valid through the opponent LOD.
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    saved = None
+    if preserve_atlas:
+        # Simplify inside each runtime UV chart. Collapsing in surface space
+        # can invert thin atlas triangles even with boundary vertices pinned.
+        # Carry physical positions as an interpolated attribute, just like poses.
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        uv = bm.loops.layers.uv.get('RuntimeAtlas')
+        seams = []
+        for edge in bm.edges:
+            if len(edge.link_loops) != 2:
+                continue
+            a, b = edge.link_loops
+            au = {a.vert: a[uv].uv, a.link_loop_next.vert: a.link_loop_next[uv].uv}
+            bu = {b.vert: b[uv].uv, b.link_loop_next.vert: b.link_loop_next[uv].uv}
+            if a.face.material_index != b.face.material_index or any((au[v]-bu[v]).length > 1e-6 for v in edge.verts):
+                seams.append(edge)
+        bmesh.ops.split_edges(bm, edges=seams)
+        bm.to_mesh(obj.data)
+        bm.free()
+        saved = obj.data.attributes.new('lod_surface_position', 'FLOAT_VECTOR', 'POINT')
+        for vertex, value in zip(obj.data.vertices, saved.data):
+            value.vector = vertex.co
+        uv = obj.data.uv_layers['RuntimeAtlas'].data
+        for face in obj.data.polygons:
+            for loop in face.loop_indices:
+                obj.data.vertices[obj.data.loops[loop].vertex_index].co = (*uv[loop].uv, face.material_index * 4)
+    baseline = obj.data.copy() if preserve_atlas and obj.name == 'body' else None
+    protected = set()
+    for attempt in range(12):
+        if attempt:
+            failed = obj.data
+            obj.data = baseline.copy()
+            bpy.data.meshes.remove(failed)
+        if protected:
+            group = obj.vertex_groups.get('LOD atlas protection')
+            if group is None:
+                group = obj.vertex_groups.new(name='LOD atlas protection')
+            group.add(list(protected), 1, 'REPLACE')
+        mod = obj.modifiers.new('Silhouette budget', 'DECIMATE')
+        mod.ratio = target / count
+        mod.use_collapse_triangulate = True
+        if protected:
+            mod.vertex_group = group.name
+            mod.invert_vertex_group = True
+            mod.vertex_group_factor = 1000
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        folded = overlapping_uv_faces(obj, 'paint') if baseline is not None else set()
+        if not folded:
+            break
+        from mathutils.kdtree import KDTree
+        tree = KDTree(len(baseline.vertices))
+        for vertex in baseline.vertices:
+            tree.insert(vertex.co, vertex.index)
+        tree.balance()
+        for index in folded:
+            for vertex in obj.data.polygons[index].vertices:
+                _, nearest, _ = tree.find(obj.data.vertices[vertex].co)
+                protected.add(nearest)
+        patch = protected.copy()
+        for edge in baseline.edges:
+            if any(i in patch for i in edge.vertices):
+                protected.update(edge.vertices)
+        print('LOD UV RETRY', attempt, len(folded), len(protected), flush=True)
+    else:
+        raise RuntimeError('LOD chart collapse could not preserve paint atlas')
+    if baseline is not None:
+        bpy.data.meshes.remove(baseline)
+    group = obj.vertex_groups.get('LOD atlas protection')
+    if group is not None:
+        obj.vertex_groups.remove(group)
+    if saved is not None:
+        saved = obj.data.attributes['lod_surface_position']
+        for vertex, value in zip(obj.data.vertices, saved.data):
+            vertex.co = value.vector
+        obj.data.attributes.remove(saved)
+        obj.data.update()
 
 
 def material(name, color, rough=.5, metal=0):
@@ -59,7 +135,7 @@ def material(name, color, rough=.5, metal=0):
     shader.inputs['Base Color'].default_value = (*color, 1)
     shader.inputs['Metallic'].default_value = metal
     shader.inputs['Roughness'].default_value = rough
-    if name in ('paint', 'helmet_paint'):
+    if name == 'helmet_paint':
         shader.inputs['Coat Weight'].default_value = .35
         shader.inputs['Coat Roughness'].default_value = .24
     mat.diffuse_color = (*color, 1)
@@ -83,7 +159,7 @@ def make_materials():
     for mat in list(bpy.data.materials):
         bpy.data.materials.remove(mat)
     specs = {
-        'paint': ((.55, .57, .6), .3, .08),
+        'paint': ((.55, .57, .6), .48, 0),
         'carbon': ((.012, .014, .017), .62, 0),
         'tyre': ((.025, .026, .028), .85, 0),
         'tyre_marking': ((.95, .65, .015), .65, 0),
@@ -201,10 +277,12 @@ def material_for(name, old, centre, normal):
         # keeps the paint/carbon border off the curved lower sidepods.
         if normal.z < -.6:
             return 'carbon'
-    if name in ('body_object', 'body_top_wing', 'body_side_top_wings', 'mirror_main_body_at01'):
+    if name in ('body_top_wing', 'body_side_top_wings'):
+        return 'carbon'
+    if name in ('body_object', 'mirror_main_body_at01'):
         return 'paint'
-    # Only endplate faces receive paint; the wing elements remain bare carbon.
-    if name in ('front_wing_mixer', 'rear_wing_no_mod') and abs(centre.x) > (.78 if name.startswith('front') else .51) and abs(normal.x)>.45:
+    # Wing artwork includes the elements as well as the endplates.
+    if name in ('front_wing_mixer', 'rear_wing_no_mod', 'rear_wing_no_mod._drs'):
         return 'paint'
     if 'rubber' in lower or 'plastic' in lower or 'felt' in lower or 'fabric' in lower: return 'rubber'
     if any(s in lower for s in ('metal', 'chrome', 'brass', 'degradable')): return 'metal'
@@ -214,6 +292,10 @@ def material_for(name, old, centre, normal):
 def unwrap(obj, mat_name):
     # Six continuous projection regions avoid thousands of tiny smart-UV islands
     # on decimated curved surfaces. Angle-based unwrap preserves density on the concave sidepods.
+    if obj.data.uv_layers.get("RuntimeAtlas") is None:
+        obj.data.uv_layers.new(name="RuntimeAtlas")
+    obj.data.uv_layers.active = obj.data.uv_layers["RuntimeAtlas"]
+    obj.data.uv_layers.active.active_render = True
     select([obj])
     bpy.context.tool_settings.mesh_select_mode = (False, False, True)
     bpy.ops.object.mode_set(mode='EDIT')
@@ -379,6 +461,8 @@ def bake(obj, mat_name, output, extents, attempt=0):
     pos = np.zeros((ATLAS, ATLAS, 3), np.float32)
     norm = np.zeros_like(pos)
     coverage = np.zeros((ATLAS, ATLAS), np.uint8)
+    source_uv = np.full((ATLAS, ATLAS, 2), -1, np.float32)
+    source_layer = mesh.uv_layers.get(author_uv.LAYER)
     overlaps = 0
     owner = np.full((ATLAS,ATLAS),-1,np.int32)
     folded = set()
@@ -414,6 +498,11 @@ def bake(obj, mat_name, output, extents, attempt=0):
         pos[y,x] = weights @ pp
         norm[y,x] = weights @ nn
         coverage[y,x] = 1
+        if source_layer is not None:
+            source = np.array([source_layer.data[i].uv[:] for i in tri.loops])
+            if np.all(source >= 0):
+                source[:,1] = 1-source[:,1]
+                source_uv[y,x] = weights @ source
     if overlaps:
         if attempt>=10: raise RuntimeError(f'{mat_name}: {overlaps} overlapping UV texels after repair')
         print('UV REPAIR',mat_name,len(folded),'folded faces;',overlaps,'overlapping texels',flush=True)
@@ -421,7 +510,7 @@ def bake(obj, mat_name, output, extents, attempt=0):
         return bake(obj,mat_name,output,extents,attempt+1)
     norm /= np.maximum(np.linalg.norm(norm, axis=-1, keepdims=True), 1e-8)
     np.savez_compressed(output / (mat_name + '.npz'), position=pos, normal=norm,
-                        mask=coverage, extents=np.array([extents['min'], extents['max']]))
+                        mask=coverage, source_uv=source_uv, correspondence_sha256=np.array(__import__("hashlib").sha256(author_uv.PROFILE.read_bytes()).hexdigest()), extents=np.array([extents['min'], extents['max']]))
     print('BAKE', mat_name, int(coverage.sum()), 'covered texels; overlaps', overlaps, flush=True)
 
 
@@ -451,20 +540,44 @@ def add_compound_rings(nodes, mats, scene):
 
 
 def export_models(nodes, args, metadata):
+    # Shipping materials always address TEXCOORD_0. The source correspondence
+    # remains in prepared.blend and paint.npz, never as a competing runtime UV.
+    for obj in nodes.values():
+        for layer in list(obj.data.uv_layers):
+            if layer.name != 'RuntimeAtlas': obj.data.uv_layers.remove(layer)
+        obj.data.uv_layers.active = obj.data.uv_layers['RuntimeAtlas']
+        obj.data.uv_layers.active.active_render = True
+    paint = bpy.data.materials['paint'].node_tree.nodes.get('Principled BSDF')
+    paint.inputs['Coat Weight'].default_value = 0
+    paint.inputs['Metallic'].default_value = 0
+    paint.inputs['Roughness'].default_value = .48
     slots = [m.name for m in nodes['body'].data.materials]
     for filename, budget in [('car.glb',299000),('car_lod1.glb',88000)]:
         if filename == 'car_lod1.glb':
             total = sum(triangles(o) for o in nodes.values())
-            for obj in nodes.values(): decimate(obj, int(triangles(obj)*budget/total))
+            for obj in nodes.values(): decimate(obj, int(triangles(obj)*budget/total), preserve_atlas=True)
             # Three wheel materials collapse to two for distant opponents.
             for obj in nodes.values():
                 for p in obj.data.polygons:
                     mat = obj.data.materials[p.material_index].name
-                    if mat in ('mirror','emissive_red','rubber'): p.material_index=slots.index('carbon')
+                    if mat in ('mirror','emissive_red','rubber','visor'): p.material_index=slots.index('carbon')
                     elif mat in ('metal','tyre_marking'): p.material_index=slots.index('carbon')
         total = sum(triangles(o) for o in nodes.values())
-        if total > budget:
-            for obj in nodes.values(): decimate(obj,int(triangles(obj)*budget/total*.99))
+        if total > budget and filename == 'car.glb':
+            for obj in nodes.values(): decimate(obj,int(triangles(obj)*budget/total*.99), preserve_atlas=True)
+        if filename == 'car_lod1.glb':
+            # Painted atlas borders have a hard geometric floor. Spend the
+            # remaining budget on unpainted parts instead of collapsing seams.
+            protected = {'body', 'driver', 'helmet', 'drs_flap'}
+            fixed = sum(triangles(o) for n,o in nodes.items() if n in protected)
+            flexible = sum(triangles(o) for n,o in nodes.items() if n not in protected)
+            if fixed + flexible > budget:
+                if fixed >= budget:
+                    raise ValueError('Painted LOD seam floor exceeds triangle budget')
+                ratio = (budget - fixed - 100) / flexible
+                for name, obj in nodes.items():
+                    if name not in protected:
+                        decimate(obj, int(triangles(obj) * ratio), preserve_atlas=True)
         # Driver poses ride along as vertex attributes until this point.
         morphed = [obj for obj in nodes.values() if driver_steer.to_shape_keys(obj)]
         select(list(nodes.values()))
@@ -486,6 +599,36 @@ def export_models(nodes, args, metadata):
 
 
 
+def bake_paint(nodes, output, extents):
+    """Body and moving DRS flap share a disjoint atlas and team texture."""
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='gen22-paint-') as temporary:
+        temporary = Path(temporary)
+        atlases = []
+        for index, name in enumerate(('body', 'drs_flap')):
+            obj = nodes[name]
+            folder = temporary / name
+            folder.mkdir()
+            # Resolve folds before reserving each object's horizontal atlas band.
+            bake(obj, 'paint', folder, extents)
+            uv = obj.data.uv_layers.active.data
+            loops = [loop for face in obj.data.polygons
+                     if obj.data.materials[face.material_index].name == 'paint'
+                     for loop in face.loop_indices]
+            low, high = min(uv[i].uv.x for i in loops), max(uv[i].uv.x for i in loops)
+            for loop in loops:
+                u = (uv[loop].uv.x - low) / (high - low)
+                uv[loop].uv.x = .008 + u * .884 if index == 0 else .924 + u * .068
+            bake(obj, 'paint', folder, extents)
+            with np.load(folder / 'paint.npz') as archive:
+                atlases.append({key: archive[key] for key in archive.files})
+        body, flap = atlases
+        covered = flap['mask'] != 0
+        if np.any(body['mask'][covered]): raise RuntimeError('DRS atlas overlaps body')
+        for key in ('position', 'normal', 'mask', 'source_uv'): body[key][covered] = flap[key][covered]
+        np.savez_compressed(output / 'paint.npz', **body)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('output', type=Path)
@@ -502,7 +645,8 @@ def main():
         for text in list(bpy.data.texts): bpy.data.texts.remove(text)
         if args.rebake:
             for name,mat in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
-                bake(nodes[name],mat,args.bake,metadata['extents'])
+                if mat == 'paint': bake_paint(nodes,args.bake,metadata['extents'])
+                else: bake(nodes[name],mat,args.bake,metadata['extents'])
             bpy.ops.wm.save_as_mainfile(filepath=str((args.bake/'prepared.blend').resolve()))
         export_models(nodes,args,metadata)
         return
@@ -519,6 +663,7 @@ def main():
     candidates = [o for o in bpy.data.collections['fp04_tr_model'].all_objects if o.type == 'MESH' and len(o.data.polygons) and not o.hide_render]
     skip = {'helmet','shoes.l','shoes.r','bee+_logo_grey-01',
             'steering_wheel_display_glass.002','steering_wheel_display_emmiter.002'}
+    author_uv.author(candidates, args.bake)
     # Read names before deleting source materials.
     source_materials = {o.name:[m.name if m else '' for m in o.data.materials] for o in candidates}
     # Bake steering/shift poses first; capture() leaves the rig straight ahead.
@@ -529,6 +674,15 @@ def main():
         if source.name in skip: continue
         node = node_for(source)
         mesh = bpy.data.meshes.new_from_object(source.evaluated_get(deps), preserve_all_data_layers=True, depsgraph=deps)
+        for layer in list(mesh.uv_layers):
+            if layer.name != author_uv.LAYER: mesh.uv_layers.remove(layer)
+        # Every source mesh carries the same named layers before joining.
+        if mesh.uv_layers.get(author_uv.LAYER) is None:
+            layer = mesh.uv_layers.new(name=author_uv.LAYER)
+            for loop in layer.data: loop.uv = (-1,-1)
+        runtime = mesh.uv_layers.new(name='RuntimeAtlas')
+        mesh.uv_layers.active = runtime
+        runtime.active_render = True
         mesh.transform(correction @ source.matrix_world)
         obj = bpy.data.objects.new('converted_' + source.name, mesh)
         scene.collection.objects.link(obj)
@@ -556,14 +710,14 @@ def main():
             p.use_smooth = True
         decimate(obj, target_for(name, node))
         if name in ('front_wing_mixer','rear_wing_no_mod'):
-            # Cut an exact paint/carbon boundary through the curved endplates.
+            # Preserve an exact endplate boundary for panel UV seams.
             limit = .85 if name.startswith('front') else .51
             bm = bmesh.new(); bm.from_mesh(obj.data)
             for plane in (-limit,limit):
                 bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),
                     dist=1e-6,plane_co=(plane,0,0),plane_no=(1,0,0))
             for face in bm.faces:
-                face.material_index=slots.index('paint' if abs(face.calc_center_median().x)>limit-1e-6 else 'carbon')
+                face.material_index=slots.index('paint')
             bm.to_mesh(obj.data); bm.free()
         print('PART', name, node, triangles(obj), flush=True)
     # The two shift paddles are one source bar; cut it at the hub so each can move.
@@ -607,7 +761,7 @@ def main():
     for text in list(bpy.data.texts): bpy.data.texts.remove(text)
     bpy.ops.wm.save_as_mainfile(filepath=str((args.bake/'geometry.blend').resolve()))
     # Dedicated, non-overlapping atlases across every painted face.
-    for name, mat in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
+    for name, mat in [('body','paint'),('drs_flap','paint'),('driver','suit'),('helmet','helmet_paint')]:
         unwrap(nodes[name],mat)
     # Screen plane faces the driver. Texture top is physical top; left is driver's left.
     obj = nodes['steering_wheel']
@@ -662,7 +816,8 @@ def main():
             width=round(max(v.x for v in verts)-min(v.x for v in verts),5))
     bpy.context.view_layer.update()
     for name,mat in [('body','paint'),('driver','suit'),('helmet','helmet_paint')]:
-        bake(nodes[name],mat,args.bake,extents)
+        if mat == 'paint': bake_paint(nodes,args.bake,extents)
+        else: bake(nodes[name],mat,args.bake,extents)
     (args.output/'car.json').write_text(json.dumps(metadata,indent=2)+'\n')
     # This intermediate is local review data, never a shipping asset.
     for text in list(bpy.data.texts): bpy.data.texts.remove(text)

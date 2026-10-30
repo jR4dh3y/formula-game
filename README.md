@@ -37,7 +37,8 @@ fall back to extraction if FUSE mounting is unavailable. Release assets include
 
 **Start here:** choose your car in Race setup, leave Beginner aids enabled, and
 select Start race. Hold **W** to accelerate, use **A/D** to steer and **S** to brake.
-**Esc** opens the pause menu; **C** cycles cameras; **R** recovers the car.
+**Esc** opens the pause menu; **C** cycles cameras; **R** recovers the car;
+**F** (gamepad **B**) opens DRS when the badge above the dash is outlined green.
 
 ## Screenshots
 
@@ -170,16 +171,22 @@ There are exactly three camera modes: seated cockpit, TV pod above the driver's 
 
 The RB6 and GEN22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. GEN22 uses the named `steering_wheel` node, including its live LCD and LEDs; RB6 keeps its legacy wheel and screen pod.
 
-F toggles the Gen22 DRS flap during racing; braking closes it. This currently controls the visual flap only; DRS zone rules and aerodynamic effects remain unimplemented.
+DRS follows the modern rules. Each circuit gets up to two zones, found from its
+longest straights that end in a braking corner (at Spa: Kemmel into Les Combes,
+and the pit straight into La Source). From lap 2, a car within one second of the
+car ahead at a zone's detection point may open the flap in that zone with F
+(gamepad B). AI cars use it whenever it is earned. Braking or leaving the zone
+closes it. An open flap removes about 10% of the car's drag and some rear
+downforce. The 2010 RB6 predates DRS and has none.
 
-Import custom car, suit and helmet PNGs with `tools/car/import_livery.py`; it exports matching UV guides and preserves imported artwork through asset rebuilds. See [the PNG workflow](docs/gen22-car.md#importing-your-png-artwork). Monoposto sheets require UV conversion before use.
+Import custom car, suit and helmet PNGs with `tools/car/import_livery.py`; it exports matching UV guides and preserves imported artwork through asset rebuilds. See [the PNG workflow](docs/gen22-car.md#importing-your-png-artwork). `tools/car/convert_livery.py` batch-converts the square Monoposto layout used by the Porsche example through authored mesh UV correspondence; see the workflow for layout limits.
 
 
 The HUD includes the timing tower, lap times, countdown lights, race messages, shift lights, speed, pedals, tyre temperatures/wear, lock-up/sliding indicators, aero effects, minimap and results.
 
 Open **HUD & map** from Race setup or the pause menu to choose between **Digital cockpit**, with illuminated segments and a neutral gear aperture, and **Analog telemetry**, with separate metal-rimmed RPM, speed, pedal and G-force instruments. Tyre temperatures and live tow/wake effects use needle gauges in both layouts. The unboxed minimap supports Full circuit and Nearby track modes. Driving-aid buttons, camera shortcut strips and map headings are omitted while racing; their settings and keyboard shortcuts remain available. The G-force plot uses one G per ring. Both layouts use live simulation data and leave the physical cockpit wheel visible.
 
-The minimap setting is independent: **Full circuit** shows the whole field; **Nearby track** follows the car through a 600 m window with the road ahead pointing up. Both choices apply immediately, survive new races, and are saved with your other preferences. Automated capture runs use the defaults and never write your preferences.
+The minimap setting is independent: **Full circuit** shows the whole field; **Nearby track** magnifies the road around the car with the road ahead pointing up, while compressing distant sections to keep the complete circuit visible. Neither mode uses a rectangular background or crops the track. Both choices apply immediately, survive new races, and are saved with your other preferences. Automated capture runs use the defaults and never write your preferences.
 
 ## Engine sound
 

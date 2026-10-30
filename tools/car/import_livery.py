@@ -1,7 +1,7 @@
 """Import PNG paint, suit and helmet atlases, or export the matching Gen22 UV templates.
 
-These are model-specific atlases. Monoposto sheets need UV conversion before import;
-renaming or resizing a foreign atlas does not convert its layout.
+Native Gen22 atlases import directly. The monoposto-modern paint profile uses the
+official Monoposto 2026 layout; other layouts need other profiles.
 """
 import argparse
 import io
@@ -10,6 +10,8 @@ from pathlib import Path
 import re
 import struct
 import stat
+
+import sys
 import tempfile
 
 from PIL import Image, ImageDraw
@@ -97,12 +99,32 @@ def install(directory, overrides, roster, team_id, driver_id, images):
         for path in [temp for temp, _ in staged] + [backup for backup in backups.values() if backup is not None]:
             if path not in keep:
                 path.unlink(missing_ok=True)
+
+    if images.get('paint') is not None:
+        (overrides / team_id / 'paint.source.json').unlink(missing_ok=True)
     return [directory / 'liveries' / relative for relative, _ in pending]
 
 
-def apply_overrides(directory, overrides, roster):
+def apply_overrides(directory, overrides, roster, bake=None):
     """Only accept roster paths; unrelated files in the override tree are ignored."""
+    converter = None
     for team in roster['teams']:
+        provenance = overrides / team['id'] / 'paint.source.json'
+        if bake is not None and provenance.is_file():
+            report = json.loads(provenance.read_text())
+            if report.get('profile') != 'monoposto-modern':
+                raise ValueError('Unknown saved paint source profile: ' + str(report.get('profile')))
+            if report.get('profile') == 'monoposto-modern':
+                # Atlas packing can change on rebuild. Reproject the original sheet.
+                from convert_livery import Converter
+                if converter is None:
+                    converter = Converter(bake)
+                import hashlib
+                if report.get('source_sha256') and hashlib.sha256(Path(report['source']).read_bytes()).hexdigest() != report['source_sha256']:
+                    raise ValueError('Saved livery source changed; import the source explicitly again')
+                output = provenance.with_name('paint.png')
+                converter.convert(Path(report['source']), output)
+                provenance.write_bytes(output.with_name('paint.png.json').read_bytes())
         paths = [Path(team['id']) / name for name in ('paint.png', 'suit.png')]
         paths += [Path(team['id']) / driver['id'] / 'helmet.png' for driver in team['drivers']]
         for relative in paths:
@@ -146,7 +168,7 @@ def export_templates(directory, output):
                     points = [(round(uv[j][0] * (SIZE - 1)), round((1 - uv[j][1]) * (SIZE - 1))) for j in indices[i:i + 3]]
                     draw.line(points + points[:1], fill=(80, 210, 255, 190), width=1)
         image.save(output / (surface + '-uv.png'))
-    (output / 'README.txt').write_text('Gen22 UV0 templates from the exported car.glb.\nUse as a guide layer; hide it before exporting paint/suit/helmet PNG artwork.\nMonoposto 22 sheets use a different layout and must be converted first.\n')
+    (output / 'README.txt').write_text('Gen22 UV0 templates from the exported car.glb.\nUse as a guide layer; hide it before exporting paint/suit/helmet PNG artwork.\nMonoposto square modern sheets can use --layout monoposto-modern; other layouts need a matching profile.\n')
 
 
 def main():
@@ -158,19 +180,33 @@ def main():
     parser.add_argument('--paint', type=Path)
     parser.add_argument('--suit', type=Path)
     parser.add_argument('--helmet', type=Path)
-    parser.add_argument('--layout', choices=['gen22'], help='Confirm that the input artwork uses the Gen22 UV template')
+    parser.add_argument('--layout', choices=['gen22', 'monoposto-modern'], help='Input car-paint layout; Monoposto conversion is a authored mesh UV correspondence')
+    parser.add_argument('--bake', type=Path, default=ROOT / 'raw/gen22/bake/paint.npz')
     parser.add_argument('--templates', type=Path, help='Export matching UV guide PNGs to this directory')
     args = parser.parse_args()
     try:
         if args.templates:
             export_templates(args.assets, args.templates)
         else:
-            if not args.team or args.layout != 'gen22':
-                parser.error('Import requires --team and --layout gen22; Monoposto sheets must be UV-converted first')
+            if not args.team or not args.layout:
+                parser.error('Import requires --team and an explicit --layout')
+            if args.layout == 'monoposto-modern' and (not args.paint or args.suit or args.helmet):
+                parser.error('monoposto-modern converts car paint only; import suit/helmet separately with --layout gen22')
             roster = json.loads((args.assets / 'teams.json').read_text())
-            for path in install(args.assets, args.overrides, roster, args.team, args.driver,
-                                {'paint': args.paint, 'suit': args.suit, 'helmet': args.helmet}):
-                print('IMPORTED', path)
+            with tempfile.TemporaryDirectory(prefix='gen22-livery-import-') as scratch:
+                paint = args.paint
+                if args.layout == 'monoposto-modern':
+                    sys.path.insert(0, str(Path(__file__).resolve().parent))
+                    from convert_livery import Converter
+                    paint = Path(scratch) / 'paint.png'
+                    Converter(args.bake).convert(args.paint, paint)
+                for path in install(args.assets, args.overrides, roster, args.team, args.driver,
+                                    {'paint': paint, 'suit': args.suit, 'helmet': args.helmet}):
+                    print('IMPORTED', path)
+                if args.layout == 'monoposto-modern':
+                    provenance = args.overrides / args.team / 'paint.source.json'
+                    provenance.write_bytes(paint.with_name(paint.name + '.json').read_bytes())
+                    print('PROFILE monoposto-modern: authored mesh UV correspondence; check the result on the car.')
             print('Restart the game, then select the team/driver in Race setup.')
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         parser.exit(1, f'Livery import failed: {error}\n')

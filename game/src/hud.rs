@@ -313,18 +313,27 @@ impl Minimap {
         )
     }
 
-    /// A 600 m car-relative window with more space ahead than behind.
+    /// Magnify the road around the car while smoothly compressing distant
+    /// sections into the same view. No part of the circuit needs to be clipped.
     fn nearby(&self, point: (f32, f32), player: (f32, f32), yaw: f64) -> (f32, f32) {
         let dx = (point.0 - player.0) as f64 * self.span;
         let dz = (point.1 - player.1) as f64 * self.span;
         let left = dx * yaw.cos() - dz * yaw.sin();
         let ahead = dx * yaw.sin() + dz * yaw.cos();
-        ((0.5 - left / 600.) as f32, (0.72 - ahead / 600.) as f32)
+        let radius = left.hypot(ahead);
+        let magnification = 0.44 / (radius + 400.);
+        (
+            (0.5 - left * magnification) as f32,
+            (0.54 - ahead * magnification) as f32,
+        )
     }
 }
 
 fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scale: f32) {
-    let size = 240. * scale;
+    let size = match mode {
+        MapMode::FullCircuit => 240.,
+        MapMode::Nearby => 330.,
+    } * scale;
     let mx = hud.width() - size - 24. * scale;
     let my = 24. * scale;
     let inset = 24. * scale;
@@ -332,11 +341,6 @@ fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scal
         egui::pos2(mx + inset, my + inset),
         egui::pos2(mx + size - inset, my + size - 16. * scale),
     );
-    let clipped = Hud {
-        painter: hud.painter.with_clip_rect(rect),
-        size: hud.size,
-        finish: hud.finish,
-    };
     let car = &session.race.entrants[session.player].car;
     let player = session.minimap.project(car.position.x, car.position.z);
     let map = |point| {
@@ -353,17 +357,14 @@ fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scal
     for index in 0..points.len() {
         let a = map(points[index]);
         let b = map(points[(index + 1) % points.len()]);
-        if rect.intersects(
-            egui::Rect::from_two_pos(egui::pos2(a.0, a.1), egui::pos2(b.0, b.1)).expand(3. * scale),
-        ) {
-            clipped.line(a, b, 6. * scale, Color::from_black_alpha(150));
-            clipped.line(a, b, 3. * scale, hud.finish.colors().ink);
-        }
+        hud.line(a, b, 6. * scale, Color::from_black_alpha(150));
+        hud.line(a, b, 3. * scale, hud.finish.colors().ink);
     }
+
     let start = map(points[0]);
     for row in 0..3 {
         for column in 0..3 {
-            clipped.fill_rect(
+            hud.fill_rect(
                 start.0 + (column as f32 - 1.5) * 3. * scale,
                 start.1 + (row as f32 - 1.5) * 3. * scale,
                 3. * scale,
@@ -383,12 +384,12 @@ fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scal
         let point = map(session
             .minimap
             .project(entrant.car.position.x, entrant.car.position.z));
-        clipped.circle(point, 4.5 * scale, WELL);
-        clipped.circle(point, 3. * scale, WHITE);
+        hud.circle(point, 4.5 * scale, WELL);
+        hud.circle(point, 3. * scale, WHITE);
     }
     let me = map(player);
-    clipped.circle(me, 7. * scale, WELL);
-    clipped.circle(me, 5.5 * scale, ACCENT);
+    hud.circle(me, 7. * scale, WELL);
+    hud.circle(me, 5.5 * scale, ACCENT);
 }
 
 /// Short-lived banner messages.
@@ -988,15 +989,39 @@ mod tests {
             -std::f64::consts::FRAC_PI_2,
         ] {
             let center = map.nearby(player, player, yaw);
-            assert!((center.0 - 0.5).abs() < 1e-5 && (center.1 - 0.72).abs() < 1e-5);
+            assert!((center.0 - 0.5).abs() < 1e-5 && (center.1 - 0.54).abs() < 1e-5);
             let ahead = map.project(x + yaw.sin() * 300., z + yaw.cos() * 300.);
             let ahead = map.nearby(ahead, player, yaw);
-            assert!((ahead.0 - 0.5).abs() < 1e-4 && (ahead.1 - 0.22).abs() < 1e-4);
+            assert!((ahead.0 - center.0).abs() < 1e-4 && ahead.1 < center.1);
             let left = map.project(x + yaw.cos() * 300., z - yaw.sin() * 300.);
             let left = map.nearby(left, player, yaw);
-            assert!(left.0.abs() < 1e-4 && (left.1 - 0.72).abs() < 1e-4);
+            assert!(left.0 < center.0 && (left.1 - center.1).abs() < 1e-4);
+            for &point in &map.points {
+                let focused = map.nearby(point, player, yaw);
+                assert!((0. ..=1.).contains(&focused.0) && (0. ..=1.).contains(&focused.1));
+            }
         }
     }
+    #[test]
+    fn focused_map_keeps_far_sections_visible_and_gives_nearby_road_more_space() {
+        let session = crate::tests::session();
+        let map = &session.minimap;
+        for &player in map.points.iter().step_by(10) {
+            for yaw in [0., 1., 3.] {
+                for &point in &map.points {
+                    let point = map.nearby(point, player, yaw);
+                    assert!((0. ..=1.).contains(&point.0) && (0. ..=1.).contains(&point.1));
+                }
+            }
+        }
+        let p = (0.5, 0.5);
+        let near = map.nearby((p.0, p.1 + (100. / map.span) as f32), p, 0.);
+        let next = map.nearby((p.0, p.1 + (200. / map.span) as f32), p, 0.);
+        let far = map.nearby((p.0, p.1 + (5000. / map.span) as f32), p, 0.);
+        assert!(0.54 - near.1 > near.1 - next.1);
+        assert!(far.1 > 0. && far.1 < next.1);
+    }
+
     use racecraft_sim::car::spec::Compound;
 
     #[test]

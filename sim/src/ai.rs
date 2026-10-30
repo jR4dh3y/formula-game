@@ -226,6 +226,8 @@ impl AiDriver {
             brake,
             shift_up: false,
             shift_down: false,
+            // The race only lets the flap open where DRS is earned.
+            drs: true,
         }
     }
 

@@ -354,7 +354,6 @@ pub fn apply(
     *session = Session {
         identities,
         rig,
-        drs_open: false,
         guidance: crate::driving::Guidance::new(&race, player),
         corner_braking: frontend.corner_braking,
         show_racing_line: frontend.show_racing_line,
@@ -835,7 +834,8 @@ fn preview(ui: &mut egui::Ui, catalog: &Catalog, draft: &Options) {
     section(ui, "Drive your way");
     ui.label("Choose individual driving aids or a preset in Driving aids. You can adjust them from the pause menu without restarting.");
     ui.label(
-        RichText::new("C cycles cameras / 1 cockpit / 2 TV / 3 third person / Esc menu").color(DIM),
+        RichText::new("C cycles cameras / 1 cockpit / 2 TV / 3 third person / F DRS / Esc menu")
+            .color(DIM),
     );
 }
 
@@ -1129,7 +1129,7 @@ fn display_panel(ui: &mut egui::Ui, frontend: &mut Frontend) {
         (
             hud::MapMode::Nearby,
             "Nearby track",
-            "A close view of the next bends and nearby cars. Your car points up.",
+            "Zooms around your car while keeping the whole circuit visible. Your car points up.",
             "map-nearby",
         ),
     ] {

@@ -254,10 +254,11 @@ PNG guides remain ignored by Git.
 **Monoposto 22 PNGs are not Gen22 atlases.** The downloaded
 `fp04rb_new_rig.blend` and `fp04rb.zip` describe our base model's original UVs,
 which also differ from Monoposto's sheet and from our repacked runtime atlas.
-Neither resizing nor renaming those PNGs converts the panel mapping. Transfer
-the design to the exported guides, or supply the matching source mesh/UV
-correspondence for a proper bake. `--layout gen22` explicitly identifies the
-supported import layout; no Monoposto conversion is implied.
+Neither resizing nor renaming those PNGs converts the panel mapping. The
+`monoposto-modern` profile below authors correspondence on the original FP04RB
+mesh UV charts for the official Monoposto 2026 layout. The cars have different
+geometry, so this is a transfer between models.
+Use `--layout gen22` only for artwork that already matches our exported guides.
 
 ## Road contact and cockpit visibility
 
@@ -274,3 +275,80 @@ warning lamps retain their geometry and stay off.
 `GEN22_OVERRIDES` selects the source override directory for a full car build
 (default `raw/gen22/liveries`). Match it to the importer’s `--overrides` path so
 custom textures are reapplied on regeneration.
+
+## Batch conversion of Monoposto car sheets
+
+`tools/car/convert_livery.py` accepts 2048 by 2048 PNGs in the official
+[Monoposto 2026 template](https://www.gabama.com/monoposto/livery-template.zip).
+The 2025 template has a different layout and is unsupported.
+
+`author_uv.py` finds connected charts in the Blender model's original UVs.
+The checked-in `monoposto-modern.json` records chart bounds, seams and guide
+landmarks. Body chart interiors transfer measured source-chart cross sections into fixed
+guide boundary curves. Wing charts retain their original UV parameterization and receive
+separate guide islands. `Monoposto2026` stores the correspondence per mesh loop
+before subdivision and decimation. `RuntimeAtlas` remains the nonoverlapping
+shipping UV. The mesh rasterizer emits `source_uv` with the same barycentric
+weights as the position bake. Conversion never classifies target texels by XYZ.
+
+The body and moving DRS use disjoint runtime atlas bands. Suit, helmet, tyres,
+floor and suspension keep their own materials. Different geometry means panel
+proportions and seam transitions still need visual review.
+
+Convert a whole directory, preserving nested folders:
+
+```sh
+python3 -I tools/car/convert_livery.py /path/to/monoposto-sheets \
+  --output raw/gen22/converted --recursive
+```
+
+One mesh-baked lookup map is loaded and reused for every sheet in the batch. Source PNGs are
+never overwritten. The output directory must sit outside the input tree. Each
+output gets a `.png.json` report with the profile, mapped panel coverage and
+mesh-bake fingerprint; `conversion-report.json` lists successes and failures.
+A corrupt image does not prevent subsequent images from being converted; any
+failure gives a nonzero exit status. A different layout requires an authored mesh correspondence and a rebuild. `--bake` selects the target car's `paint.npz` (the normal
+asset build produces it in `raw/gen22/bake/`). Regenerate conversions after a
+model/UV change; their reports identify which bake was used.
+
+For one sheet, conversion and persistent import can run together:
+
+```sh
+python3 -I tools/car/import_livery.py --team ferrari \
+  --layout monoposto-modern --paint /path/to/porsche.png
+```
+
+This replaces that team's paint slot, leaving its driver identity, suit and
+helmet unchanged. Alternatively import any batch output with `--layout gen22`.
+Restart the game and choose the team. The converter does not infer a team from a
+filename, so a folder of unrelated brands cannot overwrite team slots by accident.
+
+Current evidence and remaining mapping defects are recorded in
+[gen22-mapping-evidence.md](gen22-mapping-evidence.md). Earlier projection captures
+are rejected baselines and do not validate this correspondence.
+
+### Rebuilding imported sheets
+
+Imports with `--layout monoposto-modern` retain `paint.source.json` beside the
+persistent override. `livery.py` reprojects that source sheet against the new
+mesh correspondence bake before applying overrides. Keep the source PNG available at the
+recorded path. Its saved SHA-256 must match. Missing correspondence or a different
+profile fingerprint stops the rebuild instead of reusing an incompatible atlas. A native Gen22 paint import removes this provenance, so a later
+build keeps the new native atlas instead of restoring the previous sheet.
+
+The profile follows the rotated sidepod and engine-cover artwork orientation. Wing elements use separate source strips; inward cockpit and halo
+faces remain carbon. Team suit accents cover shoulder caps instead of replacing
+both sleeves. No game UI is added. These sheets describe a different model and
+season than the FP04RB geometry; panel proportions and original sponsor placement
+are fitted rather than an exact mesh-to-mesh transfer.
+
+For repeatable Bevy review of cockpit, exterior and opponent assets:
+
+```sh
+F1_TEST_ASSETS="$PWD/assets" F1_TEST_TEAM=mclaren \
+  F1_TEST_OUTPUT=/tmp/gen22-review-mclaren \
+  cargo test -p f1-the-game rendered_livery_review -- --ignored --nocapture
+```
+
+This requires an isolated Vulkan display. It captures the selected team's
+player and opponent LODs without changing normal race identities or preferences.

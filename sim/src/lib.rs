@@ -9,6 +9,7 @@
 pub mod aero;
 pub mod ai;
 pub mod car;
+pub mod drs;
 pub mod race;
 pub mod rng;
 pub mod track;

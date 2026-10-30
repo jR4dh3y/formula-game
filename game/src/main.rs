@@ -39,7 +39,6 @@ pub struct Session {
     pub race: Race,
     pub identities: Vec<Option<teams::Identity>>,
     pub rig: teams::Rig,
-    pub drs_open: bool,
     pub player: usize,
     pub camera: camera::ChaseCamera,
     pub controls: controls::Controls,
@@ -133,7 +132,6 @@ fn build_app(mut options: Options) -> Result<App, String> {
     let session = Session {
         identities: teams.field(&options)?,
         rig: teams::Rig::load(&options)?,
-        drs_open: false,
         guidance: driving::Guidance::new(&race, player),
         corner_braking: frontend.corner_braking,
         show_racing_line: frontend.show_racing_line,
