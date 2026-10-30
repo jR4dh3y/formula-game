@@ -17,6 +17,13 @@ are included. You do not need Rust or a separate assets download to play.
 Requires an x86-64 Linux desktop, kernel 6.1 or newer, and a Vulkan-capable GPU
 with a working system driver. Windows and macOS binaries are not provided.
 
+A community Windows packaging workflow is available in
+[the Windows build guide](tools/package/WINDOWS.md). It produces a single
+portable `.exe` containing Spa, both cars and the game assets. The native
+launcher extracts to a temporary directory, runs the game and cleans up
+after exit; no separate asset download is required by players. This does
+not change the platform coverage of the official release linked above.
+
 ```sh
 chmod +x F1-Racecraft-0.1.0-linux-x86_64.AppImage
 ./F1-Racecraft-0.1.0-linux-x86_64.AppImage

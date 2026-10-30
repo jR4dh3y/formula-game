@@ -13,6 +13,18 @@ pub(super) struct Benchmark {
     pub(super) message: Option<String>,
 }
 
+impl Drop for Benchmark {
+    fn drop(&mut self) {
+        // Portable builds cannot remove their extracted EXE/assets until the
+        // benchmark process has exited too. Let an in-flight run finish.
+        if let Some(mut child) = self.child.take() {
+            if let Err(error) = child.wait() {
+                error!("Could not wait for benchmark shutdown: {error}");
+            }
+        }
+    }
+}
+
 impl Benchmark {
     pub(super) fn poll(&mut self) {
         let Some(child) = &mut self.child else { return };
@@ -221,5 +233,63 @@ mod tests {
             Path::new("/tmp/benchmark output")
         );
         assert!(!parsed.vsync);
+    }
+
+    #[test]
+    fn shutdown_waits_for_the_benchmark_child() {
+        use std::{sync::mpsc, time::Duration};
+        let marker = std::env::temp_dir().join(format!(
+            "racecraft-benchmark-shutdown-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "menu::benchmark::tests::shutdown_child_probe",
+                "--ignored",
+            ])
+            .env("F1_BENCHMARK_SHUTDOWN_MARKER", &marker)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let release = child.stdin.take().unwrap();
+        let benchmark = Benchmark {
+            child: Some(child),
+            output: None,
+            message: None,
+        };
+        let (done, completed) = mpsc::channel();
+        let waiter = std::thread::spawn(move || {
+            drop(benchmark);
+            done.send(()).unwrap();
+        });
+        // The child cannot finish until its input pipe closes. Drop must wait,
+        // rather than just detach the child and return immediately.
+        assert!(matches!(
+            completed.recv_timeout(Duration::from_millis(100)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
+        drop(release);
+        completed.recv_timeout(Duration::from_secs(30)).unwrap();
+        waiter.join().unwrap();
+        assert_eq!(std::fs::read(&marker).unwrap(), b"finished");
+        std::fs::remove_file(marker).unwrap();
+    }
+
+    #[test]
+    #[ignore = "subprocess helper for shutdown_waits_for_the_benchmark_child"]
+    fn shutdown_child_probe() {
+        use std::io::Read;
+        let Some(marker) = std::env::var_os("F1_BENCHMARK_SHUTDOWN_MARKER") else {
+            return;
+        };
+        std::io::stdin().read_to_end(&mut Vec::new()).unwrap();
+        std::fs::write(marker, b"finished").unwrap();
     }
 }
