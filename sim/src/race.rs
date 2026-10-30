@@ -613,7 +613,7 @@ mod tests {
     use crate::track::oval_track;
 
     fn field(humans: usize, ai: usize) -> Vec<EntrantConfig> {
-        let spec = Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9));
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
         (0..humans + ai)
             .map(|index| EntrantConfig {
                 name: format!("Driver {index}"),

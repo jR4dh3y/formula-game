@@ -89,7 +89,7 @@ mod tests {
 
     fn pair(gap: f64, lateral: f64) -> (Car, Car) {
         let track = oval_track();
-        let spec = Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9));
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
         let make = |position: DVec3| {
             let mut car = Car::new(
                 spec.clone(),

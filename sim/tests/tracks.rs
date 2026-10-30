@@ -24,7 +24,7 @@ fn drive(name: &str, reference_length: f64) {
         track.length
     );
     let models = [
-        CarSpec::rb22_with(&CarGeometry::load(root.join("cars/rb22/car.json")).expect("rb22")),
+        CarSpec::gen22_with(&CarGeometry::load(root.join("cars/gen22/car.json")).expect("gen22")),
         CarSpec::rb6_with(&CarGeometry::load(root.join("cars/rb6/car.json")).expect("rb6")),
     ];
     inspect_route(name, track.clone(), Arc::new(models[0].clone()));

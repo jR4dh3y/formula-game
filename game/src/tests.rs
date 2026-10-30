@@ -43,7 +43,7 @@ pub(super) fn session() -> Session {
         track,
         vec![EntrantConfig {
             name: "You".into(),
-            spec: Arc::new(CarSpec::rb22(wheels, 5.4, 1.9)),
+            spec: Arc::new(CarSpec::gen22(wheels, 5.4, 1.9)),
             setup: Setup::default(),
             assists: Assists::default(),
             ai: None,
@@ -54,6 +54,9 @@ pub(super) fn session() -> Session {
         5,
     );
     Session {
+        identities: vec![None],
+        rig: default(),
+        drs_open: false,
         guidance: driving::Guidance::new(&race, 0),
         corner_braking: 0.,
         show_racing_line: false,
@@ -150,6 +153,55 @@ fn cockpit_steering_tracks_both_directions_and_returns_to_rest() {
             assert_eq!(*transform, rest);
         }
     }
+}
+
+#[test]
+fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
+    let mut app = App::new();
+    let mut state = session();
+    state.rig.drs.open_angle = -0.25;
+    state.drs_open = true;
+    state.race.entrants[0].car.steer_angle = 0.2;
+    state.race.entrants[0].car.wheels[0].rotation = 1.7;
+    state.poses.record(&state.race);
+    app.insert_resource(state)
+        .init_resource::<Time<Fixed>>()
+        .add_systems(Update, assets::sync_cars);
+    let rest = Transform::from_xyz(0., 0.6, 0.7).with_rotation(Quat::from_rotation_x(0.15));
+    let entities: Vec<_> = [
+        assets::RigKind::Steering,
+        assets::RigKind::Upright,
+        assets::RigKind::Drs,
+    ]
+    .into_iter()
+    .map(|kind| {
+        app.world_mut()
+            .spawn((
+                assets::RigPart {
+                    entrant: 0,
+                    rest,
+                    kind,
+                },
+                rest,
+            ))
+            .id()
+    })
+    .collect();
+    app.update();
+    for (entity, rotation) in entities.iter().zip([
+        Quat::from_rotation_z(-1.2),
+        Quat::from_rotation_y(0.2),
+        Quat::from_rotation_x(-0.25),
+    ]) {
+        let transform = app.world().get::<Transform>(*entity).unwrap();
+        assert_eq!(transform.translation, rest.translation);
+        assert!(transform
+            .rotation
+            .abs_diff_eq(rest.rotation * rotation, 1e-5));
+    }
+    app.world_mut().resource_mut::<Session>().drs_open = false;
+    app.update();
+    assert_eq!(*app.world().get::<Transform>(entities[2]).unwrap(), rest);
 }
 
 #[test]
@@ -349,18 +401,18 @@ struct MenuProbe {
 
 #[cfg(feature = "exp")]
 const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
-    ("silverstone", "rb22", camera::Mode::Cockpit),
+    ("silverstone", "gen22", camera::Mode::Cockpit),
     ("bahrain", "rb6", camera::Mode::Tv),
-    ("cota", "rb22", camera::Mode::Chase),
+    ("cota", "gen22", camera::Mode::Chase),
     ("spa", "rb6", camera::Mode::Cockpit),
 ];
 
 #[cfg(not(feature = "exp"))]
 const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
-    ("spa", "rb22", camera::Mode::Cockpit),
+    ("spa", "gen22", camera::Mode::Cockpit),
     ("spa", "rb6", camera::Mode::Tv),
     ("spa", "rb6", camera::Mode::Chase),
-    ("spa", "rb22", camera::Mode::Chase),
+    ("spa", "gen22", camera::Mode::Chase),
 ];
 
 const HUD_CASES: [hud::Settings; 4] = [
@@ -449,6 +501,7 @@ fn menu_probe(
     roots: Query<(), With<assets::RaceVisualRoot>>,
     cameras: Query<(), With<Camera3d>>,
     steering_wheels: Query<&assets::SteeringWheelVisual>,
+    rig_parts: Query<&assets::RigPart>,
     mut exit: MessageWriter<AppExit>,
 ) {
     use bevy_egui::egui::{Event, Modifiers, PointerButton};
@@ -587,7 +640,9 @@ fn menu_probe(
             assert!(
                 steering_wheels
                     .iter()
-                    .any(|wheel| wheel.entrant == session.player),
+                    .any(|wheel| wheel.entrant == session.player)
+                    || rig_parts.iter().any(|part| part.entrant == session.player
+                        && matches!(part.kind, assets::RigKind::Steering)),
                 "{car} has no animated cockpit wheel"
             );
             assert!(!session.paused);
@@ -663,7 +718,7 @@ fn menu_probe(
 fn rendered_game_flows() {
     let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS to generated assets");
     let size = std::env::var("F1_TEST_SIZE").unwrap_or_else(|_| "1280x720".into());
-    // F1_TEST_CAR=rb22 runs the same flow with the modern car's live wheel LCD.
+    // F1_TEST_CAR=gen22 runs the same flow with the modern car's live wheel LCD.
     let car = std::env::var("F1_TEST_CAR").unwrap_or_else(|_| "rb6".into());
     let options = Options::parse(
         [
@@ -743,6 +798,9 @@ fn probe_assertions(
     mut probe: ResMut<RenderProbe>,
     wheels: Query<&assets::WheelVisual>,
     steering_wheels: Query<(&assets::SteeringWheelVisual, &Transform)>,
+    rig_parts: Query<(&assets::RigPart, &Transform)>,
+    drivers: Query<&bevy::mesh::morph::MorphWeights, With<assets::DriverMorph>>,
+    paddles: Query<(), With<assets::Paddle>>,
     bodies: Query<&assets::CarVisual>,
     meshes: Query<&Mesh3d>,
     images: Res<Assets<Image>>,
@@ -762,6 +820,14 @@ fn probe_assertions(
         let pose = session
             .poses
             .at(&session.race, session.player, fixed.overstep_fraction_f64());
+        for (part, transform) in &rig_parts {
+            if part.entrant == session.player && matches!(part.kind, assets::RigKind::Steering) {
+                assert!(transform.rotation.abs_diff_eq(
+                    part.rest.rotation * Quat::from_rotation_z(-pose.steer as f32 * 6.),
+                    1e-5
+                ));
+            }
+        }
         for (wheel, transform) in &steering_wheels {
             if wheel.entrant == session.player {
                 let rotation = Quat::from_rotation_z(-pose.steer as f32 * 6.0);
@@ -782,9 +848,27 @@ fn probe_assertions(
     }
     match frame {
         30 => {
-            assert!(steering_wheels.iter().count() >= session.race.entrants.len());
+            assert!(
+                steering_wheels.iter().count()
+                    + rig_parts
+                        .iter()
+                        .filter(|(part, _)| matches!(part.kind, assets::RigKind::Steering))
+                        .count()
+                    >= session.race.entrants.len()
+            );
             assert_eq!(wheels.iter().count(), session.race.entrants.len() * 4);
             assert_eq!(bodies.iter().count(), session.race.entrants.len());
+            if !session.rig.driver_poses.is_empty() {
+                // Exercise the real GLB loader and scene tagging for both LODs.
+                assert_eq!(drivers.iter().count(), session.race.entrants.len() * 2);
+                assert_eq!(paddles.iter().count(), session.race.entrants.len() * 2);
+                for weights in &drivers {
+                    assert_eq!(
+                        weights.weights().len(),
+                        session.rig.driver_poses.len() + session.rig.driver_shift_poses.len()
+                    );
+                }
+            }
             assert!(meshes.iter().count() > 40);
             assert!(
                 surfaces.iter().count() > 40,

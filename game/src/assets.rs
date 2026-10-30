@@ -2,10 +2,7 @@
 
 use crate::{materials::CarSurface, options::Options, pose::Pose, sky, Session};
 use bevy::{
-    asset::LoadState,
-    light::atmosphere::ScatteringMedium,
-    mesh::{Indices, VertexAttributeValues},
-    prelude::*,
+    asset::LoadState, light::atmosphere::ScatteringMedium, mesh::VertexAttributeValues, prelude::*,
     world_serialization::WorldInstanceReady,
 };
 use racecraft_sim::{Assists, CarGeometry, CarSpec, DriverProfile, EntrantConfig, Race, Track};
@@ -21,17 +18,6 @@ pub struct WheelVisual {
     pub rest: Transform,
 }
 
-/// A car primitive whose mesh may hold pieces of the steering wheel modelled
-/// with a shared body material (the RB22's carbon grips and screen bezel).
-#[derive(Component)]
-pub struct WheelShell {
-    entrant: usize,
-    pivot: Vec3,
-    /// The rim's bounds in the same mesh space, as measured from its own material.
-    bounds: (Vec3, Vec3),
-    rest: Transform,
-}
-
 #[derive(Component)]
 pub struct SteeringWheelVisual {
     pub entrant: usize,
@@ -39,17 +25,136 @@ pub struct SteeringWheelVisual {
     pub pivot: Vec3,
 }
 
-// These materials belong exclusively to the wheel, not the fixed dashboard or column.
-fn steering_material(name: &str) -> bool {
-    matches!(
-        name,
-        "RBRWHEEL10"
-            | "redbull_steeringwheel.004"
-            | "sw_decals.004"
-            | "gp21_LCD.003"
-            | "clearled.003"
-            | "kers_blue.003"
-    )
+#[derive(Component)]
+pub struct RigPart {
+    pub entrant: usize,
+    pub rest: Transform,
+    pub kind: RigKind,
+}
+pub enum RigKind {
+    Steering,
+    Upright,
+    Drs,
+}
+
+/// A shift paddle on the steering wheel; origin on its hinge.
+#[derive(Component)]
+pub struct Paddle {
+    entrant: usize,
+    rest: Transform,
+    up: bool,
+}
+
+/// How far a shift paddle and the finger on it are pulled, 0..1, `age`
+/// seconds after the shift: a quick flick, a short hold and a release.
+pub fn shift_pull(age: f32) -> f32 {
+    const PRESS: f32 = 0.04;
+    const HOLD: f32 = 0.1;
+    const RELEASE: f32 = 0.22;
+    if !(0. ..RELEASE).contains(&age) {
+        0.
+    } else if age < PRESS {
+        age / PRESS
+    } else if age < HOLD {
+        1.
+    } else {
+        1. - (age - HOLD) / (RELEASE - HOLD)
+    }
+}
+
+/// Last seen gear and seconds since the last upshift/downshift, per entrant.
+#[derive(Default)]
+pub struct ShiftTracker(Vec<(i32, [f32; 2])>);
+
+impl ShiftTracker {
+    fn update(&mut self, gears: impl Iterator<Item = i32>, dt: f32) -> Vec<[f32; 2]> {
+        let mut pulls = Vec::new();
+        for (index, gear) in gears.enumerate() {
+            if index == self.0.len() {
+                self.0.push((gear, [f32::INFINITY; 2]));
+            }
+            let (last, ages) = &mut self.0[index];
+            for age in ages.iter_mut() {
+                *age += dt;
+            }
+            if gear > *last {
+                ages[0] = 0.;
+            } else if gear < *last {
+                ages[1] = 0.;
+            }
+            *last = gear;
+            pulls.push(ages.map(shift_pull));
+        }
+        pulls
+    }
+}
+
+/// A driver or helmet node whose baked steering poses follow the wheel.
+#[derive(Component)]
+pub struct DriverMorph(usize);
+
+#[derive(Component)]
+pub struct LiverySurface {
+    entrant: usize,
+}
+
+type LiveryCache =
+    std::collections::HashMap<(AssetId<StandardMaterial>, String), Handle<StandardMaterial>>;
+
+/// Texture paths double as cache keys: paint/suit share per team, helmets per driver.
+fn livery_path(name: &str, identity: &crate::teams::Identity) -> Option<String> {
+    let base = format!("cars/gen22/liveries/{}", identity.team);
+    match name {
+        "paint" => Some(format!("{base}/paint.png")),
+        "suit" => Some(format!("{base}/suit.png")),
+        "helmet_paint" => Some(format!("{base}/{}/helmet.png", identity.driver)),
+        _ => None,
+    }
+}
+
+type PendingLiveries<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static LiverySurface,
+        &'static bevy::gltf::GltfMaterialName,
+        &'static MeshMaterial3d<StandardMaterial>,
+    ),
+>;
+
+pub fn apply_liveries(
+    mut commands: Commands,
+    pending: PendingLiveries,
+    session: Res<Session>,
+    server: Res<AssetServer>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut cache: Local<LiveryCache>,
+) {
+    for (entity, surface, name, handle) in &pending {
+        let path = session
+            .identities
+            .get(surface.entrant)
+            .and_then(Option::as_ref)
+            .and_then(|identity| livery_path(&name.0, identity));
+        if let Some(path) = path {
+            let key = (handle.0.id(), path.clone());
+            let replacement = if let Some(cached) = cache.get(&key) {
+                cached.clone()
+            } else {
+                let Some(mut material) = materials.get(&handle.0).cloned() else {
+                    continue;
+                };
+                material.base_color = Color::WHITE;
+                material.base_color_texture = Some(server.load(path));
+                let replacement = materials.add(material);
+                cache.insert(key, replacement.clone());
+                replacement
+            };
+            commands.entity(entity).insert(MeshMaterial3d(replacement));
+        }
+        commands.entity(entity).remove::<LiverySurface>();
+    }
 }
 
 #[derive(Component)]
@@ -88,8 +193,13 @@ pub fn spawn_visuals(
 ) {
     let track = server
         .load(GltfAssetLabel::Scene(0).from_asset(format!("tracks/{}/visual.glb", options.track)));
-    let rb22 = server.load(GltfAssetLabel::Scene(0).from_asset("cars/rb22/car.glb"));
-    let rb6 = server.load(GltfAssetLabel::Scene(0).from_asset("cars/rb6/car.glb"));
+    let car =
+        server.load(GltfAssetLabel::Scene(0).from_asset(format!("cars/{}/car.glb", options.car)));
+    let opponent = if options.car == "gen22" && options.opponents > 0 {
+        server.load(GltfAssetLabel::Scene(0).from_asset("cars/gen22/car_lod1.glb"))
+    } else {
+        car.clone()
+    };
     commands
         .spawn((
             RaceVisualRoot,
@@ -98,10 +208,10 @@ pub fn spawn_visuals(
         ))
         .observe(visual_ready);
     for (index, entrant) in session.race.entrants.iter().enumerate() {
-        let scene = if entrant.car.spec.name == "RB22" {
-            rb22.clone()
+        let scene = if index == session.player {
+            car.clone()
         } else {
-            rb6.clone()
+            opponent.clone()
         };
         commands
             .spawn((
@@ -111,10 +221,28 @@ pub fn spawn_visuals(
                 WorldAssetRoot(scene),
                 body_transform(&entrant.car),
             ))
-            .observe(visual_ready);
+            .observe(visual_ready)
+            .with_children(|car| {
+                if index == session.player && options.car == "gen22" {
+                    // Approximate daylight bouncing into the shaded cockpit. Short range
+                    // keeps the fill on the controls and hands rather than the bodywork.
+                    car.spawn((
+                        Name::new("cockpit-bounce"),
+                        PointLight {
+                            color: Color::srgb(0.85, 0.91, 1.0),
+                            intensity: 4000.,
+                            range: 0.85,
+                            radius: 0.15,
+                            shadow_maps_enabled: false,
+                            ..default()
+                        },
+                        Transform::from_xyz(0., 0.88, 0.38),
+                    ));
+                }
+            });
     }
     commands.insert_resource(VisualAssets {
-        handles: vec![track, rb22, rb6],
+        handles: vec![track, car, opponent],
         started: None,
     });
 }
@@ -129,12 +257,13 @@ fn visual_ready(
     material_names: Query<&bevy::gltf::GltfMaterialName>,
     mesh_handles: Query<&Mesh3d>,
     meshes: Res<Assets<Mesh>>,
+    session: Res<Session>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Ok(car) = cars.get(event.entity) {
         let pivot = children.iter_descendants(event.entity).find_map(|entity| {
             let name = material_names.get(entity).ok()?;
-            if !matches!(name.0.as_str(), "RBRWHEEL10" | "redbull_steeringwheel.004") {
+            if !matches!(name.0.as_str(), "RBRWHEEL10") {
                 return None;
             }
             let mesh = meshes.get(&mesh_handles.get(entity).ok()?.0)?;
@@ -162,43 +291,75 @@ fn visual_ready(
             let Ok((name, rest)) = nodes.get(entity) else {
                 continue;
             };
-            if let Some((pivot, bounds, rim_rest)) = pivot {
-                let steering = material_names
-                    .get(entity)
-                    .is_ok_and(|name| steering_material(&name.0));
-                // Only primitives sharing the rim's mesh space can be compared.
-                if !steering && mesh_handles.contains(entity) && *rest == rim_rest {
-                    commands.entity(entity).insert(WheelShell {
-                        entrant: car.0,
-                        pivot,
-                        bounds,
-                        rest: *rest,
-                    });
+            if name.as_str() == "steering_wheel" {
+                for surface in children.iter_descendants(entity) {
+                    if material_names.contains(surface) {
+                        commands
+                            .entity(surface)
+                            .insert(crate::materials::WheelSurface);
+                    }
                 }
-                if steering {
-                    commands.entity(entity).insert(SteeringWheelVisual {
-                        entrant: car.0,
-                        rest: *rest,
-                        pivot,
-                    });
+            }
+            if let Some((pivot, _, _)) = pivot {
+                if material_names
+                    .get(entity)
+                    .is_ok_and(|name| name.0 == "RBRWHEEL10")
+                {
+                    commands.entity(entity).insert((
+                        SteeringWheelVisual {
+                            entrant: car.0,
+                            rest: *rest,
+                            pivot,
+                        },
+                        crate::wheel_dash::WheelPart::Mount(car.0),
+                    ));
+                }
+            }
+            if session.identities.get(car.0).is_some_and(Option::is_some) {
+                if material_names.contains(entity) {
+                    commands
+                        .entity(entity)
+                        .insert(LiverySurface { entrant: car.0 });
                     match material_names.get(entity).map(|name| name.0.as_str()) {
-                        Ok("gp21_LCD.003") => {
+                        Ok("wheel_screen") => {
                             commands
                                 .entity(entity)
                                 .insert(crate::wheel_dash::WheelPart::Screen(car.0));
                         }
-                        Ok("RBRWHEEL10") => {
-                            commands
-                                .entity(entity)
-                                .insert(crate::wheel_dash::WheelPart::Mount(car.0));
-                        }
-                        Ok("clearled.003") => {
+                        Ok("wheel_leds") => {
                             commands
                                 .entity(entity)
                                 .insert(crate::wheel_dash::WheelPart::Leds(car.0));
                         }
                         _ => {}
                     }
+                }
+                let kind = match name.as_str() {
+                    "steering_wheel" => Some(RigKind::Steering),
+                    "upright_fl" | "upright_fr" => Some(RigKind::Upright),
+                    "drs_flap" => Some(RigKind::Drs),
+                    _ => None,
+                };
+                if let Some(up) = match name.as_str() {
+                    "paddle_up" => Some(true),
+                    "paddle_down" => Some(false),
+                    _ => None,
+                } {
+                    commands.entity(entity).insert(Paddle {
+                        entrant: car.0,
+                        rest: *rest,
+                        up,
+                    });
+                }
+                if matches!(name.as_str(), "driver" | "helmet") {
+                    commands.entity(entity).insert(DriverMorph(car.0));
+                }
+                if let Some(kind) = kind {
+                    commands.entity(entity).insert(RigPart {
+                        entrant: car.0,
+                        rest: *rest,
+                        kind,
+                    });
                 }
             }
             body_found |= name.as_str() == "body";
@@ -301,16 +462,33 @@ pub fn sync_cars(
     fixed: Res<Time<Fixed>>,
     mut bodies: Query<
         (&CarVisual, &mut Transform),
-        (Without<WheelVisual>, Without<SteeringWheelVisual>),
+        (
+            Without<WheelVisual>,
+            Without<SteeringWheelVisual>,
+            Without<RigPart>,
+        ),
     >,
     mut wheels: Query<
         (&WheelVisual, &mut Transform),
-        (Without<CarVisual>, Without<SteeringWheelVisual>),
+        (
+            Without<CarVisual>,
+            Without<SteeringWheelVisual>,
+            Without<RigPart>,
+        ),
     >,
     mut steering_wheels: Query<
         (&SteeringWheelVisual, &mut Transform),
-        (Without<CarVisual>, Without<WheelVisual>),
+        (Without<CarVisual>, Without<WheelVisual>, Without<RigPart>),
     >,
+    mut rig_parts: Query<
+        (&RigPart, &mut Transform),
+        (
+            Without<CarVisual>,
+            Without<WheelVisual>,
+            Without<SteeringWheelVisual>,
+        ),
+    >,
+    mut drivers: Query<(&DriverMorph, &mut bevy::mesh::morph::MorphWeights)>,
 ) {
     let blend = fixed.overstep_fraction_f64();
     let poses: Vec<Pose> = (0..session.race.entrants.len())
@@ -339,117 +517,59 @@ pub fn sync_cars(
             Quat::from_rotation_z(-poses[visual.entrant].steer as f32 * 6.0),
         );
     }
+    for (part, mut transform) in &mut rig_parts {
+        *transform = part.rest;
+        let pose = &poses[part.entrant];
+        let rotation = match part.kind {
+            // Driver looks along local +Z: left (+X) moves down for an anticlockwise turn.
+            RigKind::Steering => Quat::from_rotation_z(-pose.steer as f32 * 6.),
+            RigKind::Upright => Quat::from_rotation_y(pose.steer as f32),
+            RigKind::Drs => Quat::from_rotation_x(if session.drs_open {
+                session.rig.drs.open_angle
+            } else {
+                0.
+            }),
+        };
+        transform.rotation = part.rest.rotation * rotation;
+    }
+    for (driver, mut weights) in &mut drivers {
+        // Same wheel angle as `RigKind::Steering`, so the hands stay on the grips.
+        let wheel = -poses[driver.0].steer as f32 * 6.;
+        session.rig.driver_weights(wheel, weights.weights_mut());
+    }
 }
 
-/// Fixed and turning halves per source mesh; `None` when it has no wheel pieces.
-type ShellSplits = std::collections::HashMap<AssetId<Mesh>, Option<(Handle<Mesh>, Handle<Mesh>)>>;
-
-type ShellItem = (
-    Entity,
-    &'static WheelShell,
-    &'static Mesh3d,
-    &'static MeshMaterial3d<StandardMaterial>,
-    &'static ChildOf,
-);
-
-/// Moves body-material pieces that lie wholly inside the steering wheel into
-/// their own turning mesh, so grips and bezels follow the rim instead of
-/// staying fixed while the wheel turns through them. Each source mesh is
-/// split once and shared by every car built from it.
-pub fn rig_wheel_shells(
-    mut commands: Commands,
-    shells: Query<ShellItem>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut split: Local<ShellSplits>,
+/// Flicks the shift paddle and the finger on it whenever a car changes gear.
+/// Runs after [`sync_cars`], which sets the steering part of the driver pose.
+pub fn animate_shifts(
+    session: Res<Session>,
+    time: Res<Time>,
+    mut shifts: Local<ShiftTracker>,
+    mut paddles: Query<(&Paddle, &mut Transform)>,
+    mut drivers: Query<(&DriverMorph, &mut bevy::mesh::morph::MorphWeights)>,
 ) {
-    for (entity, shell, mesh, material, parent) in &shells {
-        commands.entity(entity).remove::<WheelShell>();
-        let parts = match split.get(&mesh.0.id()) {
-            Some(parts) => parts.clone(),
-            None => {
-                let Some(source) = meshes.get(&mesh.0).cloned() else {
-                    continue;
-                };
-                let parts = split_wheel_pieces(&source, shell.bounds).map(|(fixed, wheel)| {
-                    let mut fixed_mesh = source.clone();
-                    fixed_mesh.insert_indices(Indices::U32(fixed));
-                    let mut wheel_mesh = source;
-                    wheel_mesh.insert_indices(Indices::U32(wheel));
-                    (meshes.add(fixed_mesh), meshes.add(wheel_mesh))
-                });
-                split.insert(mesh.0.id(), parts.clone());
-                parts
-            }
-        };
-        let Some((fixed, wheel)) = parts else {
-            continue;
-        };
-        commands.entity(entity).insert(Mesh3d(fixed));
-        commands.spawn((
-            Mesh3d(wheel),
-            material.clone(),
-            shell.rest,
-            SteeringWheelVisual {
-                entrant: shell.entrant,
-                rest: shell.rest,
-                pivot: shell.pivot,
-            },
-            ChildOf(parent.parent()),
-        ));
-    }
-}
-
-/// Splits triangle indices into (fixed, wheel) by connected piece; a piece
-/// belongs to the wheel when every vertex is inside the rim's bounds.
-fn split_wheel_pieces(mesh: &Mesh, (low, high): (Vec3, Vec3)) -> Option<(Vec<u32>, Vec<u32>)> {
-    let Some(VertexAttributeValues::Float32x3(positions)) =
-        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
-    else {
-        return None;
-    };
-    let margin = Vec3::splat(0.003);
-    let (low, high) = (low - margin, high + margin);
-    let inside = |index: usize| {
-        let p = Vec3::from_array(positions[index]);
-        p.cmpge(low).all() && p.cmple(high).all()
-    };
-    if !(0..positions.len()).any(inside) {
-        return None;
-    }
-    let indices: Vec<u32> = mesh.indices()?.iter().map(|index| index as u32).collect();
-    let mut parent: Vec<usize> = (0..positions.len()).collect();
-    fn root(parent: &mut [usize], mut index: usize) -> usize {
-        while parent[index] != index {
-            parent[index] = parent[parent[index]];
-            index = parent[index];
-        }
-        index
-    }
-    for triangle in indices.chunks_exact(3) {
-        let a = root(&mut parent, triangle[0] as usize);
-        for &other in &triangle[1..] {
-            let b = root(&mut parent, other as usize);
-            parent[b] = a;
-        }
-    }
-    let mut outside = vec![false; positions.len()];
-    for index in 0..positions.len() {
-        if !inside(index) {
-            let piece = root(&mut parent, index);
-            outside[piece] = true;
-        }
-    }
-    let (mut fixed, mut wheel) = (Vec::new(), Vec::new());
-    for triangle in indices.chunks_exact(3) {
-        let piece = root(&mut parent, triangle[0] as usize);
-        if outside[piece] {
-            &mut fixed
+    let pulls = shifts.update(
+        session
+            .race
+            .entrants
+            .iter()
+            .map(|entrant| entrant.car.powertrain.gear),
+        time.delta_secs(),
+    );
+    for (paddle, mut transform) in &mut paddles {
+        let (angle, pull) = if paddle.up {
+            (session.rig.paddles.up_angle, pulls[paddle.entrant][0])
         } else {
-            &mut wheel
-        }
-        .extend_from_slice(triangle);
+            (session.rig.paddles.down_angle, pulls[paddle.entrant][1])
+        };
+        *transform = paddle.rest;
+        transform.rotation = paddle.rest.rotation * Quat::from_rotation_y(angle * pull);
     }
-    (!wheel.is_empty()).then_some((fixed, wheel))
+    for (driver, mut weights) in &mut drivers {
+        session
+            .rig
+            .shift_weights(pulls[driver.0], weights.weights_mut());
+    }
 }
 
 const AI_NAMES: [&str; 15] = [
@@ -476,23 +596,31 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     let track_dir = root.join("tracks").join(&options.track);
     for path in [
         track_dir.join("visual.glb"),
-        root.join("cars/rb22/car.glb"),
-        root.join("cars/rb6/car.glb"),
+        root.join(format!("cars/{}/car.glb", options.car)),
     ] {
         if !path.is_file() {
             return Err(format!("missing asset {}", path.display()));
         }
     }
+    if options.car == "gen22"
+        && options.opponents > 0
+        && !root.join("cars/gen22/car_lod1.glb").is_file()
+    {
+        return Err("missing asset cars/gen22/car_lod1.glb".into());
+    }
     let track = Arc::new(Track::load(&track_dir)?);
-    let rb22 = CarGeometry::load(root.join("cars/rb22/car.json"))?;
-    let rb6 = CarGeometry::load(root.join("cars/rb6/car.json"))?;
-    let rb22_spec = Arc::new(CarSpec::rb22_with(&rb22));
-    let rb6_spec = Arc::new(CarSpec::rb6_with(&rb6));
-    let field_spec = if options.car == "rb6" {
-        rb6_spec
+    let geometry = CarGeometry::load(root.join(format!("cars/{}/car.json", options.car)))?;
+    let field_spec = Arc::new(if options.car == "rb6" {
+        CarSpec::rb6_with(&geometry)
     } else {
-        rb22_spec
+        CarSpec::gen22_with(&geometry)
+    });
+    let teams = if options.car == "gen22" {
+        crate::teams::Teams::load(root)?
+    } else {
+        default()
     };
+    let identities = teams.field(options)?;
     // Grid: the player starts in the requested slot among the AI field.
     let player_slot = options.grid_slot - 1;
     let total = options.opponents + 1;
@@ -501,7 +629,9 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
         .map(|slot| {
             if slot == player_slot {
                 return EntrantConfig {
-                    name: "You".to_string(),
+                    name: identities[slot]
+                        .as_ref()
+                        .map_or_else(|| "You".into(), |identity| identity.name.clone()),
                     spec: field_spec.clone(),
                     setup: options.setup,
                     assists: options.player_assists(),
@@ -515,7 +645,10 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
             // Faster drivers start further up, like a qualifying order.
             let pace = 0.985 - 0.006 * slot as f64;
             EntrantConfig {
-                name: AI_NAMES[index % AI_NAMES.len()].to_string(),
+                name: identities[slot].as_ref().map_or_else(
+                    || AI_NAMES[index % AI_NAMES.len()].into(),
+                    |identity| identity.name.clone(),
+                ),
                 spec: field_spec.clone(),
                 setup: options.setup,
                 assists: Assists::default(),
@@ -531,4 +664,50 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
         .collect();
     let race = Race::new(track.clone(), entrants, options.laps, 0x5EED);
     Ok(race)
+}
+
+#[cfg(test)]
+mod livery_tests {
+    use super::*;
+    #[test]
+    fn shifts_flick_the_matching_paddle_and_release_it() {
+        assert_eq!(shift_pull(f32::INFINITY), 0.);
+        assert_eq!(shift_pull(0.02), 0.5);
+        assert_eq!(shift_pull(0.07), 1.);
+        assert_eq!(shift_pull(0.3), 0.);
+        let mut tracker = ShiftTracker::default();
+        assert_eq!(tracker.update([3, 3].into_iter(), 0.), vec![[0.; 2]; 2]);
+        let pulls = tracker.update([4, 2].into_iter(), 0.016);
+        assert_eq!(pulls, vec![[0., 0.], [0., 0.]]);
+        let pulls = tracker.update([4, 2].into_iter(), 0.05);
+        assert_eq!(pulls, vec![[1., 0.], [0., 1.]]);
+    }
+    #[test]
+    fn team_textures_share_paths_but_driver_helmets_are_distinct() {
+        let first = crate::teams::Identity {
+            team: "ferrari".into(),
+            driver: "leclerc".into(),
+            name: "Charles Leclerc".into(),
+            abbr: "LEC".into(),
+            team_short: "Ferrari".into(),
+            primary: [255, 0, 0],
+        };
+        let mut second = first.clone();
+        second.driver = "sainz".into();
+        for material in ["paint", "suit"] {
+            assert_eq!(
+                livery_path(material, &first),
+                livery_path(material, &second)
+            );
+        }
+        assert_ne!(
+            livery_path("helmet_paint", &first),
+            livery_path("helmet_paint", &second)
+        );
+        assert_eq!(
+            livery_path("paint", &first).unwrap(),
+            "cars/gen22/liveries/ferrari/paint.png"
+        );
+        assert_eq!(livery_path("carbon", &first), None);
+    }
 }

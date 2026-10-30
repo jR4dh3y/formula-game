@@ -627,7 +627,7 @@ mod tests {
     fn car_on(track: &Track) -> Car {
         let (position, yaw) = track.grid_slot(0);
         Car::new(
-            Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9)),
+            Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9)),
             Setup::default(),
             Assists {
                 automatic_gears: true,
@@ -745,7 +745,7 @@ mod debug_probe {
     fn probe_corner() {
         let track = oval_track();
         let mut car = Car::new(
-            Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9)),
+            Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9)),
             Setup::default(),
             Assists {
                 automatic_gears: true,
@@ -803,7 +803,7 @@ mod debug_probe {
         let track = oval_track();
         let (position, yaw) = track.grid_slot(0);
         let mut car = Car::new(
-            Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9)),
+            Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9)),
             Setup::default(),
             Assists {
                 automatic_gears: true,

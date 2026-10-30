@@ -1,0 +1,457 @@
+{
+  "season": 2022,
+  "livery_styles": {
+    "space": "Normalised car space for surface points. x: lateral, -1 right to +1 left. y: height, 0 at the floor to 1 at the top of the airbox. z: longitudinal, 0 at the nose tip to 1 at the rear wing. Every shape is symmetric in x and spans the full width, so no style reads x; it is kept for the coordinate contract. Painted surfaces are bodywork only (not wings, wheels or the driver).",
+    "roles": {
+      "description": "A colour role names one entry of the team's colors object. carbon is the exposed carbon-fibre tone and the default for halo and other dark parts.",
+      "values": ["primary", "secondary", "accent", "carbon"]
+    },
+    "styles": {
+      "solid": {
+        "description": "Whole bodywork in primary. No style parameters. Common keys still apply.",
+        "params": {}
+      },
+      "split": {
+        "description": "Bodywork below the height line h(z) = split_y + split_slope * z takes secondary; bodywork at or above it takes primary.",
+        "params": {
+          "split_y": {
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "description": "Height of the split line at the nose tip (z = 0)."
+          },
+          "split_slope": {
+            "type": "number",
+            "min": -0.5,
+            "max": 0.5,
+            "description": "Change in split height per unit of z. 0 gives a level split."
+          }
+        }
+      },
+      "fade": {
+        "description": "Bodywork colour is lerp(primary, secondary, t) with t = clamp((z - fade_z0) / (fade_z1 - fade_z0), 0, 1). Primary at or before fade_z0, secondary at or after fade_z1.",
+        "params": {
+          "fade_z0": {
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "description": "z where the fade starts. Must be less than fade_z1."
+          },
+          "fade_z1": {
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "description": "z where the fade reaches secondary. Must be greater than fade_z0."
+          }
+        }
+      },
+      "stripe": {
+        "description": "Bodywork points with |y - stripe_y| <= stripe_w / 2 take stripe_color, over the full length of the body. Painted over the base colour.",
+        "params": {
+          "stripe_y": {
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "description": "Centre height of the stripe."
+          },
+          "stripe_w": {
+            "type": "number",
+            "min": 0.01,
+            "max": 0.3,
+            "description": "Full height of the stripe in car-space units."
+          },
+          "stripe_color": {
+            "type": "role",
+            "description": "Colour role for the stripe."
+          }
+        }
+      },
+      "band": {
+        "description": "Bodywork points with |z - band_z| <= band_w / 2 take band_color, across the full width and height of the body (engine cover and nose). Painted over the base colour.",
+        "params": {
+          "band_z": {
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "description": "Centre z of the band."
+          },
+          "band_w": {
+            "type": "number",
+            "min": 0.01,
+            "max": 0.3,
+            "description": "Full length of the band along z."
+          },
+          "band_color": {
+            "type": "role",
+            "description": "Colour role for the band."
+          }
+        }
+      }
+    },
+    "common": {
+      "nose_tip": {
+        "type": "role_or_null",
+        "description": "Colour role for the nose tip (z <= 0.12). null keeps the base colour."
+      },
+      "wing_endplates": {
+        "type": "role",
+        "description": "Colour role for front and rear wing endplates."
+      },
+      "halo": {
+        "type": "role",
+        "description": "Colour role for the halo."
+      },
+      "text_color": {
+        "type": "role",
+        "description": "Colour role for the team short name printed on the sidepods and the rear wing. Pick the role that contrasts with the paint there."
+      }
+    }
+  },
+  "teams": [
+    {
+      "id": "redbull",
+      "name": "Red Bull Racing",
+      "short": "Red Bull",
+      "colors": { "primary": "#1E2A5A", "secondary": "#C8102E", "accent": "#FFCC00", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "stripe",
+        "stripe_y": 0.32,
+        "stripe_w": 0.06,
+        "stripe_color": "secondary",
+        "nose_tip": "accent",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "accent"
+      },
+      "suit": { "primary": "#1E2A5A", "secondary": "#C8102E", "accent": "#FFCC00" },
+      "drivers": [
+        {
+          "id": "verstappen",
+          "name": "Max Verstappen",
+          "abbr": "VER",
+          "number": 1,
+          "helmet": { "primary": "#1E2A5A", "secondary": "#FFCC00", "accent": "#C8102E", "style": "stripe" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "perez",
+          "name": "Sergio Perez",
+          "abbr": "PER",
+          "number": 11,
+          "helmet": { "primary": "#141414", "secondary": "#006847", "accent": "#CE1126", "style": "chevron" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "ferrari",
+      "name": "Scuderia Ferrari",
+      "short": "Ferrari",
+      "colors": { "primary": "#D40000", "secondary": "#141414", "accent": "#F2F2F2", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "split",
+        "split_y": 0.2,
+        "split_slope": 0.0,
+        "nose_tip": null,
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "accent"
+      },
+      "suit": { "primary": "#D40000", "secondary": "#141414", "accent": "#F2F2F2" },
+      "drivers": [
+        {
+          "id": "leclerc",
+          "name": "Charles Leclerc",
+          "abbr": "LEC",
+          "number": 16,
+          "helmet": { "primary": "#D40000", "secondary": "#141414", "accent": "#F2F2F2", "style": "visor_band" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "sainz",
+          "name": "Carlos Sainz",
+          "abbr": "SAI",
+          "number": 55,
+          "helmet": { "primary": "#F2F2F2", "secondary": "#D40000", "accent": "#F2C200", "style": "halves" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "mercedes",
+      "name": "Mercedes-AMG F1 Team",
+      "short": "Mercedes",
+      "colors": { "primary": "#BFC6CC", "secondary": "#141414", "accent": "#00D2BE", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "fade",
+        "fade_z0": 0.35,
+        "fade_z1": 0.85,
+        "nose_tip": null,
+        "wing_endplates": "accent",
+        "halo": "carbon",
+        "text_color": "secondary"
+      },
+      "suit": { "primary": "#141414", "secondary": "#BFC6CC", "accent": "#00D2BE" },
+      "drivers": [
+        {
+          "id": "hamilton",
+          "name": "Lewis Hamilton",
+          "abbr": "HAM",
+          "number": 44,
+          "helmet": { "primary": "#141414", "secondary": "#00D2BE", "accent": "#F2F2F2", "style": "chevron" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "russell",
+          "name": "George Russell",
+          "abbr": "RUS",
+          "number": 63,
+          "helmet": { "primary": "#BFC6CC", "secondary": "#141414", "accent": "#00D2BE", "style": "halves" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "alpine",
+      "name": "Alpine F1 Team",
+      "short": "Alpine",
+      "colors": { "primary": "#0A5BC4", "secondary": "#8ED0FF", "accent": "#E4002B", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "stripe",
+        "stripe_y": 0.42,
+        "stripe_w": 0.04,
+        "stripe_color": "accent",
+        "nose_tip": "secondary",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "secondary"
+      },
+      "suit": { "primary": "#0A5BC4", "secondary": "#8ED0FF", "accent": "#E4002B" },
+      "drivers": [
+        {
+          "id": "ocon",
+          "name": "Esteban Ocon",
+          "abbr": "OCO",
+          "number": 31,
+          "helmet": { "primary": "#0A5BC4", "secondary": "#F2F2F2", "accent": "#E4002B", "style": "chevron" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "alonso",
+          "name": "Fernando Alonso",
+          "abbr": "ALO",
+          "number": 14,
+          "helmet": { "primary": "#0A5BC4", "secondary": "#E4002B", "accent": "#F2F2F2", "style": "visor_band" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "mclaren",
+      "name": "McLaren F1 Team",
+      "short": "McLaren",
+      "colors": { "primary": "#FF8000", "secondary": "#1B3A8C", "accent": "#F2F2F2", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "fade",
+        "fade_z0": 0.35,
+        "fade_z1": 0.65,
+        "nose_tip": null,
+        "wing_endplates": "primary",
+        "halo": "carbon",
+        "text_color": "accent"
+      },
+      "suit": { "primary": "#FF8000", "secondary": "#1B3A8C", "accent": "#F2F2F2" },
+      "drivers": [
+        {
+          "id": "norris",
+          "name": "Lando Norris",
+          "abbr": "NOR",
+          "number": 4,
+          "helmet": { "primary": "#141414", "secondary": "#FF8000", "accent": "#F2F2F2", "style": "visor_band" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "ricciardo",
+          "name": "Daniel Ricciardo",
+          "abbr": "RIC",
+          "number": 3,
+          "helmet": { "primary": "#FF8000", "secondary": "#141414", "accent": "#1B3A8C", "style": "halves" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "alfaromeo",
+      "name": "Alfa Romeo F1 Team",
+      "short": "Alfa Romeo",
+      "colors": { "primary": "#F2F2F2", "secondary": "#8E0F1F", "accent": "#C8102E", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "split",
+        "split_y": 0.3,
+        "split_slope": 0.0,
+        "nose_tip": "accent",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "secondary"
+      },
+      "suit": { "primary": "#8E0F1F", "secondary": "#F2F2F2", "accent": "#141414" },
+      "drivers": [
+        {
+          "id": "bottas",
+          "name": "Valtteri Bottas",
+          "abbr": "BOT",
+          "number": 77,
+          "helmet": { "primary": "#141414", "secondary": "#8E0F1F", "accent": "#F2F2F2", "style": "stripe" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "zhou",
+          "name": "Zhou Guanyu",
+          "abbr": "ZHO",
+          "number": 24,
+          "helmet": { "primary": "#DE2910", "secondary": "#F2F2F2", "accent": "#FFDE00", "style": "chevron" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "astonmartin",
+      "name": "Aston Martin F1 Team",
+      "short": "Aston Martin",
+      "colors": { "primary": "#00655A", "secondary": "#0E3B35", "accent": "#CEDC00", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "stripe",
+        "stripe_y": 0.38,
+        "stripe_w": 0.05,
+        "stripe_color": "accent",
+        "nose_tip": "accent",
+        "wing_endplates": "accent",
+        "halo": "carbon",
+        "text_color": "accent"
+      },
+      "suit": { "primary": "#00655A", "secondary": "#CEDC00", "accent": "#F2F2F2" },
+      "drivers": [
+        {
+          "id": "vettel",
+          "name": "Sebastian Vettel",
+          "abbr": "VET",
+          "number": 5,
+          "helmet": { "primary": "#F2F2F2", "secondary": "#00655A", "accent": "#CEDC00", "style": "stripe" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "stroll",
+          "name": "Lance Stroll",
+          "abbr": "STR",
+          "number": 18,
+          "helmet": { "primary": "#141414", "secondary": "#00655A", "accent": "#CEDC00", "style": "visor_band" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "haas",
+      "name": "Haas F1 Team",
+      "short": "Haas",
+      "colors": { "primary": "#F2F2F2", "secondary": "#141414", "accent": "#E8002D", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "split",
+        "split_y": 0.28,
+        "split_slope": 0.0,
+        "nose_tip": "accent",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "accent"
+      },
+      "suit": { "primary": "#F2F2F2", "secondary": "#141414", "accent": "#E8002D" },
+      "drivers": [
+        {
+          "id": "magnussen",
+          "name": "Kevin Magnussen",
+          "abbr": "MAG",
+          "number": 20,
+          "helmet": { "primary": "#141414", "secondary": "#F2F2F2", "accent": "#E8002D", "style": "stripe" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "schumacher",
+          "name": "Mick Schumacher",
+          "abbr": "MSC",
+          "number": 47,
+          "helmet": { "primary": "#E8002D", "secondary": "#141414", "accent": "#F2F2F2", "style": "halves" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "alphatauri",
+      "name": "Scuderia AlphaTauri",
+      "short": "AlphaTauri",
+      "colors": { "primary": "#17264A", "secondary": "#F2F2F2", "accent": "#C2CCDB", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "band",
+        "band_z": 0.55,
+        "band_w": 0.06,
+        "band_color": "secondary",
+        "nose_tip": "accent",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "secondary"
+      },
+      "suit": { "primary": "#17264A", "secondary": "#F2F2F2", "accent": "#C2CCDB" },
+      "drivers": [
+        {
+          "id": "gasly",
+          "name": "Pierre Gasly",
+          "abbr": "GAS",
+          "number": 10,
+          "helmet": { "primary": "#17264A", "secondary": "#F2F2F2", "accent": "#C2CCDB", "style": "chevron" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "tsunoda",
+          "name": "Yuki Tsunoda",
+          "abbr": "TSU",
+          "number": 22,
+          "helmet": { "primary": "#17264A", "secondary": "#E4002B", "accent": "#F2F2F2", "style": "halves" },
+          "helmets": ["default"]
+        }
+      ]
+    },
+    {
+      "id": "williams",
+      "name": "Williams Racing",
+      "short": "Williams",
+      "colors": { "primary": "#0F2A5C", "secondary": "#2CA6E8", "accent": "#E4002B", "carbon": "#1C1C1C" },
+      "livery": {
+        "style": "stripe",
+        "stripe_y": 0.24,
+        "stripe_w": 0.04,
+        "stripe_color": "secondary",
+        "nose_tip": "accent",
+        "wing_endplates": "secondary",
+        "halo": "carbon",
+        "text_color": "secondary"
+      },
+      "suit": { "primary": "#0F2A5C", "secondary": "#2CA6E8", "accent": "#E4002B" },
+      "drivers": [
+        {
+          "id": "albon",
+          "name": "Alexander Albon",
+          "abbr": "ALB",
+          "number": 23,
+          "helmet": { "primary": "#0F2A5C", "secondary": "#2CA6E8", "accent": "#E4002B", "style": "visor_band" },
+          "helmets": ["default"]
+        },
+        {
+          "id": "latifi",
+          "name": "Nicholas Latifi",
+          "abbr": "LAT",
+          "number": 6,
+          "helmet": { "primary": "#1C1C1C", "secondary": "#2CA6E8", "accent": "#F2F2F2", "style": "chevron" },
+          "helmets": ["default"]
+        }
+      ]
+    }
+  ]
+}

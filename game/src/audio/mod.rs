@@ -901,8 +901,8 @@ mod tests {
     #[test]
     fn engine_choice_matches_car_and_settings_recover_from_bad_values() {
         assert_eq!(EngineChoice::MatchCar.resolve("rb6"), Kind::V8);
-        assert_eq!(EngineChoice::MatchCar.resolve("rb22"), Kind::V6Hybrid);
-        assert_eq!(EngineChoice::V12.resolve("rb22"), Kind::V12);
+        assert_eq!(EngineChoice::MatchCar.resolve("gen22"), Kind::V6Hybrid);
+        assert_eq!(EngineChoice::V12.resolve("gen22"), Kind::V12);
         let mut settings = Settings {
             master: f32::NAN,
             effects: 3.,

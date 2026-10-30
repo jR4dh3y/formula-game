@@ -128,7 +128,11 @@ impl Catalog {
         });
         for (id, name, description) in [
             ("rb6", "Red Bull RB6", "2010 / V8 / 7-speed / 18,000 RPM"),
-            ("rb22", "Red Bull RB22", "Modern era / 8-speed / 15,000 RPM"),
+            (
+                "gen22",
+                "2022 ground effect",
+                "V6 hybrid / 8-speed / shared team model",
+            ),
         ] {
             let car = root.join("cars").join(id);
             if car.join("car.glb").is_file() && car.join("car.json").is_file() {
@@ -146,6 +150,7 @@ impl Catalog {
 #[derive(Resource)]
 pub struct Frontend {
     pub catalog: Catalog,
+    pub teams: crate::teams::Teams,
     pub draft: Options,
     pub aids: Assists,
     pub corner_braking: f64,
@@ -172,8 +177,27 @@ impl Frontend {
         let (store, prefs) = crate::preferences::Store::load(options);
         let mut draft = options.clone();
         draft.camera = prefs.camera;
+        let teams = crate::teams::Teams::load(&options.assets).unwrap_or_default();
+        if !options.quick_race && options.frames.is_none() {
+            if options.team.is_empty() {
+                draft.team = prefs.team.clone();
+            }
+            if options.driver.is_empty() && (options.team.is_empty() || options.team == prefs.team)
+            {
+                draft.driver = prefs.driver.clone();
+            }
+        }
+        if let Ok((team, driver)) = teams
+            .selection(&draft.team, &draft.driver)
+            .or_else(|_| teams.selection(&draft.team, ""))
+            .or_else(|_| teams.selection("", ""))
+        {
+            draft.team = team.id.clone();
+            draft.driver = driver.id.clone();
+        }
         Self {
             catalog: Catalog::discover(&options.assets),
+            teams,
             draft,
             aids: prefs.aids,
             corner_braking: prefs.corner_braking,
@@ -237,6 +261,8 @@ pub fn apply(
         }
     }
     let prefs = crate::preferences::Preferences {
+        team: frontend.draft.team.clone(),
+        driver: frontend.draft.driver.clone(),
         aids: frontend.aids,
         corner_braking: frontend.corner_braking,
         racing_line: frontend.show_racing_line,
@@ -284,11 +310,23 @@ pub fn apply(
             return;
         }
     };
-    for root in &roots {
-        commands.entity(root).despawn();
-    }
     let player = selected.grid_slot - 1;
+    let rig = match crate::teams::Rig::load(&selected) {
+        Ok(rig) => rig,
+        Err(error) => {
+            frontend.error = Some(error);
+            return;
+        }
+    };
+    let identities = match frontend.teams.field(&selected) {
+        Ok(field) => field,
+        Err(error) => {
+            frontend.error = Some(error);
+            return;
+        }
+    };
     let mut camera = ChaseCamera::new(&race, player);
+    camera.set_cockpit_eye(rig.cockpit_eye);
     camera.select(selected.camera);
     camera.configure(
         frontend
@@ -297,6 +335,9 @@ pub fn apply(
             .cloned()
             .unwrap_or_else(|| crate::camera::Tuning::for_car(&selected.car)),
     );
+    for root in &roots {
+        commands.entity(root).despawn();
+    }
     let sun = race.track.sun_direction;
     for mut light in &mut lights {
         *light = Transform::IDENTITY
@@ -306,6 +347,9 @@ pub fn apply(
         window.title = format!("F1 Racecraft - {}", race.track.name);
     }
     *session = Session {
+        identities,
+        rig,
+        drs_open: false,
         guidance: crate::driving::Guidance::new(&race, player),
         corner_braking: frontend.corner_braking,
         show_racing_line: frontend.show_racing_line,
@@ -574,17 +618,27 @@ pub fn ui(
 fn race_setup(ui: &mut egui::Ui, frontend: &mut Frontend) {
     if ui.available_width() > 850. {
         ui.columns(2, |columns| {
-            selection(&mut columns[0], &frontend.catalog, &mut frontend.draft);
+            selection(
+                &mut columns[0],
+                &frontend.catalog,
+                &frontend.teams,
+                &mut frontend.draft,
+            );
             preview(&mut columns[1], &frontend.catalog, &frontend.draft);
         });
     } else {
-        selection(ui, &frontend.catalog, &mut frontend.draft);
+        selection(ui, &frontend.catalog, &frontend.teams, &mut frontend.draft);
         ui.separator();
         preview(ui, &frontend.catalog, &frontend.draft);
     }
 }
 
-fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
+fn selection(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    teams: &crate::teams::Teams,
+    draft: &mut Options,
+) {
     ui.spacing_mut().slider_width = (ui.available_width() - 180.).clamp(80., 420.);
     section(ui, "Circuit");
     let selected = catalog
@@ -607,12 +661,77 @@ fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
         });
     ui.add_space(4.);
     section(ui, "Car");
-    for car in &catalog.cars {
-        ui.radio_value(&mut draft.car, car.id.clone(), car.name);
+    if catalog.cars.iter().any(|car| car.id == "gen22") {
+        ui.radio_value(&mut draft.car, "gen22".into(), "2022 ground effect");
+        ui.add_enabled_ui(draft.car == "gen22", |ui| {
+            let selected = teams.teams.iter().find(|t| t.id == draft.team);
+            egui::ComboBox::from_id_salt("team")
+                .width(ui.available_width().min(340.))
+                .selected_text(selected.map_or("Choose team", |t| t.short.as_str()))
+                .show_ui(ui, |ui| {
+                    for team in &teams.teams {
+                        ui.horizontal(|ui| {
+                            for color in [
+                                &team.colors.primary,
+                                &team.colors.secondary,
+                                &team.colors.accent,
+                            ] {
+                                let rgb = crate::teams::rgb(color).unwrap_or([128; 3]);
+                                let (rect, _) = ui.allocate_exact_size(
+                                    egui::vec2(12., 16.),
+                                    egui::Sense::hover(),
+                                );
+                                ui.painter().rect_filled(
+                                    rect,
+                                    2.,
+                                    Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
+                                );
+                            }
+                            if ui
+                                .selectable_value(&mut draft.team, team.id.clone(), &team.short)
+                                .clicked()
+                            {
+                                draft.driver = team.drivers[0].id.clone();
+                            }
+                        })
+                        .response
+                        .on_hover_text(&team.name);
+                    }
+                });
+            if let Some(team) = teams.teams.iter().find(|t| t.id == draft.team) {
+                let driver_label =
+                    |driver: &crate::teams::Driver| format!("#{}  {}", driver.number, driver.name);
+                egui::ComboBox::from_id_salt("driver")
+                    .width(ui.available_width().min(340.))
+                    .selected_text(
+                        team.drivers
+                            .iter()
+                            .find(|d| d.id == draft.driver)
+                            .map_or("Choose driver".into(), driver_label),
+                    )
+                    .show_ui(ui, |ui| {
+                        for driver in &team.drivers {
+                            ui.selectable_value(
+                                &mut draft.driver,
+                                driver.id.clone(),
+                                driver_label(driver),
+                            );
+                        }
+                    });
+            }
+            ui.add_enabled(false, egui::Label::new("Helmet: Team default"));
+        });
     }
-    if let Some(car) = catalog.cars.iter().find(|car| car.id == draft.car) {
-        ui.label(RichText::new(car.description).color(DIM));
-    }
+    egui::CollapsingHeader::new("Legacy cars")
+        .default_open(draft.car != "gen22")
+        .show(ui, |ui| {
+            for car in catalog.cars.iter().filter(|car| car.id != "gen22") {
+                ui.radio_value(&mut draft.car, car.id.clone(), car.name);
+                if draft.car == car.id {
+                    ui.label(RichText::new(car.description).color(DIM));
+                }
+            }
+        });
     ui.separator();
     ui.add(egui::Slider::new(&mut draft.laps, 1..=30).text("Laps"));
     ui.add(egui::Slider::new(&mut draft.opponents, 0..=15).text("AI opponents"));

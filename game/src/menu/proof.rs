@@ -158,7 +158,30 @@ fn drive(
                 && frontend.audio.engine != crate::audio::EngineChoice::V12
             {
                 let button = frontend.widgets["3.0 V12"];
-                assert!(rect.contains_rect(button));
+                // A widget may be inside the window but clipped below the scroll
+                // viewport, especially at 640×600. Scroll it into view before clicking.
+                let body = frontend.widgets["settings-body"].shrink(18.);
+                if !body.contains_rect(button) {
+                    input
+                        .0
+                        .events
+                        .push(egui::Event::PointerMoved(body.center()));
+                    input.0.events.push(egui::Event::MouseWheel {
+                        unit: egui::MouseWheelUnit::Point,
+                        phase: egui::TouchPhase::Move,
+                        delta: egui::vec2(
+                            0.,
+                            if button.center().y > body.center().y {
+                                -180.
+                            } else {
+                                180.
+                            },
+                        ),
+                        modifiers: egui::Modifiers::default(),
+                    });
+                    proof.ticks = 0;
+                    return;
+                }
                 click(&mut proof, &mut input, button.center());
                 proof.ticks = 0;
                 return;

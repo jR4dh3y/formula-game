@@ -121,7 +121,6 @@ def main():
     (APP / "AppRun").chmod(0o755)
     assets = Path(os.environ.get("F1_PACKAGE_ASSETS", str(ROOT / "assets"))).resolve()
     for category, ids, files in [
-        ("cars", ["rb6", "rb22"], ["car.json", "car.glb"]),
         ("tracks", tracks, ["track.json", "collision.bin", "visual.glb"]),
     ]:
         for item in ids:
@@ -129,6 +128,11 @@ def main():
             destination.mkdir(parents=True)
             for filename in files:
                 shutil.copy2(assets / category / item / filename, destination / filename)
+
+    # Include the full modern livery/helmet tree and every legacy asset.
+    for car in ["gen22", "rb6"]:
+        shutil.copytree(assets / "cars" / car,
+                        APP / "usr/share/f1-racecraft/assets/cars" / car)
 
     # Only generic x86-64 official packages are used. The build host's CachyOS
     # AVX2/v3-optimized libraries must not impose that CPU requirement on players.

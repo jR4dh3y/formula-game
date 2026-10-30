@@ -42,26 +42,23 @@ pub struct Tuning {
 
 impl Tuning {
     pub fn for_car(car: &str) -> Self {
+        let modern = car.eq_ignore_ascii_case("gen22");
         Self {
             cockpit: View {
-                height: if car.eq_ignore_ascii_case("rb22") {
-                    1.00
-                } else {
-                    0.96
-                },
+                height: if modern { 1.00 } else { 0.96 },
                 fore_aft: -0.18,
                 pitch: 3.,
                 fov: 64.,
             },
             tv: View {
-                height: 1.30,
-                fore_aft: -0.35,
+                height: if modern { 1.35 } else { 1.30 },
+                fore_aft: if modern { -0.25 } else { -0.35 },
                 pitch: 8.,
                 fov: 60.,
             },
             chase: View {
-                height: 1.65,
-                fore_aft: -5.6,
+                height: if modern { 1.85 } else { 1.65 },
+                fore_aft: if modern { -6.2 } else { -5.6 },
                 pitch: 4.5,
                 fov: 54.,
             },
@@ -130,6 +127,7 @@ pub struct ChaseCamera {
     yaw: f64,
     fov: f32,
     cut: bool,
+    cockpit_eye: Option<DVec3>,
 }
 
 impl ChaseCamera {
@@ -143,9 +141,14 @@ impl ChaseCamera {
             yaw: car.yaw,
             fov: 54.,
             cut: true,
+            cockpit_eye: None,
         };
         camera.snap(&Pose::of(car));
         camera
+    }
+    pub fn set_cockpit_eye(&mut self, eye: Option<[f64; 3]>) {
+        self.cockpit_eye = eye.map(DVec3::from_array);
+        self.cut = true;
     }
     pub fn cycle(&mut self) {
         self.select(match self.mode {
@@ -188,7 +191,13 @@ impl ChaseCamera {
                 -car.pitch * (1. - self.tuning.horizon),
                 car.roll * (1. - self.tuning.horizon),
             );
-            let eye = origin + attitude * DVec3::new(0., view.height, view.fore_aft);
+            let offset = if self.mode == Mode::Cockpit {
+                self.cockpit_eye
+                    .map_or(DVec3::ZERO, |eye| eye - DVec3::new(0., 1., -0.18))
+            } else {
+                DVec3::ZERO
+            };
+            let eye = origin + attitude * (DVec3::new(0., view.height, view.fore_aft) + offset);
             (eye, eye + stabilized * direction * 30.)
         }
     }

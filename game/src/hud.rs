@@ -590,7 +590,15 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
         (tower_x + tower_w - 12. * scale, mid),
         Align::Right,
         dim,
-        &format!("P{}", race.position_of(session.player)),
+        &format!(
+            "{}  P{}",
+            session
+                .identities
+                .get(session.player)
+                .and_then(Option::as_ref)
+                .map_or("", |id| id.team_short.as_str()),
+            race.position_of(session.player)
+        ),
     );
     y += 38. * scale;
     let leader_distance = race.entrants[race.order()[0]].timing.distance;
@@ -638,11 +646,11 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             if mine { ink } else { dim },
             &(rank + 1).to_string(),
         );
-        let team = if entrant.car.spec.name == "RB22" {
-            rgba(0.2, 0.3, 0.9, 1.0)
-        } else {
-            rgba(0.9, 0.75, 0.1, 1.0)
-        };
+        let identity = session.identities.get(index).and_then(Option::as_ref);
+        let team = identity.map_or(rgba(0.9, 0.75, 0.1, 1.0), |identity| {
+            let [r, g, b] = identity.primary;
+            Color::from_rgb(r, g, b)
+        });
         hud.fill_round(
             tower_x + 42.0 * scale,
             y + 7.0 * scale,
@@ -657,7 +665,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             (tower_x + 54.0 * scale, mid),
             Align::Left,
             if mine { ink } else { dim },
-            &entrant.name.to_uppercase(),
+            &identity.map_or_else(|| entrant.name.to_uppercase(), |id| id.abbr.clone()),
         );
         let gap = if rank == 0 {
             "LEADER".to_string()

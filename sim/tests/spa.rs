@@ -22,8 +22,8 @@ fn ai_field_races_spa() {
         return;
     };
     let track = Arc::new(Track::load(root.join("tracks/spa")).expect("track"));
-    let rb22 = Arc::new(CarSpec::rb22_with(
-        &CarGeometry::load(root.join("cars/rb22/car.json")).expect("rb22"),
+    let gen22 = Arc::new(CarSpec::gen22_with(
+        &CarGeometry::load(root.join("cars/gen22/car.json")).expect("gen22"),
     ));
     let rb6 = Arc::new(CarSpec::rb6_with(
         &CarGeometry::load(root.join("cars/rb6/car.json")).expect("rb6"),
@@ -32,7 +32,7 @@ fn ai_field_races_spa() {
         .map(|index| EntrantConfig {
             name: format!("AI {index}"),
             spec: if index % 2 == 0 {
-                rb22.clone()
+                gen22.clone()
             } else {
                 rb6.clone()
             },

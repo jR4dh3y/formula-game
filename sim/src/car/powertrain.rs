@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn engine_braking_opposes_motion_in_forward_and_reverse_gears() {
-        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        let spec = CarSpec::gen22(test_wheels(), 5.4, 1.9).engine;
         for gear in [REVERSE, 1] {
             for speed in [-5.0, 5.0] {
                 let mut powertrain = Powertrain::new(&spec);
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn shifting_cannot_skip_gears_during_the_torque_cut() {
-        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        let spec = CarSpec::gen22(test_wheels(), 5.4, 1.9).engine;
         for up in [false, true] {
             let mut powertrain = Powertrain::new(&spec);
             powertrain.gear = 3;
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn early_upshift_loses_acceleration() {
-        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        let spec = CarSpec::gen22(test_wheels(), 5.4, 1.9).engine;
         let radius = 0.355;
         let speed_at = |gear: i32, rpm: f64| {
             rpm / (spec.gear_ratios[(gear - 1) as usize] * 60.0 / (2.0 * PI)) * radius
@@ -247,7 +247,7 @@ mod tests {
 
     #[test]
     fn over_revving_downshift_is_refused() {
-        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        let spec = CarSpec::gen22(test_wheels(), 5.4, 1.9).engine;
         let mut powertrain = Powertrain::new(&spec);
         powertrain.gear = 7;
         powertrain.shift_down(&spec, 85.0, 0.355);
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn limiter_cuts_power() {
-        let spec = CarSpec::rb22(test_wheels(), 5.4, 1.9).engine;
+        let spec = CarSpec::gen22(test_wheels(), 5.4, 1.9).engine;
         let mut powertrain = Powertrain::new(&spec);
         powertrain.rpm = spec.rev_limit + 100.0;
         let speed = (spec.rev_limit + 100.0) / (spec.gear_ratios[0] * 60.0 / (2.0 * PI)) * 0.355;

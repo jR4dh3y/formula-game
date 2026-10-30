@@ -27,13 +27,10 @@ if [[ $selection == all || $selection == spa ]]; then
 fi
 if [[ $selection == all || $selection == cars ]]; then
     extract '2010-redbull-rb6.zip'
-    "$blender" -b --factory-startup -P "$repo/tools/car/prepare_car.py" -- \
+    "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_car.py" -- \
         "$extracted/source/redbull rb6.glb" "$output/cars/rb6" \
         --wheel-materials wheel,wheel.001,tread,tyre --max-texture 1024
-    extract '2026-redbull-rb22.zip'
-    "$blender" -b --factory-startup -P "$repo/tools/car/prepare_car.py" -- \
-        "$extracted/source/untitled.glb" "$output/cars/rb22" \
-        --wheel-materials discs.007,redbull_wheel_hub.007,sidewall.007 --max-faces 120000 --max-texture 1024
+    "$repo/tools/car/build_gen22.sh" "$output/cars/gen22"
 fi
 found=false
 for config in "$repo"/tools/track/tracks/*.json; do

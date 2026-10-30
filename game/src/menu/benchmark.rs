@@ -83,7 +83,7 @@ fn arguments(
         Mode::Tv => "tv",
         Mode::Chase => "chase",
     };
-    vec![
+    let mut args = vec![
         "--assets".into(),
         draft.assets.as_os_str().to_owned(),
         "--track".into(),
@@ -103,7 +103,14 @@ fn arguments(
         draft.benchmark_seed.to_string().into(),
         "--benchmark-start".into(),
         draft.benchmark_start.to_string().into(),
-    ]
+    ];
+    if !draft.team.is_empty() {
+        args.extend(["--team".into(), draft.team.clone().into()]);
+    }
+    if !draft.driver.is_empty() {
+        args.extend(["--driver".into(), draft.driver.clone().into()]);
+    }
+    args
 }
 
 pub(super) fn panel(ui: &mut egui::Ui, frontend: &mut Frontend, size: egui::Vec2) {
@@ -200,7 +207,7 @@ mod tests {
     fn menu_launch_uses_selected_settings_and_the_normal_cli_contract() {
         let mut draft = Options::parse(std::iter::empty()).unwrap();
         draft.track = if cfg!(feature = "exp") { "cota" } else { "spa" }.into();
-        draft.car = "rb22".into();
+        draft.car = "gen22".into();
         draft.camera = Mode::Cockpit;
         let args = arguments(
             &draft,
@@ -211,7 +218,7 @@ mod tests {
         let parsed =
             Options::parse(args.into_iter().map(|arg| arg.into_string().unwrap())).unwrap();
         assert_eq!(parsed.track, draft.track);
-        assert_eq!(parsed.car, "rb22");
+        assert_eq!(parsed.car, "gen22");
         assert_eq!(parsed.camera, Mode::Cockpit);
         assert_eq!((parsed.width, parsed.height), (958, 1078));
         assert_eq!(parsed.graphics, crate::graphics::Quality::Ultra);
