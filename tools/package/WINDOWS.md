@@ -7,12 +7,16 @@ needed to play. Requires 64-bit Windows 10/11 and a Vulkan-capable GPU with
 its current driver. This is an unsigned community build.
 
 The native launcher decompresses the bundled game into a unique folder under
-`%TEMP%`, starts the game, waits for it to exit, and removes that folder.
+`%TEMP%`, starts the game, waits for it and any menu-launched benchmark to
+exit, and removes that folder. Closing the game during a benchmark lets
+that benchmark finish before cleanup.
 Keep at least 500 MB of temporary space free. Extraction takes a few seconds
 at each launch. A forced termination or power failure can leave the temporary
 folder behind; normal exit removes it. Preferences and per-launch logs stay
 in `%LOCALAPPDATA%\f1-racecraft`; benchmark output stays there as well.
 Existing `F1_SETTINGS` and `XDG_CACHE_HOME` overrides are respected.
+The game keeps the caller's working directory, so relative capture/benchmark
+paths and relative environment overrides resolve there and survive cleanup.
 
 Arguments are forwarded to the game, including paths containing spaces:
 
@@ -74,6 +78,7 @@ cargo clippy --locked --manifest-path tools/package/windows_launcher/Cargo.toml 
 The single-file EXE accepts `--launcher-verify` as its first argument for an
 automated, noninteractive extraction/integrity/cleanup check. It does not
 start the game. Its exit status is zero on success, and its per-launch log
-records the temporary path and result. Also move just the EXE to a fresh
+records the temporary path and cleanup result. Cleanup failure returns a
+nonzero status, including in verification mode. Also move just the EXE to a fresh
 directory and launch it from an unrelated working directory, start a race,
 and confirm that its temporary directory disappears after closing the game.

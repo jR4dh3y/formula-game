@@ -3,6 +3,7 @@
 use flate2::read::ZlibDecoder;
 use std::{
     env,
+    ffi::OsString,
     fs::{self, File, OpenOptions},
     io::{self, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
@@ -18,7 +19,7 @@ fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
-struct TemporaryDirectory(PathBuf);
+struct TemporaryDirectory(PathBuf, bool);
 
 impl TemporaryDirectory {
     fn new() -> io::Result<Self> {
@@ -32,20 +33,34 @@ impl TemporaryDirectory {
                 std::process::id()
             ));
             match fs::create_dir(&path) {
-                Ok(()) => return Ok(Self(path)),
+                Ok(()) => return Ok(Self(path, false)),
                 Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
                 Err(error) => return Err(error),
             }
         }
         Err(io::Error::other("Could not create a temporary game folder"))
     }
+
+    fn cleanup(&mut self, log: &mut impl Write) -> io::Result<()> {
+        match fs::remove_dir_all(&self.0) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                let message = format!("Could not remove {}: {error}", self.0.display());
+                writeln!(log, "Cleanup failed: {message}")?;
+                return Err(io::Error::new(error.kind(), message));
+            }
+        }
+        self.1 = true;
+        writeln!(log, "Cleanup complete: {}", self.0.display())
+    }
 }
 
 impl Drop for TemporaryDirectory {
     fn drop(&mut self) {
-        // The game has exited before this guard drops, releasing its EXE/assets.
-        if let Err(error) = fs::remove_dir_all(&self.0) {
-            eprintln!("Could not remove {}: {error}", self.0.display());
+        // Fallback for early failures/panics; normal paths explicitly check cleanup.
+        if !self.1 {
+            let _ = fs::remove_dir_all(&self.0);
         }
     }
 }
@@ -139,40 +154,85 @@ fn unpack(executable: &Path, destination: &Path) -> io::Result<()> {
     Ok(())
 }
 
+fn verification_requested() -> bool {
+    env::args_os()
+        .nth(1)
+        .is_some_and(|arg| arg == "--launcher-verify")
+}
+
+fn finish(
+    directory: &mut TemporaryDirectory,
+    result: io::Result<i32>,
+    log: &mut impl Write,
+) -> io::Result<i32> {
+    if let Err(error) = &result {
+        writeln!(log, "Launcher error: {error}")?;
+    }
+    directory.cleanup(log)?;
+    result
+}
+
 fn run(log: &mut File, data: &Path) -> io::Result<i32> {
-    let directory = TemporaryDirectory::new()?;
-    writeln!(log, "Extracting to {}", directory.0.display())?;
-    unpack(&env::current_exe()?, &directory.0)?;
+    let mut directory = TemporaryDirectory::new()?;
+    let result = run_game(log, data, &directory.0);
+    let code = finish(&mut directory, result, log)?;
+    if verification_requested() && code == 0 {
+        writeln!(log, "Package verified and cleanup complete")?;
+    }
+    Ok(code)
+}
+
+fn run_game(log: &mut File, data: &Path, directory: &Path) -> io::Result<i32> {
+    writeln!(log, "Extracting to {}", directory.display())?;
+    unpack(&env::current_exe()?, directory)?;
     if env::args_os()
         .nth(1)
         .is_some_and(|arg| arg == "--launcher-verify")
     {
-        writeln!(log, "Package verified")?;
         return Ok(0);
     }
-    let mut command = Command::new(directory.0.join("f1-the-game.exe"));
+    let mut command = game_command(
+        directory,
+        data,
+        env::args_os().skip(1),
+        env::var_os("F1_SETTINGS"),
+        env::var_os("XDG_CACHE_HOME"),
+    );
+    command.stdout(log.try_clone()?).stderr(log.try_clone()?);
+    let status = command.status()?;
+    let code = status.code().unwrap_or(1);
+    writeln!(log, "Game exited with code {code}")?;
+    Ok(code)
+}
+
+fn game_command(
+    directory: &Path,
+    data: &Path,
+    args: impl IntoIterator<Item = OsString>,
+    settings: Option<OsString>,
+    cache: Option<OsString>,
+) -> Command {
+    let mut command = Command::new(directory.join("f1-the-game.exe"));
+    // Inherit the caller's CWD. Only the bundled assets need an absolute path;
+    // user-supplied relative outputs and environment overrides belong to the caller.
     command
-        .current_dir(&directory.0)
         .arg("--assets")
-        .arg(directory.0.join("assets"))
-        .args(env::args_os().skip(1))
-        .stdout(log.try_clone()?)
-        .stderr(log.try_clone()?);
-    if env::var_os("F1_SETTINGS").is_none() {
-        command.env("F1_SETTINGS", data.join("preferences.json"));
-    }
-    if env::var_os("XDG_CACHE_HOME").is_none() {
-        command.env("XDG_CACHE_HOME", data);
-    }
+        .arg(directory.join("assets"))
+        .args(args)
+        .env(
+            "F1_SETTINGS",
+            settings.unwrap_or_else(|| data.join("preferences.json").into_os_string()),
+        )
+        .env(
+            "XDG_CACHE_HOME",
+            cache.unwrap_or_else(|| data.as_os_str().to_owned()),
+        );
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no extra console.
     }
-    let status = command.status()?;
-    let code = status.code().unwrap_or(1);
-    writeln!(log, "Game exited with code {code}")?;
-    Ok(code)
+    command
 }
 
 fn show_error(message: &str) {
@@ -318,5 +378,69 @@ mod tests {
         *compressed.last_mut().unwrap() ^= 1;
         let directory = TemporaryDirectory::new().unwrap();
         assert!(extract(ZlibDecoder::new(compressed.as_slice()), &directory.0).is_err());
+    }
+
+    #[test]
+    fn successful_result_is_returned_only_after_logged_cleanup() {
+        let mut directory = TemporaryDirectory::new().unwrap();
+        fs::write(directory.0.join("file"), b"contents").unwrap();
+        let mut log = Vec::new();
+        assert_eq!(finish(&mut directory, Ok(0), &mut log).unwrap(), 0);
+        assert!(!directory.0.exists());
+        assert!(String::from_utf8(log)
+            .unwrap()
+            .contains("Cleanup complete:"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn cleanup_failure_overrides_success_and_is_logged() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let mut directory = TemporaryDirectory::new().unwrap();
+        let path = directory.0.join("locked");
+        let locked = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .share_mode(0)
+            .open(path)
+            .unwrap();
+        let mut log = Vec::new();
+        assert!(finish(&mut directory, Ok(0), &mut log).is_err());
+        assert!(String::from_utf8(log).unwrap().contains("Cleanup failed:"));
+        assert!(directory.0.exists());
+        drop(locked);
+        directory.cleanup(&mut Vec::new()).unwrap();
+        assert!(!directory.0.exists());
+    }
+
+    #[test]
+    fn keeps_caller_cwd_relative_outputs_and_environment_overrides() {
+        let directory = TemporaryDirectory::new().unwrap();
+        let args: Vec<OsString> = ["--benchmark", "results", "--capture", "shot.png"]
+            .into_iter()
+            .map(OsString::from)
+            .collect();
+        let command = game_command(
+            &directory.0,
+            Path::new("unused-default-data"),
+            args.clone(),
+            Some("settings/preferences.json".into()),
+            Some("cache".into()),
+        );
+        assert!(command.get_current_dir().is_none());
+        let actual: Vec<_> = command.get_args().map(|arg| arg.to_owned()).collect();
+        assert_eq!(actual[0], "--assets");
+        assert_eq!(actual[1], directory.0.join("assets"));
+        assert!(Path::new(&actual[1]).is_absolute());
+        assert_eq!(actual[2..], args);
+        let overrides: std::collections::BTreeMap<_, _> = command.get_envs().collect();
+        assert_eq!(
+            overrides[std::ffi::OsStr::new("F1_SETTINGS")],
+            Some(std::ffi::OsStr::new("settings/preferences.json"))
+        );
+        assert_eq!(
+            overrides[std::ffi::OsStr::new("XDG_CACHE_HOME")],
+            Some(std::ffi::OsStr::new("cache"))
+        );
     }
 }
