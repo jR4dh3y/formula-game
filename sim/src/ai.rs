@@ -226,6 +226,8 @@ impl AiDriver {
             brake,
             shift_up: false,
             shift_down: false,
+            // The race only lets the flap open where DRS is earned.
+            drs: true,
         }
     }
 
@@ -406,7 +408,7 @@ mod tests {
     fn driver_and_car(track: &Track) -> (AiDriver, Car) {
         let (position, yaw) = track.grid_slot(0);
         let car = Car::new(
-            Arc::new(CarSpec::rb22(test_wheels(), 5.4, 1.9)),
+            Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9)),
             Setup::default(),
             Assists {
                 automatic_gears: true,

@@ -43,7 +43,7 @@ pub(super) fn session() -> Session {
         track,
         vec![EntrantConfig {
             name: "You".into(),
-            spec: Arc::new(CarSpec::rb22(wheels, 5.4, 1.9)),
+            spec: Arc::new(CarSpec::gen22(wheels, 5.4, 1.9)),
             setup: Setup::default(),
             assists: Assists::default(),
             ai: None,
@@ -54,6 +54,8 @@ pub(super) fn session() -> Session {
         5,
     );
     Session {
+        identities: vec![None],
+        rig: default(),
         guidance: driving::Guidance::new(&race, 0),
         corner_braking: 0.,
         show_racing_line: false,
@@ -153,6 +155,96 @@ fn cockpit_steering_tracks_both_directions_and_returns_to_rest() {
 }
 
 #[test]
+fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
+    let mut app = App::new();
+    let mut state = session();
+    state.rig.drs.open_angle = -0.25;
+    state.race.entrants[0].car.drs.flap = 1.0;
+    state.race.entrants[0].car.steer_angle = 0.2;
+    state.race.entrants[0].car.wheels[0].rotation = 1.7;
+    state.race.entrants[0].car.wheels[0].ground_height = 0.1;
+    state.race.entrants[0].car.wheels[1].ground_height = 0.35;
+    state.poses.record(&state.race);
+    app.insert_resource(state)
+        .init_resource::<Time<Fixed>>()
+        .add_systems(Update, assets::sync_cars);
+    let rest = Transform::from_xyz(0., 0.6, 0.7).with_rotation(Quat::from_rotation_x(0.15));
+    let entities: Vec<_> = [
+        assets::RigKind::Steering,
+        assets::RigKind::Upright,
+        assets::RigKind::Drs,
+        assets::RigKind::Upright,
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(index, kind)| {
+        let rest = if index == 1 {
+            rest.with_translation(Vec3::new(0.8, 0.6, 0.7))
+        } else if index == 3 {
+            rest.with_translation(Vec3::new(-0.8, 0.6, 0.7))
+        } else {
+            rest
+        };
+        app.world_mut()
+            .spawn((
+                assets::RigPart {
+                    entrant: 0,
+                    rest,
+                    kind,
+                },
+                rest,
+            ))
+            .id()
+    })
+    .collect();
+    let body = app
+        .world_mut()
+        .spawn((assets::CarVisual(0), Transform::default()))
+        .id();
+    app.update();
+    let chassis = app.world().get::<Transform>(body).unwrap();
+    for (entity, rotation) in entities.iter().zip([
+        Quat::from_rotation_z(-1.2),
+        Quat::from_rotation_y(0.2),
+        Quat::from_rotation_x(-0.25),
+        Quat::from_rotation_y(0.2),
+    ]) {
+        let transform = app.world().get::<Transform>(*entity).unwrap();
+        if *entity != entities[1] && *entity != entities[3] {
+            assert_eq!(transform.translation, rest.translation);
+        } else {
+            let wheel_index = if *entity == entities[1] { 0 } else { 1 };
+            let state = app.world().resource::<Session>();
+            let car = &state.race.entrants[0].car;
+            let wheel = &car.spec.wheels[wheel_index];
+            let mut lowest = f32::INFINITY;
+            for side in [-0.5, 0.5] {
+                for step in 0..720 {
+                    let angle = step as f32 * std::f32::consts::TAU / 720.;
+                    let vertex = Vec3::new(
+                        side * wheel.width as f32,
+                        angle.cos() * wheel.radius as f32,
+                        angle.sin() * wheel.radius as f32,
+                    );
+                    lowest =
+                        lowest.min(chassis.transform_point(transform.transform_point(vertex)).y);
+                }
+            }
+            assert!((lowest - car.wheels[wheel_index].ground_height as f32).abs() < 1e-4);
+        }
+        assert!(transform
+            .rotation
+            .abs_diff_eq(rest.rotation * rotation, 1e-5));
+    }
+    app.world_mut().resource_mut::<Session>().race.entrants[0]
+        .car
+        .drs
+        .flap = 0.0;
+    app.update();
+    assert_eq!(*app.world().get::<Transform>(entities[2]).unwrap(), rest);
+}
+
+#[test]
 fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     let mut session = session();
     let car = &mut session.race.entrants[0].car;
@@ -184,7 +276,15 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
         .id();
     app.update();
     let transform = app.world().get::<Transform>(wheel).unwrap();
-    assert_eq!(transform.translation, rest.translation);
+    let chassis = app.world().get::<Transform>(body).unwrap();
+    let session = app.world().resource::<Session>();
+    let car = &session.race.entrants[0].car;
+    let axle_y = (chassis.rotation * transform.rotation * Vec3::X).y.abs();
+    let tyre = &car.spec.wheels[0];
+    let bottom = chassis.transform_point(transform.translation).y
+        - tyre.radius as f32 * (1. - axle_y * axle_y).sqrt()
+        - tyre.width as f32 * 0.5 * axle_y;
+    assert!((bottom - car.wheels[0].ground_height as f32).abs() < 1e-4);
     assert!(transform.rotation.abs_diff_eq(
         Quat::from_rotation_y(0.2) * Quat::from_rotation_x(1.4),
         1e-5
@@ -212,6 +312,39 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
         assert!(pose.translation.is_finite());
         assert!(pose.rotation.is_finite());
     }
+}
+
+#[test]
+fn drs_key_requests_the_flap_only_while_racing() {
+    let mut state = session();
+    state.race.phase = racecraft_sim::Phase::Racing;
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(state)
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_systems(Update, controls::update);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyF);
+    app.update();
+    let mut session = app.world_mut().resource_mut::<Session>();
+    assert!(session.controls.car_input().drs);
+    assert!(!session.controls.car_input().drs);
+    session.screen = menu::Screen::Paused;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyF);
+    app.update();
+    assert!(
+        !app.world_mut()
+            .resource_mut::<Session>()
+            .controls
+            .car_input()
+            .drs
+    );
 }
 
 #[test]
@@ -349,18 +482,18 @@ struct MenuProbe {
 
 #[cfg(feature = "exp")]
 const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
-    ("silverstone", "rb22", camera::Mode::Cockpit),
+    ("silverstone", "gen22", camera::Mode::Cockpit),
     ("bahrain", "rb6", camera::Mode::Tv),
-    ("cota", "rb22", camera::Mode::Chase),
+    ("cota", "gen22", camera::Mode::Chase),
     ("spa", "rb6", camera::Mode::Cockpit),
 ];
 
 #[cfg(not(feature = "exp"))]
 const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
-    ("spa", "rb22", camera::Mode::Cockpit),
+    ("spa", "gen22", camera::Mode::Cockpit),
     ("spa", "rb6", camera::Mode::Tv),
     ("spa", "rb6", camera::Mode::Chase),
-    ("spa", "rb22", camera::Mode::Chase),
+    ("spa", "gen22", camera::Mode::Chase),
 ];
 
 const HUD_CASES: [hud::Settings; 4] = [
@@ -449,6 +582,7 @@ fn menu_probe(
     roots: Query<(), With<assets::RaceVisualRoot>>,
     cameras: Query<(), With<Camera3d>>,
     steering_wheels: Query<&assets::SteeringWheelVisual>,
+    rig_parts: Query<&assets::RigPart>,
     mut exit: MessageWriter<AppExit>,
 ) {
     use bevy_egui::egui::{Event, Modifiers, PointerButton};
@@ -587,7 +721,9 @@ fn menu_probe(
             assert!(
                 steering_wheels
                     .iter()
-                    .any(|wheel| wheel.entrant == session.player),
+                    .any(|wheel| wheel.entrant == session.player)
+                    || rig_parts.iter().any(|part| part.entrant == session.player
+                        && matches!(part.kind, assets::RigKind::Steering)),
                 "{car} has no animated cockpit wheel"
             );
             assert!(!session.paused);
@@ -663,7 +799,7 @@ fn menu_probe(
 fn rendered_game_flows() {
     let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS to generated assets");
     let size = std::env::var("F1_TEST_SIZE").unwrap_or_else(|_| "1280x720".into());
-    // F1_TEST_CAR=rb22 runs the same flow with the modern car's live wheel LCD.
+    // F1_TEST_CAR=gen22 runs the same flow with the modern car's live wheel LCD.
     let car = std::env::var("F1_TEST_CAR").unwrap_or_else(|_| "rb6".into());
     let options = Options::parse(
         [
@@ -743,6 +879,9 @@ fn probe_assertions(
     mut probe: ResMut<RenderProbe>,
     wheels: Query<&assets::WheelVisual>,
     steering_wheels: Query<(&assets::SteeringWheelVisual, &Transform)>,
+    rig_parts: Query<(&assets::RigPart, &Transform)>,
+    drivers: Query<&bevy::mesh::morph::MorphWeights, With<assets::DriverMorph>>,
+    paddles: Query<(), With<assets::Paddle>>,
     bodies: Query<&assets::CarVisual>,
     meshes: Query<&Mesh3d>,
     images: Res<Assets<Image>>,
@@ -762,6 +901,14 @@ fn probe_assertions(
         let pose = session
             .poses
             .at(&session.race, session.player, fixed.overstep_fraction_f64());
+        for (part, transform) in &rig_parts {
+            if part.entrant == session.player && matches!(part.kind, assets::RigKind::Steering) {
+                assert!(transform.rotation.abs_diff_eq(
+                    part.rest.rotation * Quat::from_rotation_z(-pose.steer as f32 * 6.),
+                    1e-5
+                ));
+            }
+        }
         for (wheel, transform) in &steering_wheels {
             if wheel.entrant == session.player {
                 let rotation = Quat::from_rotation_z(-pose.steer as f32 * 6.0);
@@ -782,9 +929,27 @@ fn probe_assertions(
     }
     match frame {
         30 => {
-            assert!(steering_wheels.iter().count() >= session.race.entrants.len());
+            assert!(
+                steering_wheels.iter().count()
+                    + rig_parts
+                        .iter()
+                        .filter(|(part, _)| matches!(part.kind, assets::RigKind::Steering))
+                        .count()
+                    >= session.race.entrants.len()
+            );
             assert_eq!(wheels.iter().count(), session.race.entrants.len() * 4);
             assert_eq!(bodies.iter().count(), session.race.entrants.len());
+            if !session.rig.driver_poses.is_empty() {
+                // Exercise the real GLB loader and scene tagging for both LODs.
+                assert_eq!(drivers.iter().count(), session.race.entrants.len() * 2);
+                assert_eq!(paddles.iter().count(), session.race.entrants.len() * 2);
+                for weights in &drivers {
+                    assert_eq!(
+                        weights.weights().len(),
+                        session.rig.driver_poses.len() + session.rig.driver_shift_poses.len()
+                    );
+                }
+            }
             assert!(meshes.iter().count() > 40);
             assert!(
                 surfaces.iter().count() > 40,
@@ -883,4 +1048,99 @@ fn probe_assertions(
             info!("Render probe screenshot: {}", path.display());
         },
     );
+}
+
+/// Fixed grid views of the shipped player/opponent assets for texture review.
+#[test]
+#[ignore = "requires a Vulkan display and F1_TEST_ASSETS"]
+fn rendered_livery_review() {
+    let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS");
+    let team = std::env::var("F1_TEST_TEAM").unwrap_or_else(|_| "mclaren".into());
+    let options = Options::parse(
+        [
+            "--assets", &root, "--team", &team, "--car", "gen22", "--size", "1600x900", "--camera",
+            "cockpit", "--mute", "--frames", "10000",
+        ]
+        .into_iter()
+        .map(str::to_owned),
+    )
+    .unwrap();
+    let mut app = build_app(options).unwrap();
+    {
+        let mut session = app.world_mut().resource_mut::<Session>();
+        let identity = session.identities[session.player].clone();
+        for entry in &mut session.identities {
+            *entry = identity.clone();
+        }
+    }
+    app.add_systems(Update, livery_review.after(camera::update));
+    assert!(app.run().is_success());
+}
+
+fn livery_review(
+    mut commands: Commands,
+    mut session: ResMut<Session>,
+    mut cameras: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    mut frame: Local<u32>,
+    mut captured: Local<usize>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if !session.ready {
+        return;
+    }
+    session.paused = true;
+    *frame += 1;
+    let stage = (*frame / 60).min(7);
+    if stage > 0 {
+        session.camera.mode = camera::Mode::Chase;
+        let entrant = if stage < 5 { session.player } else { 0 };
+        let pose = pose::Pose::of(&session.race.entrants[entrant].car);
+        let offset = match stage {
+            1 | 5 => Vec3::new(4., 2.4, 5.),
+            2 | 6 => Vec3::new(5.5, 2.4, 0.),
+            3 => Vec3::new(-5.5, 2.4, 0.),
+            _ => Vec3::new(4., 2.4, -5.),
+        };
+        let rotation = Quat::from_rotation_y(pose.yaw as f32);
+        let origin = pose.origin.as_vec3();
+        for (mut camera, mut projection) in &mut cameras {
+            if let Projection::Perspective(lens) = &mut *projection {
+                lens.fov = 45_f32.to_radians();
+            }
+            *camera = Transform::from_translation(origin + rotation * offset)
+                .looking_at(origin + Vec3::Y * 0.5, Vec3::Y);
+        }
+    }
+    if *frame % 60 == 50 && stage < 8 {
+        let output =
+            std::path::PathBuf::from(std::env::var("F1_TEST_OUTPUT").expect("set F1_TEST_OUTPUT"));
+        std::fs::create_dir_all(&output).unwrap();
+        let names = [
+            "cockpit",
+            "front",
+            "left",
+            "right",
+            "rear",
+            "opponent-front",
+            "opponent-side",
+            "opponent-rear",
+        ];
+        let path = output.join(format!("{}.png", names[stage as usize]));
+        commands.spawn(Screenshot::primary_window()).observe(
+            move |event: On<ScreenshotCaptured>| {
+                event
+                    .image
+                    .clone()
+                    .try_into_dynamic()
+                    .unwrap()
+                    .save(&path)
+                    .unwrap();
+            },
+        );
+        *captured += 1;
+    }
+    if *frame == 490 {
+        assert_eq!(*captured, 8);
+        exit.write(AppExit::Success);
+    }
 }

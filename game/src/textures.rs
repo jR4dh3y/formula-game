@@ -16,10 +16,11 @@ pub fn prepare(
             continue;
         };
         // Renderer lookup tables are data, not color textures. Never filter them.
-        if !server
-            .get_path(*id)
-            .is_some_and(|path| path.path().extension().is_some_and(|ext| ext == "glb"))
-        {
+        if !server.get_path(*id).is_some_and(|path| {
+            let path = path.path();
+            path.extension().is_some_and(|ext| ext == "glb")
+                || path.starts_with("cars/gen22/liveries")
+        }) {
             continue;
         }
         let Some(mut image) = images.get_mut(*id) else {

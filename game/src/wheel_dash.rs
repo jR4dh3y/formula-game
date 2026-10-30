@@ -1,4 +1,4 @@
-//! Live cockpit steering wheel: the RB22 LCD shows an egui-painted dash and
+//! Live cockpit steering wheel: the GEN22 LCD shows an egui-painted dash and
 //! its LED strip lights per lamp, both driven by the player's car. Wheels
 //! modelled without a display (the RB6) get a slim screen pod on top.
 
@@ -132,10 +132,6 @@ pub struct WheelDash {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Lamp {
     Rev(usize),
-    /// Left column, bottom to top: grip warnings.
-    Left(usize),
-    /// Right column, bottom to top: tow strength.
-    Right(usize),
 }
 
 #[derive(Component)]
@@ -233,7 +229,7 @@ type WheelPartItem = (
     &'static Mesh3d,
     &'static MeshMaterial3d<StandardMaterial>,
     &'static Transform,
-    &'static SteeringWheelVisual,
+    Option<&'static SteeringWheelVisual>,
     &'static ChildOf,
 );
 
@@ -259,6 +255,7 @@ pub fn attach(
         };
         match part {
             WheelPart::Mount(_) => {
+                let Some(visual) = visual else { continue };
                 dash.compact = true;
                 let mut pod = |mesh: Mesh, material: StandardMaterial| {
                     (
@@ -319,22 +316,19 @@ pub fn attach(
                     })));
             }
             WheelPart::Leds(_) => {
-                let Some(base) = materials.get(&material.0).cloned() else {
+                let Some(mut base) = materials.get(&material.0).cloned() else {
                     continue;
                 };
-                let (lamps, rest) = split_lamps(&source);
+                base.base_color = Color::srgb(0.015, 0.018, 0.02);
+                base.emissive = LinearRgba::BLACK;
+                let (lamps, rest) = split_uv_lamps(&source);
                 for (lamp, indices) in lamps {
                     let mut lamp_mesh = source.clone();
                     lamp_mesh.insert_indices(Indices::U32(indices));
-                    commands.spawn((
+                    let mut lamp_entity = commands.spawn((
                         Mesh3d(meshes.add(lamp_mesh)),
                         MeshMaterial3d(materials.add(base.clone())),
                         *transform,
-                        SteeringWheelVisual {
-                            entrant,
-                            rest: visual.rest,
-                            pivot: visual.pivot,
-                        },
                         WheelLamp {
                             lamp,
                             lit: None,
@@ -342,12 +336,20 @@ pub fn attach(
                         },
                         ChildOf(parent.parent()),
                     ));
+                    if let Some(visual) = visual {
+                        lamp_entity.insert(SteeringWheelVisual {
+                            entrant,
+                            rest: visual.rest,
+                            pivot: visual.pivot,
+                        });
+                    }
                 }
                 let mut rest_mesh = source;
                 rest_mesh.insert_indices(Indices::U32(rest));
-                commands
-                    .entity(entity)
-                    .insert(Mesh3d(meshes.add(rest_mesh)));
+                commands.entity(entity).insert((
+                    Mesh3d(meshes.add(rest_mesh)),
+                    MeshMaterial3d(materials.add(base)),
+                ));
             }
         }
     }
@@ -389,120 +391,69 @@ fn screen_uvs(mesh: &Mesh) -> Option<Rect> {
     (window.width() > 0. && window.height() > 0.).then_some(window)
 }
 
-/// Groups the strip's triangles into lamps by connected piece: the row above
-/// the screen is the rev counter, the columns either side are status lamps.
-fn split_lamps(mesh: &Mesh) -> (Vec<(Lamp, Vec<u32>)>, Vec<u32>) {
+/// Only the fifteen lamps in the narrow top row are rev lights. The imported
+/// material also contains side warning lamps; its full-width UVs span both.
+fn split_uv_lamps(mesh: &Mesh) -> (Vec<(Lamp, Vec<u32>)>, Vec<u32>) {
     let Some(VertexAttributeValues::Float32x3(positions)) =
         mesh.attribute(Mesh::ATTRIBUTE_POSITION)
     else {
         return (Vec::new(), Vec::new());
     };
-    let indices: Vec<u32> = match mesh.indices() {
-        Some(indices) => indices.iter().map(|index| index as u32).collect(),
-        None => (0..positions.len() as u32).collect(),
-    };
-    let mut parent: Vec<usize> = (0..positions.len()).collect();
-    fn root(parent: &mut [usize], mut index: usize) -> usize {
-        while parent[index] != index {
-            parent[index] = parent[parent[index]];
-            index = parent[index];
-        }
-        index
+    let indices: Vec<u32> = mesh.indices().map_or_else(
+        || (0..positions.len() as u32).collect(),
+        |indices| indices.iter().map(|i| i as u32).collect(),
+    );
+    let mut low = Vec3::splat(f32::INFINITY);
+    let mut high = Vec3::splat(f32::NEG_INFINITY);
+    for position in positions {
+        let p = Vec3::from_array(*position);
+        low = low.min(p);
+        high = high.max(p);
     }
-    for triangle in indices.chunks_exact(3) {
-        let a = root(&mut parent, triangle[0] as usize);
-        for &other in &triangle[1..] {
-            let b = root(&mut parent, other as usize);
-            parent[b] = a;
-        }
+    let middle = (low.x + high.x) * 0.5;
+    // The warning lamps sit wider than the strip or below it. Coordinates are
+    // wheel-local metres; this selection is independent of texture UV layout.
+    // The exported row curves down at both ends: its lowest vertices are
+    // 4.84 mm below the crown, so allow 6 mm to retain complete lamp lenses.
+    let is_rev = |p: &[f32; 3]| p[1] >= high.y - 0.006 && (p[0] - middle).abs() < 0.05;
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    for p in positions.iter().filter(|p| is_rev(p)) {
+        min_x = min_x.min(p[0]);
+        max_x = max_x.max(p[0]);
     }
-    // Centroid per piece.
-    let mut sums = vec![(Vec3::ZERO, 0.); positions.len()];
-    for (index, position) in positions.iter().enumerate() {
-        let piece = root(&mut parent, index);
-        sums[piece].0 += Vec3::from_array(*position);
-        sums[piece].1 += 1.;
+    if max_x <= min_x {
+        return (Vec::new(), indices);
     }
-    let centroid = |piece: usize| sums[piece].0 / sums[piece].1;
-    let top = positions.iter().map(|p| p[1]).fold(f32::MIN, f32::max);
-    // Pieces at the same lamp position (lens and housing) share one lamp.
-    let mut rev_x: Vec<f32> = Vec::new();
-    let mut side: [Vec<f32>; 2] = [Vec::new(), Vec::new()];
-    let mut pieces = Vec::new();
-    for piece in 0..positions.len() {
-        if root(&mut parent, piece) != piece {
-            continue;
-        }
-        let c = centroid(piece);
-        pieces.push((piece, c));
-        if c.y > top - 0.006 {
-            rev_x.push(c.x);
-        } else if (0.045..0.065).contains(&c.x.abs()) {
-            side[usize::from(c.x > 0.)].push(c.y);
-        }
-    }
-    // Lamps sit 3–5 mm apart; pieces of one lamp are within a millimetre.
-    let cluster = |values: &mut Vec<f32>| {
-        values.sort_by(f32::total_cmp);
-        let mut centres: Vec<(f32, f32)> = Vec::new();
-        let mut last = f32::MIN;
-        for &value in values.iter() {
-            match centres.last_mut() {
-                Some((sum, count)) if value - last < 0.002 => {
-                    *sum += value;
-                    *count += 1.;
-                }
-                _ => centres.push((value, 1.)),
-            }
-            last = value;
-        }
-        *values = centres.iter().map(|(sum, count)| sum / count).collect();
-    };
-    cluster(&mut rev_x);
-    cluster(&mut side[0]);
-    cluster(&mut side[1]);
-    let nearest = |values: &[f32], value: f32| {
-        (0..values.len())
-            .min_by(|&a, &b| {
-                (values[a] - value)
-                    .abs()
-                    .total_cmp(&(values[b] - value).abs())
-            })
-            .unwrap_or(0)
-    };
-    let lamp_of = |c: Vec3| {
-        if c.y > top - 0.006 && rev_x.len() == REV_LAMPS {
-            // The driver looks along +Z, so their left is +X.
-            Some(Lamp::Rev(REV_LAMPS - 1 - nearest(&rev_x, c.x)))
-        } else if (0.045..0.065).contains(&c.x.abs()) {
-            let column = &side[usize::from(c.x > 0.)];
-            let row = nearest(column, c.y);
-            Some(if c.x > 0. {
-                Lamp::Left(row)
-            } else {
-                Lamp::Right(row)
-            })
-        } else {
-            None
-        }
-    };
-    let mut lamps: Vec<(Lamp, Vec<u32>)> = Vec::new();
+    let mut groups = vec![Vec::new(); REV_LAMPS];
     let mut rest = Vec::new();
     for triangle in indices.chunks_exact(3) {
-        let piece = root(&mut parent, triangle[0] as usize);
-        match lamp_of(centroid(piece)) {
-            Some(lamp) => match lamps.iter_mut().find(|(other, _)| *other == lamp) {
-                Some((_, list)) => list.extend_from_slice(triangle),
-                None => lamps.push((lamp, triangle.to_vec())),
-            },
-            None => rest.extend_from_slice(triangle),
+        if !triangle.iter().all(|i| is_rev(&positions[*i as usize])) {
+            rest.extend_from_slice(triangle);
+            continue;
         }
+        let x = triangle
+            .iter()
+            .map(|i| positions[*i as usize][0])
+            .sum::<f32>()
+            / 3.;
+        // +X is the driver's left: fill from that end of the strip.
+        let u = (max_x - x) / (max_x - min_x);
+        let lamp = ((u.clamp(0., 1.) * REV_LAMPS as f32) as usize).min(REV_LAMPS - 1);
+        groups[lamp].extend_from_slice(triangle);
     }
-    (lamps, rest)
+    (
+        groups
+            .into_iter()
+            .enumerate()
+            .filter(|(_, indices)| !indices.is_empty())
+            .map(|(i, indices)| (Lamp::Rev(i), indices))
+            .collect(),
+        rest,
+    )
 }
 
-/// Rev lights fill green, red, then blue and flash on the limiter; during the
-/// start sequence they mirror the gantry. Side lamps show grip loss and tow.
+/// Rev lights fill green, red, then blue; during the start they mirror the gantry.
 pub fn lights(
     session: Res<Session>,
     mut lamps: Query<(&mut WheelLamp, &MeshMaterial3d<StandardMaterial>)>,
@@ -511,27 +462,12 @@ pub fn lights(
     if !session.ready || lamps.is_empty() {
         return;
     }
-    let race = &session.race;
-    let car = &race.entrants[session.player].car;
-    let flash = (race.time * 12.).sin() > 0.;
-    let blue = Color::srgb(0.2, 0.45, 1.);
-    let amber = Color::srgb(1., 0.62, 0.05);
-    let slipping = car
-        .wheels
-        .iter()
-        .filter(|wheel| wheel.locked || wheel.sliding > 0.3)
-        .count();
-    let tow = car.aero.slipstream().clamp(0., 1.) as f32;
     for (mut state, material) in &mut lamps {
         let lit = match state.lamp {
             Lamp::Rev(index) => hud::wheel::rev_light(&session, index, REV_LAMPS).map(|color| {
                 let [r, g, b, _] = color.to_array();
                 Color::srgb_u8(r, g, b)
             }),
-            Lamp::Left(row) => {
-                (car.powertrain.last_refusal.is_some() && flash || slipping > row).then_some(amber)
-            }
-            Lamp::Right(row) => (tow > (row as f32 + 0.5) / 3.).then_some(blue),
         };
         if lit == state.lit {
             continue;
@@ -541,5 +477,53 @@ pub fn lights(
             material.unlit = lit.is_some();
             material.base_color = lit.unwrap_or(state.off);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rev_strip_excludes_side_warning_lamps_and_preserves_their_geometry() {
+        let mut positions = Vec::new();
+        for i in 0..REV_LAMPS {
+            let x = 0.042 - i as f32 * 0.006;
+            // Match the exported curved row: outer lens bottoms are about
+            // 4.9 mm below the middle lamp's crown.
+            let drop = 0.001 * (x / 0.042).powi(2);
+            positions.extend([
+                [x - 0.001, 0.0888 - drop, -0.024],
+                [x + 0.001, 0.0888 - drop, -0.024],
+                [x, 0.0927 - drop, -0.024],
+            ]);
+        }
+        for (x, y) in [
+            (0.086, 0.088),
+            (-0.086, 0.088),
+            (0.055, 0.076),
+            (-0.055, 0.076),
+        ] {
+            positions.extend([
+                [x - 0.001, y, -0.024],
+                [x + 0.001, y, -0.024],
+                [x, y + 0.001, -0.024],
+            ]);
+        }
+        let mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        let (lamps, rest) = split_uv_lamps(&mesh);
+        assert_eq!(lamps.len(), REV_LAMPS);
+        for (i, (lamp, indices)) in lamps.iter().enumerate() {
+            assert!(*lamp == Lamp::Rev(i));
+            assert_eq!(
+                *indices,
+                vec![i as u32 * 3, i as u32 * 3 + 1, i as u32 * 3 + 2]
+            );
+        }
+        assert_eq!(rest, (45..57).collect::<Vec<_>>());
     }
 }

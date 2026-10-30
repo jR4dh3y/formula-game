@@ -34,7 +34,7 @@ impl EngineChoice {
     }
     pub fn description(self) -> &'static str {
         match self {
-            Self::MatchCar => "RB6 uses the 2.4 V8, RB22 the V6 turbo hybrid.",
+            Self::MatchCar => "RB6 uses the 2.4 V8, GEN22 the V6 turbo hybrid.",
             Self::V6Hybrid => {
                 "2014-era power unit: a deep, raspy V6 with turbo whistle and MGU-K whine."
             }
@@ -44,7 +44,7 @@ impl EngineChoice {
     }
     pub fn resolve(self, car: &str) -> Kind {
         match self {
-            Self::MatchCar if car == "rb22" => Kind::V6Hybrid,
+            Self::MatchCar if car == "gen22" => Kind::V6Hybrid,
             Self::MatchCar => Kind::V8,
             Self::V6Hybrid => Kind::V6Hybrid,
             Self::V8 => Kind::V8,

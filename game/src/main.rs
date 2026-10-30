@@ -15,6 +15,7 @@ mod options;
 mod pose;
 mod preferences;
 mod sky;
+mod teams;
 #[cfg(test)]
 mod tests;
 mod textures;
@@ -36,6 +37,8 @@ use std::process::ExitCode;
 #[derive(Resource)]
 pub struct Session {
     pub race: Race,
+    pub identities: Vec<Option<teams::Identity>>,
+    pub rig: teams::Rig,
     pub player: usize,
     pub camera: camera::ChaseCamera,
     pub controls: controls::Controls,
@@ -102,6 +105,14 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .assets
         .canonicalize()
         .map_err(|error| format!("asset directory {}: {error}", options.assets.display()))?;
+    let teams = if options.car == "gen22" {
+        teams::Teams::load(&options.assets)?
+    } else {
+        teams::Teams::load(&options.assets).unwrap_or_default()
+    };
+    if options.car == "gen22" {
+        teams.selection(&options.team, &options.driver)?;
+    }
     let mut race = assets::load_race(&options)?;
     let benchmark = if options.benchmark.is_some() {
         let (planned_race, run) = benchmark::Run::plan(&options, &race)?;
@@ -117,7 +128,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
     let mut rig = camera::ChaseCamera::new(&race, player);
     rig.select(frontend.draft.camera);
     rig.configure(frontend.views[&options.car].clone());
+    rig.set_cockpit_eye(teams::Rig::load(&options)?.cockpit_eye);
     let session = Session {
+        identities: teams.field(&options)?,
+        rig: teams::Rig::load(&options)?,
         guidance: driving::Guidance::new(&race, player),
         corner_braking: frontend.corner_braking,
         show_racing_line: frontend.show_racing_line,
@@ -202,6 +216,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
             session.show_performance = std::env::var_os("F1_SHOW_FPS").is_some();
         })
         .insert_resource(Time::<Fixed>::from_hz(PHYSICS_RATE))
+        .insert_resource(teams)
         .insert_resource(session)
         .insert_resource(options)
         .insert_resource(frontend)
@@ -219,11 +234,12 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 menu::apply,
                 graphics::apply,
                 textures::prepare,
+                assets::apply_liveries,
                 materials::prepare,
                 assets::check_loading,
                 benchmark::advance,
-                assets::rig_wheel_shells,
                 assets::sync_cars,
+                assets::animate_shifts,
                 wheel_dash::attach,
                 wheel_dash::lights,
                 camera::update,

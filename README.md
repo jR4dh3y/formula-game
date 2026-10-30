@@ -1,9 +1,9 @@
 # Formula Game — F1 Racecraft
 
 A formula-style racing game built with Rust and Bevy. Race at Spa-Francorchamps
-with the RB6 or RB22, configurable driving aids, AI opponents, and three camera views.
+with the 2022 ground-effect GEN22 or legacy RB6, configurable driving aids, AI opponents, and three camera views.
 
-![RB22 at Spa-Francorchamps in chase view](docs/screenshots/spa-chase.png)
+![Previous modern-car build at Spa-Francorchamps in chase view](docs/screenshots/spa-chase.png)
 
 ## Download and play
 
@@ -35,7 +35,7 @@ fall back to extraction if FUSE mounting is unavailable. Release assets include
 
 ## What you can do
 
-- Drive the V8-era RB6 or modern RB22 against up to 15 AI opponents.
+- Drive the V8-era RB6 or modern GEN22 against up to 15 AI opponents.
 - Set race length, grid position, tyres, and front/rear wings.
 - Choose Beginner, Balanced, or Unassisted driving, with separate steering, braking, traction, and stability aids.
 - Switch between cockpit, TV pod, and chase cameras, and save camera positions per car.
@@ -44,7 +44,8 @@ fall back to extraction if FUSE mounting is unavailable. Release assets include
 
 **Start here:** choose your car in Race setup, leave Beginner aids enabled, and
 select Start race. Hold **W** to accelerate, use **A/D** to steer and **S** to brake.
-**Esc** opens the pause menu; **C** cycles cameras; **R** recovers the car.
+**Esc** opens the pause menu; **C** cycles cameras; **R** recovers the car;
+**F** (gamepad **B**) opens DRS when the badge above the dash is outlined green.
 
 ## Screenshots
 
@@ -64,7 +65,7 @@ These are captures from the game, not concept renders.
 
 ## Development
 
-A Bevy 0.20 racing game with a deterministic 360 Hz simcade simulation. Select a circuit, car and driving aids from the in-game menu, then race against up to 15 AI drivers. The default RB6 field matches the V8-era sound and proportions; the RB22 provides the modern car and matching field. The simulation includes manual gearing, tyre temperature and wear, wing setup, slipstream, dirty air, car contacts, track collisions, timing and results.
+A Bevy 0.20 racing game with a deterministic 360 Hz simcade simulation. Select a circuit, car and driving aids from the in-game menu, then race against up to 15 AI drivers. The default GEN22 field uses the 2022 teams and drivers; the legacy RB6 field matches the V8-era sound and proportions. The simulation includes manual gearing, tyre temperature and wear, wing setup, slipstream, dirty air, car contacts, track collisions, timing and results.
 
 ### Run from source
 
@@ -79,13 +80,13 @@ The generated assets are separate from this repository. [Download the complete a
 ```text
 assets/
   tracks/spa/{track.json,collision.bin,visual.glb}
-  cars/rb22/{car.json,car.glb}
+  cars/gen22/{car.json,car.glb,car_lod1.glb,teams.json,liveries/}
   cars/rb6/{car.json,car.glb}
 ```
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
 
-Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. Run `cargo run -p f1-the-game -- --help` for the full CLI.
+Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
@@ -173,19 +174,35 @@ Normal packaging always builds without `exp` and includes only Spa.
 | Frame-rate readout | F3 | — |
 | Quit | Quit game in menu, or window close | Window close |
 
-There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or Cameras & controls. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and RB22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
+There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or Cameras & controls. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and GEN22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
 
-The RB6 and RB22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. The existing wheel geometry and its attached controls rotate around the wheel centre; the dashboard stays fixed. This uses the steering materials in the supplied converted car models.
+The RB6 and GEN22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. GEN22 uses the named `steering_wheel` node, including its live LCD and LEDs; RB6 keeps its legacy wheel and screen pod.
+
+DRS follows the modern rules. Each circuit gets up to two zones, found from its
+longest straights that end in a braking corner (at Spa: Kemmel into Les Combes,
+and the pit straight into La Source). From lap 2, a car within one second of the
+car ahead at a zone's detection point may open the flap in that zone with F
+(gamepad B). AI cars use it whenever it is earned. Braking or leaving the zone
+closes it. An open flap removes about 10% of the car's drag and some rear
+downforce. The 2010 RB6 predates DRS and has none.
+
+**DRS anywhere** (Driving aids tab, or `--drs-anywhere`) drops the zone and
+one-second rules for your car: F opens the flap anywhere on track from the
+start, and braking still closes it. AI cars keep to the race rules. The
+setting is saved with your other aids.
+
+Import custom car, suit and helmet PNGs with `tools/car/import_livery.py`; it exports matching UV guides and preserves imported artwork through asset rebuilds. See [the PNG workflow](docs/gen22-car.md#importing-your-png-artwork). `tools/car/convert_livery.py` batch-converts the square Monoposto layout used by the Porsche example through authored mesh UV correspondence; see the workflow for layout limits.
+
 
 The HUD includes the timing tower, lap times, countdown lights, race messages, shift lights, speed, pedals, tyre temperatures/wear, lock-up/sliding indicators, aero effects, minimap and results.
 
 Open **HUD & map** from Race setup or the pause menu to choose between **Digital cockpit**, with illuminated segments and a neutral gear aperture, and **Analog telemetry**, with separate metal-rimmed RPM, speed, pedal and G-force instruments. Tyre temperatures and live tow/wake effects use needle gauges in both layouts. The unboxed minimap supports Full circuit and Nearby track modes. Driving-aid buttons, camera shortcut strips and map headings are omitted while racing; their settings and keyboard shortcuts remain available. The G-force plot uses one G per ring. Both layouts use live simulation data and leave the physical cockpit wheel visible.
 
-The minimap setting is independent: **Full circuit** shows the whole field; **Nearby track** follows the car through a 600 m window with the road ahead pointing up. Both choices apply immediately, survive new races, and are saved with your other preferences. Automated capture runs use the defaults and never write your preferences.
+The minimap setting is independent: **Full circuit** shows the whole field; **Nearby track** magnifies the road around the car with the road ahead pointing up, while compressing distant sections to keep the complete circuit visible. Neither mode uses a rectangular background or crops the track. Both choices apply immediately, survive new races, and are saved with your other preferences. Automated capture runs use the defaults and never write your preferences.
 
 ## Engine sound
 
-The engine voices are synthesized in real time from cylinder firing pulses, exhaust-pipe resonances and intake noise. The RB6 defaults to a high-revving flat-plane V8; the RB22 uses a V6 turbo hybrid with turbo spool, lift-off chatter and electric whine. The **Audio** settings tab also offers a Ferrari-inspired V12 voice on either car. These are stylized procedural interpretations, not recordings of specific Ferrari engines. Sound overrides map the car's idle-to-redline range onto the chosen voice without changing its physics.
+The engine voices are synthesized in real time from cylinder firing pulses, exhaust-pipe resonances and intake noise. The RB6 defaults to a high-revving flat-plane V8; the GEN22 uses a V6 turbo hybrid with turbo spool, lift-off chatter and electric whine. The **Audio** settings tab also offers a Ferrari-inspired V12 voice on either car. These are stylized procedural interpretations, not recordings of specific Ferrari engines. Sound overrides map the car's idle-to-redline range onto the chosen voice without changing its physics.
 
 The mix adds the three nearest rivals with stereo placement, distance filtering and Doppler shift, plus tyre scrub/lock-up squeal, wind, kerb and off-road rumble, drivetrain whine and collision thumps. Cockpit and external views have different balances. A gentle presence dip, stereo-linked compression and soft limiting control harshness and leave output headroom. Saved sliders control master volume, your engine, other cars and effects. Press M to mute; pause and mute fade smoothly, and `--mute` starts muted.
 

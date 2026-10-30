@@ -218,13 +218,31 @@ fn sample_ticks(seed: u64) -> Vec<usize> {
 
 fn asset_fingerprints(options: &Options) -> Result<BTreeMap<String, String>, String> {
     let mut results = BTreeMap::new();
-    for name in [
+    let mut names = vec![
         format!("tracks/{}/visual.glb", options.track),
         format!("tracks/{}/track.json", options.track),
         format!("tracks/{}/collision.bin", options.track),
         format!("cars/{}/car.glb", options.car),
         format!("cars/{}/car.json", options.car),
-    ] {
+    ];
+    if options.car == "gen22" {
+        names.extend([
+            "cars/gen22/car_lod1.glb".into(),
+            "cars/gen22/teams.json".into(),
+        ]);
+        let field = crate::teams::Teams::load(&options.assets)?.field(options)?;
+        for identity in field.iter().flatten() {
+            let base = format!("cars/gen22/liveries/{}", identity.team);
+            names.extend([
+                format!("{base}/paint.png"),
+                format!("{base}/suit.png"),
+                format!("{base}/{}/helmet.png", identity.driver),
+            ]);
+        }
+    }
+    names.sort();
+    names.dedup();
+    for name in names {
         let mut file = std::fs::File::open(options.assets.join(&name))
             .map_err(|e| format!("benchmark fingerprint {name}: {e}"))?;
         let mut buffer = [0u8; 65536];
@@ -268,6 +286,7 @@ fn state_hash(race: &Race) -> u64 {
 fn reset_view(session: &mut Session, options: &Options) {
     session.poses = pose::Poses::new(&session.race);
     session.camera = camera::ChaseCamera::new(&session.race, 0);
+    session.camera.set_cockpit_eye(session.rig.cockpit_eye);
     session.camera.select(options.camera);
     session.show_racing_line = false;
     session.show_performance = false;
@@ -473,7 +492,7 @@ mod tests {
             .into_iter()
             .filter(|track| Options::track_enabled(track))
         {
-            for car in ["rb6", "rb22"] {
+            for car in ["rb6", "gen22"] {
                 let output = format!("{evidence}/{track}-{car}");
                 let options = Options::parse(
                     [

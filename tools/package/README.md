@@ -6,7 +6,7 @@ Make the AppImage executable and open it:
     ./F1-Racecraft-0.1.0-linux-x86_64.AppImage
 
 Only that AppImage needs to be sent to another player. It contains the game,
-RB6/RB22, Spa, engine audio, fonts, runtime libraries
+RB6/GEN22, Spa, engine audio, fonts, runtime libraries
 and a matching libc/loader. No Rust, separate assets, installer, root access,
 network download or FUSE installation is needed. When mounting is unavailable,
 the embedded runtime extracts to temporary storage and cleans up after exit.
@@ -20,7 +20,7 @@ Controls: W/S throttle/brake; A/D steer; E/Q shift; C or 1/2/3 camera;
 F4 adjust camera; Esc menu; R recover; M mute. Beginner aids include steering
 guidance, corner braking and automatic gears. Manual steering overrides guidance.
 
-Build again from the repository:
+Build again from the repository (Python requires Pillow for texture validation):
 
     CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py
 
