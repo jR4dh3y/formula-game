@@ -9,7 +9,6 @@
 
 use super::dsp::{saturate, smoothing, smoothstep, Biquad, Noise, OnePole, Oscillator, Pipe, RATE};
 use serde::{Deserialize, Serialize};
-use std::f32::consts::TAU;
 
 /// The engine sound the player picks in settings.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -79,7 +78,6 @@ impl Kind {
 }
 
 pub const MAX_CYLINDERS: usize = 12;
-const ORDERS: usize = 10;
 
 struct Profile {
     cylinders: usize,
@@ -94,8 +92,6 @@ struct Profile {
     jitter: f32,
     /// Turbulent gas noise riding on each pulse.
     rasp: f32,
-    /// Cycle-order content below the firing pitch: the engine's growl.
-    growl: f32,
     headers: [f32; 2],
     header_feedback: f32,
     tailpipe: f32,
@@ -117,15 +113,14 @@ const V8: Profile = Profile {
     cylinders: 8,
     idle_rpm: 5000.,
     limit_rpm: 18000.,
-    pulse_degrees: 82.,
+    pulse_degrees: 44.,
     scatter_degrees: 4.,
-    jitter: 0.08,
-    rasp: 0.35,
-    growl: 0.5,
+    jitter: 0.16,
+    rasp: 0.8,
     headers: [0.72, 0.79],
-    header_feedback: 0.42,
+    header_feedback: 0.26,
     tailpipe: 1.9,
-    tail_feedback: 0.3,
+    tail_feedback: 0.2,
     formants: [
         (850., 1.4, 0.5),
         (2300., 2., 0.45),
@@ -137,7 +132,7 @@ const V8: Profile = Profile {
     airbox_hz: 480.,
     crackle: 0.012,
     drive: 1.8,
-    level: 0.5,
+    level: 0.65,
     upshift_cut: 0.045,
     turbo: false,
 };
@@ -146,15 +141,14 @@ const V12: Profile = Profile {
     cylinders: 12,
     idle_rpm: 4500.,
     limit_rpm: 17500.,
-    pulse_degrees: 58.,
+    pulse_degrees: 30.,
     scatter_degrees: 3.,
-    jitter: 0.06,
-    rasp: 0.28,
-    growl: 0.28,
+    jitter: 0.12,
+    rasp: 0.65,
     headers: [0.61, 0.66],
-    header_feedback: 0.38,
+    header_feedback: 0.24,
     tailpipe: 1.4,
-    tail_feedback: 0.28,
+    tail_feedback: 0.18,
     formants: [
         (1100., 1.3, 0.45),
         (2900., 1.8, 0.5),
@@ -166,7 +160,7 @@ const V12: Profile = Profile {
     airbox_hz: 620.,
     crackle: 0.014,
     drive: 1.5,
-    level: 0.5,
+    level: 0.65,
     upshift_cut: 0.05,
     turbo: false,
 };
@@ -175,15 +169,14 @@ const V6: Profile = Profile {
     cylinders: 6,
     idle_rpm: 4500.,
     limit_rpm: 13500.,
-    pulse_degrees: 112.,
+    pulse_degrees: 64.,
     scatter_degrees: 5.,
-    jitter: 0.1,
-    rasp: 0.5,
-    growl: 0.8,
+    jitter: 0.2,
+    rasp: 0.9,
     headers: [1.05, 1.12],
-    header_feedback: 0.4,
+    header_feedback: 0.28,
     tailpipe: 2.6,
-    tail_feedback: 0.35,
+    tail_feedback: 0.24,
     formants: [
         (420., 1.2, 0.55),
         (1150., 1.6, 0.45),
@@ -195,7 +188,7 @@ const V6: Profile = Profile {
     airbox_hz: 300.,
     crackle: 0.006,
     drive: 2.2,
-    level: 0.5,
+    level: 0.65,
     upshift_cut: 0.03,
     turbo: true,
 };
@@ -240,8 +233,9 @@ pub struct Voice {
     onboard: f32,
     doppler: f32,
     offsets: [f32; MAX_CYLINDERS],
-    /// Amplitude and phase of each cycle order below the firing frequency.
-    orders: [(f32, f32); ORDERS],
+    /// Each combustion event has a slightly different blowdown duration.
+    widths: [f32; MAX_CYLINDERS],
+    combustion_speed: OnePole,
     gains: [f32; MAX_CYLINDERS],
     previous: [f32; MAX_CYLINDERS],
     amplitude: [f32; MAX_CYLINDERS],
@@ -283,7 +277,8 @@ impl Voice {
             onboard: 0.,
             doppler: 1.,
             offsets: [0.; MAX_CYLINDERS],
-            orders: [(0., 0.); ORDERS],
+            widths: [1.; MAX_CYLINDERS],
+            combustion_speed: OnePole::new(25.),
             gains: [1.; MAX_CYLINDERS],
             previous: [0.; MAX_CYLINDERS],
             amplitude: [0.; MAX_CYLINDERS],
@@ -331,18 +326,9 @@ impl Voice {
         for cylinder in 0..MAX_CYLINDERS {
             self.offsets[cylinder] =
                 cylinder as f32 * interval + scatter.next() * profile.scatter_degrees / 720.;
-            self.gains[cylinder] = 1. + 0.14 * scatter.next();
+            self.gains[cylinder] = 1. + 0.22 * scatter.next();
+            self.widths[cylinder] = 1.;
             self.amplitude[cylinder] = 0.;
-        }
-        for (order, slot) in self.orders.iter_mut().enumerate() {
-            let k = order + 1;
-            // Firing harmonics already come from the pulses.
-            let amplitude = if k >= profile.cylinders {
-                0.
-            } else {
-                profile.growl * (0.6 + 0.4 * scatter.unit()) / (1. + k as f32 * 0.35)
-            };
-            *slot = (amplitude, scatter.unit());
         }
         for (pipe, length) in self.headers.iter_mut().zip(profile.headers) {
             pipe.configure(length, profile.header_feedback, 8000.);
@@ -407,6 +393,7 @@ impl Voice {
             self.pop_bank = cylinder % 2;
         }
         self.amplitude[cylinder] = amplitude.max(0.);
+        self.widths[cylinder] = 1. + p.jitter * self.noise.next();
     }
 
     pub fn sample(&mut self) -> f32 {
@@ -424,7 +411,10 @@ impl Voice {
         let load = self.load;
         let rpm = self.rpm();
 
-        self.cycle = (self.cycle + (rpm / 120. * self.doppler / RATE) as f64).fract();
+        // Small, aperiodic crank-speed changes prevent an oscillator-like steady tone.
+        let flutter = self.combustion_speed.process(self.noise.next()) * (0.08 - 0.06 * load);
+        self.cycle =
+            (self.cycle + (rpm / 120. * (1. + flutter) * self.doppler / RATE) as f64).fract();
         let width = p.pulse_degrees / 720. * (1.35 - 0.45 * load);
         let gas = self.rasp_filter.process(self.noise.next());
         let mut banks = [0f32; 2];
@@ -436,6 +426,7 @@ impl Voice {
             }
             self.previous[cylinder] = local;
             let amplitude = self.amplitude[cylinder];
+            let width = width * self.widths[cylinder];
             let x = local / width;
             if x < 1. {
                 banks[cylinder % 2] += amplitude * pulse(x) * (1. + p.rasp * gas);
@@ -452,13 +443,7 @@ impl Voice {
             self.pop *= 0.9948;
         }
 
-        let mut growl = 0.;
-        for (order, (amplitude, phase)) in self.orders.iter().enumerate() {
-            growl += amplitude * (TAU * ((order + 1) as f32 * self.cycle as f32 + phase)).sin();
-        }
-        let growl = growl * (0.35 + 0.65 * load) * 0.12;
-        banks[0] += growl;
-        banks[1] += growl;
+        // All pitched exhaust content comes from combustion; no sine-wave growl bed.
         let headers = self.headers[0].process(banks[0]) + self.headers[1].process(banks[1]);
         let tail = self.tailpipe.process(headers * 0.5);
         let mut body = tail * 0.55;
@@ -475,8 +460,8 @@ impl Voice {
             self.boost += (target - self.boost) * smoothing(rate);
             let shaft = 0.25 + 0.55 * self.boost + 0.2 * self.revs;
             let frequency = 2000. + 5600. * shaft;
-            extra += self.whistle[0].process(frequency) * (0.006 + 0.022 * self.boost)
-                + self.whistle[1].process(frequency * 1.47) * 0.006 * self.boost
+            extra += self.whistle[0].process(frequency) * (0.0015 + 0.005 * self.boost)
+                + self.whistle[1].process(frequency * 1.47) * 0.0015 * self.boost
                 + self.whistle_hiss.process(self.noise.next()) * 0.05 * self.boost;
             if self.flutter > 1e-3 {
                 let chatter = 0.5 + 0.5 * self.flutter_clock.process(23.).signum();
@@ -485,7 +470,7 @@ impl Voice {
                 self.flutter *= 1. - 1. / (0.12 * RATE);
             }
             // MGU-K: electric whine deploying on power, louder harvesting under braking.
-            let target = 0.012 * c.throttle * self.revs.clamp(0., 1.) + 0.03 * c.brake;
+            let target = 0.0025 * c.throttle * self.revs.clamp(0., 1.) + 0.006 * c.brake;
             self.motor_level += (target - self.motor_level) * smoothing(0.06);
             let frequency = rpm / 60. * 13.;
             extra += (self.motor[0].process(frequency)
@@ -514,13 +499,13 @@ impl Voice {
 
 /// Exhaust blowdown: a fast rise as the valve opens, then a longer decay.
 fn pulse(x: f32) -> f32 {
-    const ATTACK: f32 = 0.14;
+    const ATTACK: f32 = 0.07;
     if x < ATTACK {
         let t = x / ATTACK;
         t * t * (3. - 2. * t)
     } else {
         let d = (x - ATTACK) / (1. - ATTACK);
-        (1. - d) * (1. - d) * (1. - 0.5 * d)
+        (1. - d).powi(3) * (1. - 0.8 * d)
     }
 }
 

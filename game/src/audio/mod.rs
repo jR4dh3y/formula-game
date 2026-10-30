@@ -510,7 +510,7 @@ impl Mixer {
         let rumble = a.offroad.process(a.noise[1].next()) * 0.5 * m.offroad * rolling;
         // Straight-cut gear whine, clearest in the cockpit.
         let whine = a.whine.process(m.wheel_rps * 4.3 * 21.)
-            * 0.006
+            * 0.002
             * (0.35 + m.onboard)
             * smoothstep(4., 40., m.speed);
         // Impacts: a short low thump.
