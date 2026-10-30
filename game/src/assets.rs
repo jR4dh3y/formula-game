@@ -166,6 +166,7 @@ pub struct RaceVisualRoot;
 #[derive(Resource)]
 pub struct VisualAssets {
     handles: Vec<Handle<bevy::world_serialization::WorldAsset>>,
+    liveries: Vec<Handle<Image>>,
     started: Option<f64>,
 }
 
@@ -241,8 +242,21 @@ pub fn spawn_visuals(
                 }
             });
     }
+    // Request every field texture before scene instantiation so readiness and
+    // failure reporting include external PNGs, even before apply_liveries runs.
+    let mut paths: Vec<_> = session
+        .identities
+        .iter()
+        .flatten()
+        .flat_map(|identity| {
+            ["paint", "suit", "helmet_paint"].map(|name| livery_path(name, identity).unwrap())
+        })
+        .collect();
+    paths.sort();
+    paths.dedup();
     commands.insert_resource(VisualAssets {
         handles: vec![track, car, opponent],
+        liveries: paths.into_iter().map(|path| server.load(path)).collect(),
         started: None,
     });
 }
@@ -263,7 +277,7 @@ fn visual_ready(
     if let Ok(car) = cars.get(event.entity) {
         let pivot = children.iter_descendants(event.entity).find_map(|entity| {
             let name = material_names.get(entity).ok()?;
-            if !matches!(name.0.as_str(), "RBRWHEEL10") {
+            if !matches!(name.0.as_str(), "RBRWHEEL10" | "redbull_steeringwheel.004") {
                 return None;
             }
             let mesh = meshes.get(&mesh_handles.get(entity).ok()?.0)?;
@@ -301,10 +315,9 @@ fn visual_ready(
                 }
             }
             if let Some((pivot, _, _)) = pivot {
-                if material_names
-                    .get(entity)
-                    .is_ok_and(|name| name.0 == "RBRWHEEL10")
-                {
+                if material_names.get(entity).is_ok_and(|name| {
+                    matches!(name.0.as_str(), "RBRWHEEL10" | "redbull_steeringwheel.004")
+                }) {
                     commands.entity(entity).insert((
                         SteeringWheelVisual {
                             entrant: car.0,
@@ -410,10 +423,15 @@ pub fn check_loading(
         return;
     }
     let started = *visuals.started.get_or_insert(time.elapsed_secs_f64());
-    for handle in &visuals.handles {
-        if let Some(LoadState::Failed(error)) = server.get_load_state(handle.id()) {
+    for id in visuals
+        .handles
+        .iter()
+        .map(|handle| handle.id().untyped())
+        .chain(visuals.liveries.iter().map(|handle| handle.id().untyped()))
+    {
+        if let Some(LoadState::Failed(error)) = server.get_load_state(id) {
             error!("visual asset failed: {error}");
-            menu.error = Some(format!("Could not load the scene: {error}"));
+            menu.error = Some(format!("Could not load a visual asset: {error}"));
             session.screen = crate::menu::Screen::Main;
             session.paused = true;
             if menu.draft.frames.is_some() || menu.draft.benchmark.is_some() {
@@ -422,7 +440,12 @@ pub fn check_loading(
             return;
         }
     }
-    if ready.iter().count() == session.race.entrants.len() + 1 {
+    if ready.iter().count() == session.race.entrants.len() + 1
+        && visuals
+            .liveries
+            .iter()
+            .all(|handle| server.is_loaded(handle.id()))
+    {
         session.ready = true;
         if session.screen == crate::menu::Screen::Loading {
             menu.race_started = true;
@@ -591,6 +614,11 @@ pub fn animate_shifts(
     mut paddles: Query<(&Paddle, &mut Transform)>,
     mut drivers: Query<(&DriverMorph, &mut bevy::mesh::morph::MorphWeights)>,
 ) {
+    // Every replacement session loads its visuals before it can race. Local
+    // system state survives that replacement, so discard the previous gears.
+    if !session.ready {
+        shifts.0.clear();
+    }
     let pulls = shifts.update(
         session
             .race
@@ -712,6 +740,110 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
 #[cfg(test)]
 mod livery_tests {
     use super::*;
+    #[test]
+    fn missing_or_corrupt_livery_prevents_readiness_and_reports_failure() {
+        use bevy::asset::AssetPlugin;
+        use bevy::image::{CompressedImageFormats, ImageLoader, ImagePlugin};
+        let root = std::env::temp_dir().join(format!("f1-livery-load-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("corrupt.png"), b"not a PNG").unwrap();
+        for path in ["missing.png", "corrupt.png"] {
+            let mut options = Options::parse(std::iter::empty()).unwrap();
+            options.assets = root.clone();
+            let mut app = App::new();
+            app.add_plugins((
+                MinimalPlugins,
+                AssetPlugin {
+                    file_path: root.to_string_lossy().into_owned(),
+                    ..default()
+                },
+                ImagePlugin::default(),
+            ))
+            .register_asset_loader(ImageLoader::new(CompressedImageFormats::NONE))
+            .insert_resource(crate::tests::session())
+            .insert_resource(crate::menu::Frontend::new(&options))
+            .add_message::<AppExit>()
+            .add_systems(Update, check_loading);
+            let texture = app.world().resource::<AssetServer>().load(path);
+            app.insert_resource(VisualAssets {
+                handles: vec![],
+                liveries: vec![texture],
+                started: None,
+            });
+            app.world_mut().spawn(VisualReady);
+            app.world_mut().spawn(VisualReady);
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+            while app
+                .world()
+                .resource::<crate::menu::Frontend>()
+                .error
+                .is_none()
+            {
+                app.update();
+                assert!(!app.world().resource::<Session>().ready);
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "image failure was not reported: {path}"
+                );
+                std::thread::yield_now();
+            }
+            let session = app.world().resource::<Session>();
+            assert!(session.paused);
+            assert_eq!(session.screen, crate::menu::Screen::Main);
+            assert!(app
+                .world()
+                .resource::<crate::menu::Frontend>()
+                .error
+                .as_ref()
+                .unwrap()
+                .contains(path));
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn new_session_does_not_inherit_shift_pulls() {
+        let mut state = crate::tests::session();
+        state.ready = true;
+        state.rig.paddles.up_angle = -0.1;
+        state.rig.paddles.down_angle = 0.1;
+        let mut app = App::new();
+        app.insert_resource(state)
+            .init_resource::<Time>()
+            .add_systems(Update, animate_shifts);
+        let paddle = app
+            .world_mut()
+            .spawn((
+                Paddle {
+                    entrant: 0,
+                    rest: Transform::IDENTITY,
+                    up: false,
+                },
+                Transform::IDENTITY,
+            ))
+            .id();
+        app.update();
+        app.world_mut().resource_mut::<Session>().race.entrants[0]
+            .car
+            .powertrain
+            .gear = 4;
+        app.update();
+        let mut replacement = crate::tests::session();
+        replacement.ready = false;
+        replacement.rig.paddles.down_angle = 0.1;
+        app.insert_resource(replacement);
+        app.update();
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs_f32(0.05));
+        app.world_mut().resource_mut::<Session>().ready = true;
+        app.update();
+        assert_eq!(
+            *app.world().get::<Transform>(paddle).unwrap(),
+            Transform::IDENTITY
+        );
+    }
+
     #[test]
     fn tyre_geometry_meets_the_road_during_chassis_heave_pitch_and_roll() {
         for (height, pitch, roll, steer) in [

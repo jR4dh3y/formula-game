@@ -208,6 +208,8 @@ mod tests {
         let mut draft = Options::parse(std::iter::empty()).unwrap();
         draft.track = if cfg!(feature = "exp") { "cota" } else { "spa" }.into();
         draft.car = "gen22".into();
+        draft.team = "ferrari".into();
+        draft.driver = "leclerc".into();
         draft.camera = Mode::Cockpit;
         let args = arguments(
             &draft,
@@ -219,6 +221,8 @@ mod tests {
             Options::parse(args.into_iter().map(|arg| arg.into_string().unwrap())).unwrap();
         assert_eq!(parsed.track, draft.track);
         assert_eq!(parsed.car, "gen22");
+        assert_eq!(parsed.team, draft.team);
+        assert_eq!(parsed.driver, draft.driver);
         assert_eq!(parsed.camera, Mode::Cockpit);
         assert_eq!((parsed.width, parsed.height), (958, 1078));
         assert_eq!(parsed.graphics, crate::graphics::Quality::Ultra);

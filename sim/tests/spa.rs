@@ -12,7 +12,15 @@ fn assets() -> Option<PathBuf> {
     let root = std::env::var_os("F1_TEST_ASSETS")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets"));
-    root.join("tracks/spa/track.json").exists().then_some(root)
+    [
+        "tracks/spa/track.json",
+        "tracks/spa/collision.bin",
+        "cars/gen22/car.json",
+        "cars/rb6/car.json",
+    ]
+    .iter()
+    .all(|path| root.join(path).is_file())
+    .then_some(root)
 }
 
 #[test]

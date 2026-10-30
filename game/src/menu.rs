@@ -135,7 +135,10 @@ impl Catalog {
             ),
         ] {
             let car = root.join("cars").join(id);
-            if car.join("car.glb").is_file() && car.join("car.json").is_file() {
+            if car.join("car.glb").is_file()
+                && car.join("car.json").is_file()
+                && (id != "gen22" || car.join("teams.json").is_file())
+            {
                 catalog.cars.push(CarChoice {
                     id: id.into(),
                     name,
@@ -144,6 +147,13 @@ impl Catalog {
             }
         }
         catalog
+    }
+
+    fn car_available(&self, options: &Options) -> bool {
+        self.cars.iter().any(|car| car.id == options.car)
+            && (options.car != "gen22"
+                || options.opponents == 0
+                || options.assets.join("cars/gen22/car_lod1.glb").is_file())
     }
 }
 
@@ -289,12 +299,7 @@ pub fn apply(
         frontend.error = Some("This circuit is not ready. Select an available circuit.".into());
         return;
     }
-    if !frontend
-        .catalog
-        .cars
-        .iter()
-        .any(|car| car.id == frontend.draft.car)
-    {
+    if !frontend.catalog.car_available(&frontend.draft) {
         frontend.error = Some("This car is not available in the asset directory.".into());
         return;
     }
@@ -585,7 +590,7 @@ pub fn ui(
                             }
                             let available = frontend.catalog.circuits.iter().any(|track| {
                                 track.id == frontend.draft.track && track.unavailable.is_none()
-                            }) && frontend.catalog.cars.iter().any(|car| car.id == frontend.draft.car);
+                            }) && frontend.catalog.car_available(&frontend.draft);
                             let start = ui.add_enabled(available && !frontend.pending && frontend.benchmark.child.is_none(),
                                 egui::Button::new(RichText::new(if frontend.race_started {
                                     "Start new race"
@@ -1184,6 +1189,28 @@ fn controls_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gen22_requires_roster_and_opponent_lod_for_the_selected_field() {
+        let root = std::env::temp_dir().join(format!("f1-car-catalog-{}", std::process::id()));
+        let car = root.join("cars/gen22");
+        std::fs::create_dir_all(&car).unwrap();
+        for name in ["car.glb", "car.json"] {
+            std::fs::write(car.join(name), []).unwrap();
+        }
+        let mut options = Options::parse(std::iter::empty()).unwrap();
+        options.assets = root.clone();
+        options.opponents = 0;
+        assert!(!Catalog::discover(&root).car_available(&options));
+        std::fs::write(car.join("teams.json"), []).unwrap();
+        let catalog = Catalog::discover(&root);
+        assert!(catalog.car_available(&options));
+        options.opponents = 1;
+        assert!(!catalog.car_available(&options));
+        std::fs::write(car.join("car_lod1.glb"), []).unwrap();
+        assert!(catalog.car_available(&options));
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn discovery_distinguishes_complete_incomplete_and_deferred_tracks() {

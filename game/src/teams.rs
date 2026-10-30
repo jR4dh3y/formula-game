@@ -79,6 +79,12 @@ impl Teams {
                     team.id
                 ));
             }
+            if team.short.trim().is_empty() || team.short.chars().count() > 12 {
+                return Err(format!(
+                    "team short label must contain 1..=12 characters: {}",
+                    team.id
+                ));
+            }
             for color in [
                 &team.colors.primary,
                 &team.colors.secondary,
@@ -299,6 +305,18 @@ mod tests {
         assert_eq!(rgb("#AB0102"), Some([171, 1, 2]));
         assert_eq!(rgb("#é0000"), None);
     }
+    #[test]
+    fn runtime_rosters_enforce_short_label_character_limit() {
+        let mut value: serde_json::Value =
+            serde_json::from_slice(include_bytes!("../../tools/car/teams.json")).unwrap();
+        for label in ["", "             ", "1234567890123"] {
+            value["teams"][0]["short"] = label.into();
+            assert!(Teams::parse(&serde_json::to_vec(&value).unwrap()).is_err());
+        }
+        value["teams"][0]["short"] = "é".repeat(12).into();
+        assert!(Teams::parse(&serde_json::to_vec(&value).unwrap()).is_ok());
+    }
+
     #[test]
     fn field_has_unique_real_drivers_and_selected_player_at_every_grid_slot() {
         let teams = fixture();

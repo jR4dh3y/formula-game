@@ -413,7 +413,9 @@ fn split_uv_lamps(mesh: &Mesh) -> (Vec<(Lamp, Vec<u32>)>, Vec<u32>) {
     let middle = (low.x + high.x) * 0.5;
     // The warning lamps sit wider than the strip or below it. Coordinates are
     // wheel-local metres; this selection is independent of texture UV layout.
-    let is_rev = |p: &[f32; 3]| p[1] >= high.y - 0.0045 && (p[0] - middle).abs() < 0.05;
+    // The exported row curves down at both ends: its lowest vertices are
+    // 4.84 mm below the crown, so allow 6 mm to retain complete lamp lenses.
+    let is_rev = |p: &[f32; 3]| p[1] >= high.y - 0.006 && (p[0] - middle).abs() < 0.05;
     let mut min_x = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
     for p in positions.iter().filter(|p| is_rev(p)) {
@@ -487,10 +489,13 @@ mod tests {
         let mut positions = Vec::new();
         for i in 0..REV_LAMPS {
             let x = 0.042 - i as f32 * 0.006;
+            // Match the exported curved row: outer lens bottoms are about
+            // 4.9 mm below the middle lamp's crown.
+            let drop = 0.001 * (x / 0.042).powi(2);
             positions.extend([
-                [x - 0.001, 0.090, -0.024],
-                [x + 0.001, 0.090, -0.024],
-                [x, 0.092, -0.024],
+                [x - 0.001, 0.0888 - drop, -0.024],
+                [x + 0.001, 0.0888 - drop, -0.024],
+                [x, 0.0927 - drop, -0.024],
             ]);
         }
         for (x, y) in [
