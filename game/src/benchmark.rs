@@ -469,7 +469,10 @@ mod tests {
         let root = std::env::var("F1_TEST_ASSETS").expect("F1_TEST_ASSETS");
         let evidence = std::env::var("F1_BENCHMARK_PLAN_OUTPUT")
             .expect("F1_BENCHMARK_PLAN_OUTPUT on disk, not tmpfs");
-        for track in ["spa", "silverstone", "bahrain", "cota"] {
+        for track in ["spa", "silverstone", "bahrain", "cota"]
+            .into_iter()
+            .filter(|track| Options::track_enabled(track))
+        {
             for car in ["rb6", "rb22"] {
                 let output = format!("{evidence}/{track}-{car}");
                 let options = Options::parse(

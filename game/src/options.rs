@@ -37,7 +37,7 @@ pub struct Options {
 impl Options {
     pub const USAGE: &'static str = "usage: f1-the-game [options]
   --assets DIR        asset directory (default: ./assets)
-  --track NAME        track directory under assets/tracks (default: spa)
+  --track NAME        circuit (default: spa; other circuits require an exp build)
   --car rb6|rb22      car and matching AI field (default: rb6, V8 era)
   --laps N            race length (default: 3)
   --opponents N       AI cars (default: 7)
@@ -219,7 +219,23 @@ impl Options {
         if options.capture.is_some() && options.frames.is_none() {
             return Err("--capture requires --frames".into());
         }
+        options.validate_track()?;
         Ok(options)
+    }
+
+    pub fn track_enabled(track: &str) -> bool {
+        track == "spa" || cfg!(feature = "exp")
+    }
+
+    pub fn validate_track(&self) -> Result<(), String> {
+        if Self::track_enabled(&self.track) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Only Spa is supported in this build. Track '{}' requires the experimental build (cargo build --release -p f1-the-game --features exp).",
+                self.track
+            ))
+        }
     }
 
     pub fn player_assists(&self) -> Assists {
@@ -312,6 +328,28 @@ mod tests {
     fn audio_starts_enabled_unless_muted() {
         assert!(!parse(&[]).unwrap().mute);
         assert!(parse(&["--mute"]).unwrap().mute);
+    }
+
+    #[test]
+    fn unfinished_tracks_require_the_exp_build() {
+        assert_eq!(parse(&[]).unwrap().track, "spa");
+        assert!(parse(&["--track", "spa"]).is_ok());
+        for track in ["silverstone", "bahrain", "cota", "other", "../tracks/spa"] {
+            let result = parse(&["--track", track]);
+            assert_eq!(result.is_ok(), cfg!(feature = "exp"), "{track}");
+            if let Err(error) = result {
+                assert!(error.contains("--features exp"));
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(not(feature = "exp"))]
+    fn race_loading_rejects_experimental_tracks_even_without_cli_parsing() {
+        let mut options = parse(&[]).unwrap();
+        options.track = "silverstone".into();
+        let error = crate::assets::load_race(&options).err().unwrap();
+        assert!(error.contains("Only Spa is supported"), "{error}");
     }
 
     #[test]

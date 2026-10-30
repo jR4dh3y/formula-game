@@ -37,7 +37,7 @@ name: `silverstone`, `bahrain`, `cota`. For example:
 ```sh
 ZIP_DIR=/home/radhey/code/f1-the-game tools/build_assets.sh silverstone
 cargo run --release -p f1-the-game -- --list-tracks
-cargo run --release -p f1-the-game -- --track silverstone
+cargo run --release -p f1-the-game --features exp -- --track silverstone
 ```
 
 Launch without `--track` to choose a circuit and setup in the HUD menu. Arrow keys
@@ -119,6 +119,7 @@ spent off racing surfaces. Review the two debug PNGs for every circuit, then run
 and inspect a GPU capture:
 
 ```sh
+# Build with --features exp before testing an unfinished circuit.
 ./target/release/f1-the-game --track silverstone --frames 300 --capture /tmp/f1-silverstone.png
 ```
 

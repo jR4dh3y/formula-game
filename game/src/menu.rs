@@ -72,12 +72,19 @@ impl Catalog {
     pub fn discover(root: &Path) -> Self {
         let mut catalog = Self::default();
         for (directory, deferred) in [("tracks", false), ("deferred", true)] {
+            if deferred && !cfg!(feature = "exp") {
+                continue;
+            }
             let Ok(entries) = std::fs::read_dir(root.join(directory)) else {
                 continue;
             };
             for entry in entries.flatten() {
                 let path = entry.path();
                 if !path.is_dir() {
+                    continue;
+                }
+                let id = entry.file_name().to_string_lossy().into_owned();
+                if !Options::track_enabled(&id) {
                     continue;
                 }
                 let summary = std::fs::read(path.join("track.json"))
@@ -105,7 +112,7 @@ impl Catalog {
                     })
                     .sum();
                 catalog.circuits.push(Circuit {
-                    id: entry.file_name().to_string_lossy().into_owned(),
+                    id,
                     name: summary.name,
                     length,
                     outline: summary.centerline,
@@ -1070,7 +1077,8 @@ mod tests {
                 .as_nanos()
         ));
         for (directory, complete) in [
-            ("tracks/ready", true),
+            ("tracks/spa", true),
+            ("tracks/silverstone", true),
             ("tracks/missing", false),
             ("deferred/needs-repair", true),
         ] {
@@ -1084,25 +1092,37 @@ mod tests {
             }
         }
         let catalog = Catalog::discover(&root);
-        assert_eq!(catalog.circuits.len(), 3);
+        assert_eq!(
+            catalog.circuits.len(),
+            if cfg!(feature = "exp") { 4 } else { 1 }
+        );
         assert_eq!(
             catalog
                 .circuits
                 .iter()
                 .filter(|track| track.unavailable.is_none())
                 .count(),
-            1
+            if cfg!(feature = "exp") { 2 } else { 1 }
         );
-        assert_eq!(catalog.circuits[0].id, "ready");
-        assert!(catalog
-            .circuits
-            .iter()
-            .find(|track| track.id == "needs-repair")
-            .unwrap()
-            .unavailable
-            .as_ref()
-            .unwrap()
-            .contains("deferred"));
+        assert!(catalog.circuits.iter().any(|track| track.id == "spa"));
+        assert_eq!(
+            catalog
+                .circuits
+                .iter()
+                .any(|track| track.id == "silverstone"),
+            cfg!(feature = "exp")
+        );
+        if cfg!(feature = "exp") {
+            assert!(catalog
+                .circuits
+                .iter()
+                .find(|track| track.id == "needs-repair")
+                .unwrap()
+                .unavailable
+                .as_ref()
+                .unwrap()
+                .contains("deferred"));
+        }
         std::fs::remove_dir_all(root).unwrap();
     }
 }

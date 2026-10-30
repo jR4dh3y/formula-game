@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render a complete deterministic lap and recovery for each playable non-Spa map.
+# Render a complete deterministic lap and recovery for each experimental non-Spa map.
 # Assets are read only. Each run gets its own compositor and output directory.
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -31,7 +31,7 @@ output=$(realpath -m -- "$2")
 # A fresh directory prevents stale screenshots/status from masking a failed run.
 mkdir -- "$output"
 cd "$repo"
-executable=$(cargo test --release -p f1-the-game --bin f1-the-game --no-run --message-format=json |
+executable=$(cargo test --release -p f1-the-game --features exp --bin f1-the-game --no-run --message-format=json |
     python3 -c 'import json,sys; records=[json.loads(line) for line in sys.stdin]; print(next(r["executable"] for r in records if r.get("reason")=="compiler-artifact" and r.get("profile",{}).get("test") and r.get("executable")))')
 # Freeze the binary: another worktree can rebuild the shared Cargo target while
 # the compositor is running. Never execute a subsequently replaced test binary.

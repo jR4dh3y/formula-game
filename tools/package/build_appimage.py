@@ -5,6 +5,7 @@ Build host: Arch-compatible Linux with cargo, gcc binutils, pacman/keyring,
 Python, curl, tar/zstd and mksquashfs. Players need none of these tools.
 Official Arch package signatures and the pinned runtime digest are verified.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -99,10 +100,16 @@ def needed(path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--exp", action="store_true", help="build with experimental circuits enabled")
+    args = parser.parse_args()
+    tracks = ["spa", "silverstone", "bahrain", "cota"] if args.exp else ["spa"]
     CACHE.mkdir(parents=True, exist_ok=True)
     DIST.mkdir(exist_ok=True)
-    if not os.environ.get("F1_SKIP_BUILD"):
-        subprocess.run(["cargo", "build", "--release", "--locked", "-p", "f1-the-game"], cwd=ROOT, check=True)
+    build = ["cargo", "build", "--release", "--locked", "-p", "f1-the-game"]
+    if args.exp:
+        build += ["--features", "exp"]
+    subprocess.run(build, cwd=ROOT, check=True)
     if APP.exists():
         shutil.rmtree(APP)
     for directory in ["usr/bin", "usr/lib", "usr/share/f1-racecraft/assets", "usr/share/licenses/f1-racecraft"]:
@@ -115,7 +122,7 @@ def main():
     assets = Path(os.environ.get("F1_PACKAGE_ASSETS", str(ROOT / "assets"))).resolve()
     for category, ids, files in [
         ("cars", ["rb6", "rb22"], ["car.json", "car.glb"]),
-        ("tracks", ["spa", "silverstone", "bahrain", "cota"], ["track.json", "collision.bin", "visual.glb"]),
+        ("tracks", tracks, ["track.json", "collision.bin", "visual.glb"]),
     ]:
         for item in ids:
             destination = APP / "usr/share/f1-racecraft/assets" / category / item
@@ -172,6 +179,7 @@ def main():
     shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "f1-racecraft/FONT-OFL.txt")
     shutil.copy2(ROOT / "game/audio/reference/CREDITS.md", licenses / "f1-racecraft/AUDIO-CREDITS.md")
     shutil.copy2(ROOT / "tools/package/README.md", APP / "README.txt")
+    (APP / "BUILD.json").write_text(json.dumps({"experimental": args.exp, "tracks": tracks}, indent=2))
     manifest = {name: meta for name, (_, meta) in sorted(PACKAGES.items())}
     (APP / "SYSTEM-PACKAGES.json").write_text(json.dumps(manifest, indent=2))
     # Include Rust dependency licensing/source metadata and available license texts.
@@ -196,7 +204,8 @@ def main():
         raise RuntimeError("Runtime checksum mismatch")
     squash = WORK / "payload.squashfs"
     subprocess.run(["mksquashfs", str(APP), str(squash), "-noappend", "-comp", "zstd", "-Xcompression-level", "15", "-processors", "3", "-all-root"], check=True)
-    output = DIST / "F1-Racecraft-0.1.0-linux-x86_64.AppImage"
+    suffix = "-exp" if args.exp else ""
+    output = DIST / f"F1-Racecraft-0.1.0{suffix}-linux-x86_64.AppImage"
     # Automatic no-FUSE fallback, even when this game grows beyond 350 MiB.
     data = runtime.read_bytes().replace(b"URUNTIME_EXTRACT=3", b"URUNTIME_EXTRACT=2")
     with output.open("wb") as target:

@@ -31,7 +31,7 @@ cargo run -p f1-the-game -- --assets /home/radhey/code/f1-the-game/assets
 
 Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
-The menu discovers converted circuits in the selected asset directory. The original asset tree on this machine contains **Spa, Silverstone, Bahrain and COTA**, plus **RB6 and RB22**. Deferred Nürburgring assets remain disabled until their drivable-surface conversion is repaired. To add a circuit, provide `tracks/<id>/{track.json,collision.bin,visual.glb}`. The worktree's ignored `assets` symlink points at the original asset tree for convenient local launching.
+**Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
 The Graphics tab offers Low, Medium, High (default) and Ultra presets, applied immediately and saved with your preferences; `--graphics low|medium|high|ultra` sets one from the command line. Leaving the window during a race opens the pause menu, and rendering is throttled while the window is unfocused.
 
@@ -90,11 +90,16 @@ process and report, and checks that the original race stays paused and intact.
 
 `CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py` builds a single
 `dist/F1-Racecraft-0.1.0-linux-x86_64.AppImage` containing the game, both cars,
-all four playable tracks, sound, fonts and runtime libraries. Send that file;
+Spa, sound, fonts and runtime libraries. Send that file;
 players do not need Rust, the repository, separate assets or FUSE installed.
 They need an x86-64 Linux desktop (kernel 6.1+) and a working Vulkan GPU driver. The image
 automatically extracts and runs when mounting is unavailable. See
 [packaging notes](tools/package/README.md) for controls, rebuilding and provenance.
+
+For an experimental package containing the other converted tracks, run
+`CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py --exp`. This compiles
+with `--features exp` and writes `dist/F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage`.
+Normal packaging always builds without `exp` and includes only Spa.
 
 ## Controls
 
@@ -163,7 +168,7 @@ cargo test -p f1-the-game live_engine_playback -- --ignored --nocapture
 
 Capture counts frames after scene loading and exits after writing the image. Missing assets and screenshot-write errors return a failing exit code. Spa integration tests print a skip notice when no generated assets are available; use `F1_TEST_ASSETS` to run them against an external tree.
 
-The ignored renderer tests need a Vulkan-capable display. The gameplay check verifies scene hierarchy, car materials, driving, all three cameras, pause/resume and recovery, and writes grid/cockpit/onboard/paused/racing/results screenshots plus both instrument layouts and both map modes under `/tmp/f1-bevy-proof`. Its results screenshot uses a forced finish state; race completion is covered by the simulation tests. The menu check clicks actual egui tabs, aid presets, both HUD/map selectors and Start, switches through all four circuits and both cars, checks that old scene roots are removed, and confirms live aid changes while paused. Set `F1_TEST_OUTPUT` to choose a capture directory. `tools/verify_hud.sh` runs these checks on an isolated Weston/XWayland display and captures landscape and tall-window layouts; it requires Weston and a Vulkan-capable GPU. The existing Spa AI lap-time benchmark still fails its unchanged target; see MIGRATION.md for the baseline comparison.
+The ignored renderer tests need a Vulkan-capable display. The gameplay check verifies scene hierarchy, car materials, driving, all three cameras, pause/resume and recovery, and writes grid/cockpit/onboard/paused/racing/results screenshots plus both instrument layouts and both map modes under `/tmp/f1-bevy-proof`. Its results screenshot uses a forced finish state; race completion is covered by the simulation tests. The menu check clicks actual egui tabs, aid presets, both HUD/map selectors and Start, switches through Spa and both cars (all four circuits with `--features exp`), checks that old scene roots are removed, and confirms live aid changes while paused. Set `F1_TEST_OUTPUT` to choose a capture directory. `tools/verify_hud.sh` runs these checks on an isolated Weston/XWayland display and captures landscape and tall-window layouts; it requires Weston and a Vulkan-capable GPU. The existing Spa AI lap-time benchmark still fails its unchanged target; see MIGRATION.md for the baseline comparison.
 
 The CLI exit test launches separate game processes, quits after 1 and 12 frames, captures the first frame, and checks a failed screenshot write. Pipeline compilation runs on Bevy's render thread to prevent early shutdown racing a background GPU compiler worker. First-use pipeline compilation can block a frame; this avoids the reproduced NVIDIA teardown crash.
 

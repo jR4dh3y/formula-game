@@ -471,6 +471,7 @@ const AI_NAMES: [&str; 15] = [
 ];
 
 pub fn load_race(options: &Options) -> Result<Race, String> {
+    options.validate_track()?;
     let root = &options.assets;
     let track_dir = root.join("tracks").join(&options.track);
     for path in [

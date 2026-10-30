@@ -347,11 +347,20 @@ struct MenuProbe {
     completed: Arc<std::sync::atomic::AtomicBool>,
 }
 
+#[cfg(feature = "exp")]
 const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
     ("silverstone", "rb22", camera::Mode::Cockpit),
     ("bahrain", "rb6", camera::Mode::Tv),
     ("cota", "rb22", camera::Mode::Chase),
     ("spa", "rb6", camera::Mode::Cockpit),
+];
+
+#[cfg(not(feature = "exp"))]
+const MENU_CASES: [(&str, &str, camera::Mode); 4] = [
+    ("spa", "rb22", camera::Mode::Cockpit),
+    ("spa", "rb6", camera::Mode::Tv),
+    ("spa", "rb6", camera::Mode::Chase),
+    ("spa", "rb22", camera::Mode::Chase),
 ];
 
 const HUD_CASES: [hud::Settings; 4] = [
@@ -383,7 +392,7 @@ fn choose_menu_case(frontend: &mut menu::Frontend, index: usize) {
 
 fn menu_click(
     probe: &mut MenuProbe,
-    inputs: &mut Query<&mut bevy_egui::EguiInput>,
+    inputs: &mut Query<&mut bevy_egui::EguiInput, With<bevy_egui::PrimaryEguiContext>>,
     frontend: &menu::Frontend,
     name: &str,
 ) {
@@ -436,7 +445,7 @@ fn menu_probe(
     session: Res<Session>,
     options: Res<Options>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
-    mut inputs: Query<&mut bevy_egui::EguiInput>,
+    mut inputs: Query<&mut bevy_egui::EguiInput, With<bevy_egui::PrimaryEguiContext>>,
     roots: Query<(), With<assets::RaceVisualRoot>>,
     cameras: Query<(), With<Camera3d>>,
     steering_wheels: Query<&assets::SteeringWheelVisual>,

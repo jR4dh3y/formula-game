@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn menu_launch_uses_selected_settings_and_the_normal_cli_contract() {
         let mut draft = Options::parse(std::iter::empty()).unwrap();
-        draft.track = "cota".into();
+        draft.track = if cfg!(feature = "exp") { "cota" } else { "spa" }.into();
         draft.car = "rb22".into();
         draft.camera = Mode::Cockpit;
         let args = arguments(
@@ -210,7 +210,7 @@ mod tests {
         );
         let parsed =
             Options::parse(args.into_iter().map(|arg| arg.into_string().unwrap())).unwrap();
-        assert_eq!(parsed.track, "cota");
+        assert_eq!(parsed.track, draft.track);
         assert_eq!(parsed.car, "rb22");
         assert_eq!(parsed.camera, Mode::Cockpit);
         assert_eq!((parsed.width, parsed.height), (958, 1078));

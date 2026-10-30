@@ -6,7 +6,7 @@ Make the AppImage executable and open it:
     ./F1-Racecraft-0.1.0-linux-x86_64.AppImage
 
 Only that AppImage needs to be sent to another player. It contains the game,
-RB6/RB22, Spa/Silverstone/Bahrain/COTA, engine audio, fonts, runtime libraries
+RB6/RB22, Spa, engine audio, fonts, runtime libraries
 and a matching libc/loader. No Rust, separate assets, installer, root access,
 network download or FUSE installation is needed. When mounting is unavailable,
 the embedded runtime extracts to temporary storage and cleans up after exit.
@@ -23,6 +23,15 @@ guidance, corner braking and automatic gears. Manual steering overrides guidance
 Build again from the repository:
 
     CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py
+
+The normal build supports Spa only. To include unfinished Silverstone, Bahrain
+and COTA, use the experimental package command:
+
+    CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py --exp
+
+This enables Cargo's `exp` feature and creates
+F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage. Experimental tracks are available
+only in this opt-in build. BUILD.json inside the image records the included tracks.
 
 F1_PACKAGE_ASSETS can select the converted assets directory. Build downloads
 are cached under target/packaging. Official generic x86-64 Arch runtime library

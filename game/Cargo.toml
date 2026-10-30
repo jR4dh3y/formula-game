@@ -13,6 +13,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [features]
+# Unfinished circuits; normal builds support Spa only.
+exp = []
 # `cargo run --release -p f1-the-game --features profile` writes a Chrome trace
 # (trace-*.json) of every system and render pass; open it in ui.perfetto.dev.
 profile = ["bevy/trace_chrome"]
