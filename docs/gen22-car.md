@@ -118,7 +118,7 @@ Liveries use team colours and the team name only. Real sponsor logos are not use
 ## Conversion and verification
 
 `tools/car/build_gen22.sh` runs conversion, livery generation and clean Blender
-re-import checks. `GEN22_SOURCE`, `GEN22_BAKE`, `BLENDER`, `PYTHON` and its optional
+re-import checks. `GEN22_SOURCE`, `GEN22_BAKE`, `GEN22_OVERRIDES`, `BLENDER`, `PYTHON` and its optional
 output-directory argument override the default paths. Python requires NumPy and
 Pillow; Blender supplies its own NumPy. Blender scripts fail the shell build with
 `--python-exit-code 1`.
@@ -270,3 +270,7 @@ The wheel has separate material instances for readable carbon and controls,
 plus a short-range cockpit daylight fill. Car body materials retain their own
 calibration. Only the fifteen top-row lamps respond to RPM/start lights; side
 warning lamps retain their geometry and stay off.
+
+`GEN22_OVERRIDES` selects the source override directory for a full car build
+(default `raw/gen22/liveries`). Match it to the importer’s `--overrides` path so
+custom textures are reapplied on regeneration.

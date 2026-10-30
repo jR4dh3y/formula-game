@@ -105,7 +105,10 @@ def validate_gen22_assets(directory):
         path = directory / name
         if not path.is_file():
             raise RuntimeError(f"Missing GEN22 asset: {path}")
+    from PIL import Image
     roster = json.loads((directory / "teams.json").read_text())
+    if not roster["teams"]:
+        raise RuntimeError("GEN22 roster must not be empty")
     for team in roster["teams"]:
         paths = [Path("paint.png"), Path("suit.png")]
         paths += [Path(driver["id"]) / "helmet.png" for driver in team["drivers"]]
@@ -113,6 +116,13 @@ def validate_gen22_assets(directory):
             path = directory / "liveries" / team["id"] / relative
             if not path.is_file():
                 raise RuntimeError(f"Missing GEN22 livery texture: {path}")
+            try:
+                with Image.open(path) as image:
+                    if image.format != 'PNG' or image.size != (2048, 2048):
+                        raise ValueError('expected a 2048x2048 PNG')
+                    image.load()
+            except (OSError, ValueError) as error:
+                raise RuntimeError(f"Invalid GEN22 livery texture: {path}: {error}") from error
 
 
 def main():

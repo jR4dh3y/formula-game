@@ -30,6 +30,13 @@ class CheckerTests(unittest.TestCase):
                     path.parent.mkdir(parents=True, exist_ok=True)
                     Image.new('RGB', (2048, 2048)).save(path)
                 checker.main()
+                path = root / 'liveries/test/paint.png'
+                Image.new('RGB', (512, 512)).save(path)
+                with self.assertRaises(AssertionError):
+                    checker.main()
+                (root / 'teams.json').write_text('{"teams": []}')
+                with self.assertRaisesRegex(AssertionError, 'teams must not be empty'):
+                    checker.main()
 
 
 if __name__ == '__main__':

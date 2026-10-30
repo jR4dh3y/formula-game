@@ -5,7 +5,7 @@
 //! tick directly makes the car judder against the smoothly moving camera;
 //! drawing between the last two ticks keeps motion even.
 
-use glam::DVec3;
+use glam::{DQuat, DVec3, EulerRot};
 use racecraft_sim::{Car, Race};
 use std::f64::consts::{PI, TAU};
 
@@ -39,6 +39,22 @@ impl Pose {
             steer: car.steer_angle,
             wheels: std::array::from_fn(|index| car.wheels[index].rotation),
             ground: std::array::from_fn(|index| car.wheels[index].ground_height),
+        }
+    }
+
+    fn resample_ground(
+        &mut self,
+        collision: &racecraft_sim::track::CollisionWorld,
+        wheels: &[racecraft_sim::WheelSpec; 4],
+    ) {
+        let rotation = DQuat::from_euler(EulerRot::YXZ, self.yaw, -self.pitch, self.roll);
+        for (index, wheel) in wheels.iter().enumerate() {
+            let position = self.origin + rotation * wheel.position;
+            if let Some(hit) =
+                collision.ground(DVec3::new(position.x, self.ground[index] + 1.5, position.z))
+            {
+                self.ground[index] = hit.height;
+            }
         }
     }
 
@@ -84,7 +100,9 @@ impl Poses {
         match self.previous.get(index) {
             // Recovered cars must not sweep across the track.
             Some(previous) if previous.origin.distance(current.origin) < TELEPORT => {
-                previous.lerp(&current, t.clamp(0., 1.))
+                let mut pose = previous.lerp(&current, t.clamp(0., 1.));
+                pose.resample_ground(&race.track.collision, &race.entrants[index].car.spec.wheels);
+                pose
             }
             _ => current,
         }
@@ -94,6 +112,47 @@ impl Poses {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rendered_contacts_follow_a_step_instead_of_blending_road_heights() {
+        let mut bytes = b"F1CL".to_vec();
+        for value in [1_u32, 4, 0] {
+            bytes.extend(value.to_le_bytes());
+        }
+        for (z0, z1, height) in [(-4_f32, 0_f32, 0_f32), (0., 4., 0.2)] {
+            let a = [-5., height, z0];
+            let b = [5., height, z0];
+            let c = [-5., height, z1];
+            let d = [5., height, z1];
+            for vertex in [a, c, b, b, c, d] {
+                for value in vertex {
+                    bytes.extend(value.to_le_bytes());
+                }
+            }
+        }
+        bytes.extend([0_u8; 4]);
+        let collision = racecraft_sim::track::CollisionWorld::from_bytes(&bytes).unwrap();
+        let session = crate::tests::session();
+        let car = &session.race.entrants[0].car;
+        let mut before = Pose::of(car);
+        before.origin = DVec3::new(0., 0., -1.8);
+        before.yaw = 0.;
+        before.pitch = 0.;
+        before.roll = 0.;
+        before.ground = [0.; 4];
+        let mut after = before;
+        after.origin.z = -1.6;
+        after.ground = [0.2, 0.2, 0., 0.];
+        for (fraction, expected) in [(0.25, 0.), (0.75, 0.2)] {
+            let mut rendered = before.lerp(&after, fraction);
+            assert!((rendered.ground[0] - expected).abs() > 0.01);
+            rendered.resample_ground(&collision, &car.spec.wheels);
+            for height in &rendered.ground[..2] {
+                assert!((*height - expected).abs() < 1e-6);
+            }
+            assert_eq!(&rendered.ground[2..], &[0., 0.]);
+        }
+    }
 
     #[test]
     fn yaw_blends_across_the_wrap_and_teleports_snap() {

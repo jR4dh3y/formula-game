@@ -167,6 +167,7 @@ def main():
     teams_path = args.directory/'teams.json'
     assert teams_path.is_file(), teams_path
     teams = json.loads(teams_path.read_text())
+    assert teams['teams'], 'teams must not be empty'
     for team in teams['teams']:
         paths = [Path('paint.png'),Path('suit.png')]+[Path(d['id'])/'helmet.png' for d in team['drivers']]
         for file in paths:

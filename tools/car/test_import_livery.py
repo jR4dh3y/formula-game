@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from PIL import Image
 
 spec = importlib.util.spec_from_file_location('import_livery', Path(__file__).with_name('import_livery.py'))
@@ -52,6 +53,31 @@ class ImportTests(unittest.TestCase):
                            {'paint': self.input, 'suit': invalid})
         self.assertEqual((self.directory / 'paint.png').read_bytes(), previous)
         self.assertFalse(self.overrides.exists())
+
+    def test_late_publish_failure_restores_live_and_persistent_bytes(self):
+        persistent = self.overrides / 'ferrari/paint.png'
+        persistent.parent.mkdir(parents=True)
+        persistent.write_bytes(b'previous persistent bytes')
+        paths = [self.directory / 'paint.png', self.directory / 'suit.png', persistent]
+        before = {path: path.read_bytes() for path in paths}
+        replace = Path.replace
+        failed = False
+
+        def fail_late(path, target):
+            nonlocal failed
+            if Path(target) == self.directory / 'suit.png' and not failed:
+                failed = True
+                raise PermissionError('injected late publish failure')
+            return replace(path, target)
+
+        with patch.object(Path, 'replace', fail_late), self.assertRaises(PermissionError):
+            module.install(self.assets, self.overrides, self.roster, 'ferrari', '',
+                           {'paint': self.input, 'suit': self.input})
+        self.assertTrue(failed)
+        for path, data in before.items():
+            self.assertEqual(path.read_bytes(), data)
+        self.assertFalse((self.overrides / 'ferrari/suit.png').exists())
+        self.assertFalse(list(self.root.rglob('.gen22-*')))
 
     def test_unknown_identity_is_rejected(self):
         for team, driver in [('missing', 'leclerc'), ('ferrari', 'missing'), ('../escape', '')]:

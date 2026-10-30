@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 import re
 import struct
+import stat
+import tempfile
 
 from PIL import Image, ImageDraw
 
@@ -49,15 +51,52 @@ def install(directory, overrides, roster, team_id, driver_id, images):
         pending.append((relative, png_bytes(source, directory / 'liveries' / relative)))
     if not pending:
         raise ValueError('Supply at least one of --paint, --suit or --helmet')
-    # Decode every input before replacing any atlas, so a bad second input leaves
-    # the existing textures intact. Originals in raw survive future asset builds.
-    for relative, data in pending:
-        for root in (overrides, directory / 'liveries'):
-            destination = root / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            temporary = destination.with_suffix('.png.tmp')
-            temporary.write_bytes(data)
+    # Stage every new image and every rollback copy before publishing any of
+    # them. A later rename failure must not leave a new persistent override.
+    staged = []
+    backups = {}
+    published = []
+    keep = set()
+    try:
+        for relative, data in pending:
+            for root in (overrides, directory / 'liveries'):
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.NamedTemporaryFile(prefix='.gen22-import-', dir=destination.parent, delete=False) as file:
+                    temporary = Path(file.name)
+                    staged.append((temporary, destination))
+                    file.write(data)
+                temporary.chmod(stat.S_IMODE(destination.stat().st_mode) if destination.exists() else 0o644)
+                backups[destination] = None
+                if destination.exists():
+                    with tempfile.NamedTemporaryFile(prefix='.gen22-backup-', dir=destination.parent, delete=False) as file:
+                        backup = Path(file.name)
+                        backups[destination] = backup
+                        file.write(destination.read_bytes())
+                    backup.chmod(stat.S_IMODE(destination.stat().st_mode))
+        for temporary, destination in staged:
             temporary.replace(destination)
+            published.append(destination)
+    except BaseException as original:
+        failed = []
+        for destination in reversed(published):
+            backup = backups[destination]
+            try:
+                if backup is None:
+                    destination.unlink(missing_ok=True)
+                else:
+                    backup.replace(destination)
+            except OSError:
+                if backup is not None:
+                    keep.add(backup)
+                failed.append(str(destination))
+        if failed:
+            raise RuntimeError('Livery rollback failed; backup files retained for: ' + ', '.join(failed)) from original
+        raise
+    finally:
+        for path in [temp for temp, _ in staged] + [backup for backup in backups.values() if backup is not None]:
+            if path not in keep:
+                path.unlink(missing_ok=True)
     return [directory / 'liveries' / relative for relative, _ in pending]
 
 
@@ -133,7 +172,7 @@ def main():
                                 {'paint': args.paint, 'suit': args.suit, 'helmet': args.helmet}):
                 print('IMPORTED', path)
             print('Restart the game, then select the team/driver in Race setup.')
-    except (OSError, ValueError, KeyError) as error:
+    except (OSError, ValueError, KeyError, RuntimeError) as error:
         parser.exit(1, f'Livery import failed: {error}\n')
 
 

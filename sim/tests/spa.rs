@@ -9,18 +9,58 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 fn assets() -> Option<PathBuf> {
-    let root = std::env::var_os("F1_TEST_ASSETS")
+    let explicit = std::env::var_os("F1_TEST_ASSETS");
+    let root = explicit
+        .as_ref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets"));
-    [
+    checked_assets(root, explicit.is_some())
+}
+
+fn checked_assets(root: PathBuf, explicit: bool) -> Option<PathBuf> {
+    let missing: Vec<_> = [
         "tracks/spa/track.json",
         "tracks/spa/collision.bin",
         "cars/gen22/car.json",
         "cars/rb6/car.json",
     ]
-    .iter()
-    .all(|path| root.join(path).is_file())
-    .then_some(root)
+    .into_iter()
+    .filter(|path| !root.join(path).is_file())
+    .collect();
+    assert!(
+        !explicit || missing.is_empty(),
+        "F1_TEST_ASSETS {} is incomplete; missing: {}",
+        root.display(),
+        missing.join(", ")
+    );
+    missing.is_empty().then_some(root)
+}
+
+#[test]
+fn explicit_partial_assets_fail_while_default_assets_can_skip() {
+    let root = std::env::temp_dir().join(format!(
+        "f1-spa-partial-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(root.join("tracks/spa")).unwrap();
+    std::fs::write(root.join("tracks/spa/track.json"), b"{}").unwrap();
+    assert!(checked_assets(root.clone(), false).is_none());
+    assert!(std::panic::catch_unwind(|| checked_assets(root.clone(), true)).is_err());
+    for name in [
+        "tracks/spa/collision.bin",
+        "cars/gen22/car.json",
+        "cars/rb6/car.json",
+    ] {
+        let path = root.join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, b"fixture").unwrap();
+    }
+    assert_eq!(checked_assets(root.clone(), true), Some(root.clone()));
+    std::fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

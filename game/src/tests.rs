@@ -163,6 +163,8 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
     state.drs_open = true;
     state.race.entrants[0].car.steer_angle = 0.2;
     state.race.entrants[0].car.wheels[0].rotation = 1.7;
+    state.race.entrants[0].car.wheels[0].ground_height = 0.1;
+    state.race.entrants[0].car.wheels[1].ground_height = 0.35;
     state.poses.record(&state.race);
     app.insert_resource(state)
         .init_resource::<Time<Fixed>>()
@@ -172,9 +174,18 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
         assets::RigKind::Steering,
         assets::RigKind::Upright,
         assets::RigKind::Drs,
+        assets::RigKind::Upright,
     ]
     .into_iter()
-    .map(|kind| {
+    .enumerate()
+    .map(|(index, kind)| {
+        let rest = if index == 1 {
+            rest.with_translation(Vec3::new(0.8, 0.6, 0.7))
+        } else if index == 3 {
+            rest.with_translation(Vec3::new(-0.8, 0.6, 0.7))
+        } else {
+            rest
+        };
         app.world_mut()
             .spawn((
                 assets::RigPart {
@@ -187,18 +198,40 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
             .id()
     })
     .collect();
+    let body = app
+        .world_mut()
+        .spawn((assets::CarVisual(0), Transform::default()))
+        .id();
     app.update();
+    let chassis = app.world().get::<Transform>(body).unwrap();
     for (entity, rotation) in entities.iter().zip([
         Quat::from_rotation_z(-1.2),
         Quat::from_rotation_y(0.2),
         Quat::from_rotation_x(-0.25),
+        Quat::from_rotation_y(0.2),
     ]) {
         let transform = app.world().get::<Transform>(*entity).unwrap();
-        if *entity != entities[1] {
+        if *entity != entities[1] && *entity != entities[3] {
             assert_eq!(transform.translation, rest.translation);
         } else {
-            // The upright follows the road-contact hub, independently of chassis heave.
-            assert!(transform.translation.y < rest.translation.y);
+            let wheel_index = if *entity == entities[1] { 0 } else { 1 };
+            let state = app.world().resource::<Session>();
+            let car = &state.race.entrants[0].car;
+            let wheel = &car.spec.wheels[wheel_index];
+            let mut lowest = f32::INFINITY;
+            for side in [-0.5, 0.5] {
+                for step in 0..720 {
+                    let angle = step as f32 * std::f32::consts::TAU / 720.;
+                    let vertex = Vec3::new(
+                        side * wheel.width as f32,
+                        angle.cos() * wheel.radius as f32,
+                        angle.sin() * wheel.radius as f32,
+                    );
+                    lowest =
+                        lowest.min(chassis.transform_point(transform.transform_point(vertex)).y);
+                }
+            }
+            assert!((lowest - car.wheels[wheel_index].ground_height as f32).abs() < 1e-4);
         }
         assert!(transform
             .rotation
@@ -302,6 +335,16 @@ fn drs_flap_control_opens_in_racing_and_braking_closes_it() {
         .press(KeyCode::KeyS);
     app.update();
     assert!(!app.world().resource::<Session>().drs_open);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut().resource_mut::<Session>().drs_open = true;
+    let mut gamepad = Gamepad::default();
+    gamepad.analog_mut().set(GamepadButton::LeftTrigger2, 0.3);
+    let pad = app.world_mut().spawn(gamepad).id();
+    app.update();
+    assert!(!app.world().resource::<Session>().drs_open);
+    app.world_mut().despawn(pad);
     app.world_mut().resource_mut::<Session>().screen = menu::Screen::Paused;
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()

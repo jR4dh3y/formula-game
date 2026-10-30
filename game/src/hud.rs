@@ -583,22 +583,36 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
         ink,
         &format!("{lap}/{}", race.laps),
     );
-    readout(
-        hud,
-        style,
-        14. * scale,
+    let team_position = format!(
+        "{}  P{}",
+        session
+            .identities
+            .get(session.player)
+            .and_then(Option::as_ref)
+            .map_or("", |id| id.team_short.as_str()),
+        race.position_of(session.player)
+    );
+    // Reserve room for LAP and even a three-digit lap count. Fit using the
+    // actual font, since equal character counts can have very different widths.
+    let team_width = 142. * scale;
+    let font_size = 18.2 * scale;
+    let measured = hud.text_width(&style.regular, font_size, &team_position);
+    let fitted = font_size * (team_width / measured.max(1.)).min(1.);
+    let team_hud = Hud {
+        painter: hud.painter.with_clip_rect(egui::Rect::from_min_max(
+            egui::pos2(tower_x + tower_w - 12. * scale - team_width, y),
+            egui::pos2(tower_x + tower_w - 12. * scale, y + 35. * scale),
+        )),
+        size: hud.size,
+        finish: hud.finish,
+    };
+    team_hud.text_mid(
+        &style.regular,
+        fitted,
         (tower_x + tower_w - 12. * scale, mid),
         Align::Right,
         dim,
-        &format!(
-            "{}  P{}",
-            session
-                .identities
-                .get(session.player)
-                .and_then(Option::as_ref)
-                .map_or("", |id| id.team_short.as_str()),
-            race.position_of(session.player)
-        ),
+        &team_position,
     );
     y += 38. * scale;
     let leader_distance = race.entrants[race.order()[0]].timing.distance;

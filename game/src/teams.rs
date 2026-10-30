@@ -79,9 +79,12 @@ impl Teams {
                     team.id
                 ));
             }
-            if team.short.trim().is_empty() || team.short.chars().count() > 12 {
+            if team.short.trim().is_empty()
+                || team.short.chars().count() > 12
+                || team.short.chars().any(char::is_control)
+            {
                 return Err(format!(
-                    "team short label must contain 1..=12 characters: {}",
+                    "team short label must contain 1..=12 printable characters: {}",
                     team.id
                 ));
             }
@@ -309,7 +312,14 @@ mod tests {
     fn runtime_rosters_enforce_short_label_character_limit() {
         let mut value: serde_json::Value =
             serde_json::from_slice(include_bytes!("../../tools/car/teams.json")).unwrap();
-        for label in ["", "             ", "1234567890123"] {
+        for label in [
+            "",
+            "             ",
+            "1234567890123",
+            "FE\nR",
+            "FE\tR",
+            "FE\0R",
+        ] {
             value["teams"][0]["short"] = label.into();
             assert!(Teams::parse(&serde_json::to_vec(&value).unwrap()).is_err());
         }

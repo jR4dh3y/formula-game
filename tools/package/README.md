@@ -20,7 +20,7 @@ Controls: W/S throttle/brake; A/D steer; E/Q shift; C or 1/2/3 camera;
 F4 adjust camera; Esc menu; R recover; M mute. Beginner aids include steering
 guidance, corner braking and automatic gears. Manual steering overrides guidance.
 
-Build again from the repository:
+Build again from the repository (Python requires Pillow for texture validation):
 
     CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py
 
