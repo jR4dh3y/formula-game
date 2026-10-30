@@ -1,10 +1,65 @@
-# F1 Racecraft
+# Formula Game — F1 Racecraft
 
-Bevy is the sole active game engine. New gameplay, rendering, input, audio and UI work belongs in `game/` and `sim/`. The previous custom engine and its original client are preserved as a frozen, independent workspace under [archive/custom-engine](archive/custom-engine/README.md); do not add features there or restore it as an active dependency.
+A formula-style racing game built with Rust and Bevy. Race at Spa-Francorchamps
+with the RB6 or RB22, configurable driving aids, AI opponents, and three camera views.
+
+![RB22 at Spa-Francorchamps in chase view](docs/screenshots/spa-chase.png)
+
+## Download and play
+
+Get the Linux x86-64 AppImages from the [latest release](https://github.com/jR4dh3y/formula-game/releases/latest).
+Both are self-contained: game assets, both cars, audio, fonts, and runtime libraries
+are included. You do not need Rust or a separate assets download to play.
+
+- **[Normal build](https://github.com/jR4dh3y/formula-game/releases/download/v0.1.0/F1-Racecraft-0.1.0-linux-x86_64.AppImage)** — the recommended build. Spa is the only supported circuit; unfinished circuits are disabled.
+- **[Experimental build](https://github.com/jR4dh3y/formula-game/releases/download/v0.1.0/F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage)** — adds Silverstone, Bahrain, and COTA. These circuits still need work. This build is compiled with `--features exp`.
+
+Requires an x86-64 Linux desktop, kernel 6.1 or newer, and a Vulkan-capable GPU
+with a working system driver. Windows and macOS binaries are not provided.
+
+```sh
+chmod +x F1-Racecraft-0.1.0-linux-x86_64.AppImage
+./F1-Racecraft-0.1.0-linux-x86_64.AppImage
+```
+
+Use the `-exp` filename in those commands for the experimental build. The AppImages
+fall back to extraction if FUSE mounting is unavailable. Release assets include
+`SHA256SUMS`; download it alongside an AppImage and run `sha256sum --check --ignore-missing SHA256SUMS`.
+
+## What you can do
+
+- Drive the V8-era RB6 or modern RB22 against up to 15 AI opponents.
+- Set race length, grid position, tyres, and front/rear wings.
+- Choose Beginner, Balanced, or Unassisted driving, with separate steering, braking, traction, and stability aids.
+- Switch between cockpit, TV pod, and chase cameras, and save camera positions per car.
+- Choose digital or analog instruments, full-circuit or nearby minimaps, and graphics presets.
+- Select V6 turbo hybrid, V8, or V12 procedural engine voices and adjust the sound mix.
+
+**Start here:** choose your car in Race setup, leave Beginner aids enabled, and
+select Start race. Hold **W** to accelerate, use **A/D** to steer and **S** to brake.
+**Esc** opens the pause menu; **C** cycles cameras; **R** recovers the car.
+
+## Screenshots
+
+RB6 cockpit at Spa, captured from the normal AppImage:
+
+![RB6 cockpit and steering-wheel dashboard at Spa](docs/screenshots/spa-cockpit.png)
+
+Race setup in the normal Spa-only build:
+
+![Race setup with Spa and both car choices](docs/screenshots/race-setup.png)
+
+HUD and minimap settings:
+
+![Digital and analog HUD and minimap settings](docs/screenshots/hud-settings.png)
+
+These are captures from the game, not concept renders.
+
+## Development
 
 A Bevy 0.20 racing game with a deterministic 360 Hz simcade simulation. Select a circuit, car and driving aids from the in-game menu, then race against up to 15 AI drivers. The default RB6 field matches the V8-era sound and proportions; the RB22 provides the modern car and matching field. The simulation includes manual gearing, tyre temperature and wear, wing setup, slipstream, dirty air, car contacts, track collisions, timing and results.
 
-## Run
+### Run from source
 
 Install Rust 1.97.1 or newer and your platform's Bevy build dependencies. On Linux this includes a Vulkan driver, development libraries for Wayland/X11, ALSA and udev, and a linker.
 
@@ -22,12 +77,6 @@ assets/
 ```
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
-
-For the assets already installed on this machine:
-
-```sh
-cargo run -p f1-the-game -- --assets /home/radhey/code/f1-the-game/assets
-```
 
 Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
@@ -81,7 +130,7 @@ reports, screenshot files and repeated drive hashes. It requires Weston and
 a Vulkan-capable GPU. Frame times can differ with GPU load and clock speed;
 the repeatability check compares the workload, not a performance threshold.
 
-`tools/verify_settings.sh ASSETS NEW_OUTPUT_DIRECTORY` checks all six menu
+`tools/verify_settings.sh ASSETS NEW_OUTPUT_DIRECTORY` checks all seven menu
 tabs, pause and camera-editor layouts at 1920×1080, 958×1078 and 640×600. It
 clicks the Benchmark button on the wide layout, waits for the real child
 process and report, and checks that the original race stays paused and intact.
@@ -158,7 +207,7 @@ F1_TEST_ASSETS=/path/to/assets cargo test -p racecraft-sim --test spa -- --nocap
 cargo run -p f1-the-game -- --assets /path/to/assets --frames 180 --capture /tmp/f1-bevy.png
 # Full renderer check with injected controls, camera editor and twelve screenshots:
 F1_TEST_ASSETS=/path/to/assets cargo test -p f1-the-game rendered_game_flows -- --ignored --nocapture
-# Real menu pointer input, live aids, four circuit switches and both car models:
+# Real menu pointer input, live aids, Spa race launches and both car models:
 F1_TEST_ASSETS=/path/to/full/original/assets cargo test -p f1-the-game rendered_menu_and_track_selection -- --ignored --nocapture
 F1_TEST_ASSETS=/path/to/assets cargo test -p f1-the-game --test cli_exit -- --ignored --nocapture
 
@@ -174,9 +223,23 @@ The CLI exit test launches separate game processes, quits after 1 and 12 frames,
 
 ## Code
 
+Bevy is the sole active game engine. Keep game rendering, input, UI, audio and cameras
+in `game/`, physics and race rules in `sim/`, and asset tools in `tools/`.
+The independent `archive/custom-engine/` workspace is frozen and excluded from normal builds.
+
 - `game/`: Bevy app, glTF entities, input, three camera modes, daylight, menus and HUD through `bevy_egui`.
 - `sim/`: renderer-independent physics, AI and race rules. Post-migration polish fixes reverse engine braking, repeated shifts during a torque cut, and stale crash dynamics after recovery while preserving tyre condition and timing.
 - `tools/`: asset converters.
 - `archive/custom-engine/`: complete frozen custom-engine workspace, excluded from the active build. Includes the legacy engine, client, simulation, lockfile and asset tools from the last custom-engine `main` revision.
 
 See [MIGRATION.md](MIGRATION.md) for migration coverage and recorded verification limits. The historical gameplay design in [the archived handoff](archive/custom-engine/handoff.md) also describes future features; those are not all implemented.
+
+## Credits
+
+Track and car assets retain their upstream ownership and attribution; see the
+[asset conversion notes](tools/track/README.md). The repository's historical audio
+sources have [reference credits](game/audio/reference/CREDITS.md) and
+[V8 source credits](game/audio/v8/CREDITS_LICENSE.md); the active voices are procedural.
+The bundled font uses the [SIL Open Font License](game/fonts/OFL.txt).
+AppImages include runtime package metadata and applicable license texts; see the
+[packaging notes](tools/package/README.md).
