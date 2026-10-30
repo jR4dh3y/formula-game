@@ -179,6 +179,11 @@ car ahead at a zone's detection point may open the flap in that zone with F
 closes it. An open flap removes about 10% of the car's drag and some rear
 downforce. The 2010 RB6 predates DRS and has none.
 
+**DRS anywhere** (Driving aids tab, or `--drs-anywhere`) drops the zone and
+one-second rules for your car: F opens the flap anywhere on track from the
+start, and braking still closes it. AI cars keep to the race rules. The
+setting is saved with your other aids.
+
 Import custom car, suit and helmet PNGs with `tools/car/import_livery.py`; it exports matching UV guides and preserves imported artwork through asset rebuilds. See [the PNG workflow](docs/gen22-car.md#importing-your-png-artwork). `tools/car/convert_livery.py` batch-converts the square Monoposto layout used by the Porsche example through authored mesh UV correspondence; see the workflow for layout limits.
 
 

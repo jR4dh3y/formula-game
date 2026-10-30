@@ -891,14 +891,15 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
         })
         .inner;
     ui.separator();
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.checkbox(&mut aids.automatic_gears, "Automatic gears")
             .on_hover_text("Manual shifts: E / Shift up, Q / Ctrl down.");
         ui.checkbox(&mut frontend.show_racing_line, "Racing line");
-        ui.checkbox(&mut aids.drs_anywhere, "DRS anywhere").on_hover_text(
-            "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
+        ui.checkbox(&mut aids.drs_anywhere, "DRS anywhere")
+            .on_hover_text(
+                "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
              AI cars keep to the race rules.",
-        );
+            );
     });
     ui.add_space(8.);
     let count = if ui.available_width() >= 1000. { 2 } else { 1 };

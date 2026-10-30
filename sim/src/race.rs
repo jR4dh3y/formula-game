@@ -706,6 +706,36 @@ mod tests {
     }
 
     #[test]
+    fn drs_anywhere_lets_its_driver_open_the_flap_off_zone_from_lap_one() {
+        let track = Arc::new(crate::track::stadium(800.0, 30.0, Vec::new()));
+        let flap_after_start = |anywhere: bool| {
+            let mut configs = field(1, 0);
+            configs[0].assists.drs_anywhere = anywhere;
+            let mut race = Race::new(track.clone(), configs, 3, 5);
+            let input = [CarInput {
+                throttle: 1.0,
+                drs: true,
+                ..CarInput::default()
+            }];
+            while race.phase != Phase::Racing {
+                race.step(&input);
+            }
+            // Still near the grid: lap one, outside both zones.
+            for _ in 0..(0.5 * PHYSICS_RATE) as usize {
+                race.step(&input);
+            }
+            let car = &race.entrants[0].car;
+            assert!(!race
+                .drs_zones
+                .iter()
+                .any(|zone| zone.contains(&track, car.track_position.s)));
+            car.drs.flap
+        };
+        assert_eq!(flap_after_start(false), 0.0);
+        assert_eq!(flap_after_start(true), 1.0);
+    }
+
+    #[test]
     fn a_field_without_drs_has_no_zones() {
         let track = Arc::new(crate::track::stadium(800.0, 30.0, Vec::new()));
         let mut configs = field(0, 2);
