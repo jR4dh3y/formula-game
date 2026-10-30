@@ -194,7 +194,12 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
         Quat::from_rotation_x(-0.25),
     ]) {
         let transform = app.world().get::<Transform>(*entity).unwrap();
-        assert_eq!(transform.translation, rest.translation);
+        if *entity != entities[1] {
+            assert_eq!(transform.translation, rest.translation);
+        } else {
+            // The upright follows the road-contact hub, independently of chassis heave.
+            assert!(transform.translation.y < rest.translation.y);
+        }
         assert!(transform
             .rotation
             .abs_diff_eq(rest.rotation * rotation, 1e-5));
@@ -236,7 +241,15 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
         .id();
     app.update();
     let transform = app.world().get::<Transform>(wheel).unwrap();
-    assert_eq!(transform.translation, rest.translation);
+    let chassis = app.world().get::<Transform>(body).unwrap();
+    let session = app.world().resource::<Session>();
+    let car = &session.race.entrants[0].car;
+    let axle_y = (chassis.rotation * transform.rotation * Vec3::X).y.abs();
+    let tyre = &car.spec.wheels[0];
+    let bottom = chassis.transform_point(transform.translation).y
+        - tyre.radius as f32 * (1. - axle_y * axle_y).sqrt()
+        - tyre.width as f32 * 0.5 * axle_y;
+    assert!((bottom - car.wheels[0].ground_height as f32).abs() < 1e-4);
     assert!(transform.rotation.abs_diff_eq(
         Quat::from_rotation_y(0.2) * Quat::from_rotation_x(1.4),
         1e-5
@@ -264,6 +277,40 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
         assert!(pose.translation.is_finite());
         assert!(pose.rotation.is_finite());
     }
+}
+
+#[test]
+fn drs_flap_control_opens_in_racing_and_braking_closes_it() {
+    let mut state = session();
+    state.rig.drs.open_angle = -0.25;
+    state.race.phase = racecraft_sim::Phase::Racing;
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(state)
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_systems(Update, controls::update);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyF);
+    app.update();
+    assert!(app.world().resource::<Session>().drs_open);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyS);
+    app.update();
+    assert!(!app.world().resource::<Session>().drs_open);
+    app.world_mut().resource_mut::<Session>().screen = menu::Screen::Paused;
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyF);
+    app.update();
+    assert!(!app.world().resource::<Session>().drs_open);
 }
 
 #[test]

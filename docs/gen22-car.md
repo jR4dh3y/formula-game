@@ -137,8 +137,8 @@ python3 -I tools/car/test_livery.py
 
 The review renderer reads **the exported GLB**, applies Red Bull, Ferrari,
 McLaren and Mercedes textures, and writes front, rear, side, top and cockpit
-views to `/tmp/gen22-previews/`. The source comparison command writes isolated,
-neutral-material steering-wheel and front-wing references to that directory.
+views to a private `/tmp/gen22-previews-*/` directory (or `--output DIR`). The source comparison command writes isolated,
+neutral-material steering-wheel and front-wing references to its output directory.
 The exported comparison images use the corresponding car-relative camera views.
 Cockpit renders hide the driver's own helmet to put the camera at eye level.
 
@@ -219,3 +219,54 @@ a two-car cockpit benchmark with six deterministic captures. The regular
 workspace unit tests, Clippy and formatting checks passed. Legacy RB6 gameplay
 and wide/tall HUD flows remain covered by the renderer checks. A fresh legacy
 RB6 conversion and an AppImage rebuild were not part of this pass.
+
+## Importing your PNG artwork
+
+The game reads separate car, suit and helmet PNGs. Export guide layers from the
+**current exported model** before painting:
+
+```sh
+python3 -I tools/car/import_livery.py --templates raw/gen22/templates
+```
+
+This produces transparent `paint-uv.png`, `suit-uv.png` and
+`helmet_paint-uv.png` guides. Paint on layers above them, hide the guides, then
+export square PNG artwork. Import any combination of the three:
+
+```sh
+python3 -I tools/car/import_livery.py --team ferrari --driver leclerc \
+  --layout gen22 --paint /path/car.png --suit /path/suit.png \
+  --helmet /path/helmet.png
+```
+
+Restart the game and choose that team/driver in Race setup. Paint and suit are
+shared by the team; helmet artwork applies to the selected driver. RGB artwork
+replaces the atlas; transparent RGBA artwork overlays the existing atlas.
+Inputs from 256 to 8192 pixels are resampled to the contracted 2048-pixel size.
+All inputs are validated before any existing textures are replaced.
+
+Imported textures are also stored in `raw/gen22/liveries/` and reapplied by the
+livery generator after every build. `--overrides` changes that source directory
+on both import and generation. Remove the relevant source override and rebuild
+to return to a generated team texture. Generated assets, source overrides and
+PNG guides remain ignored by Git.
+
+**Monoposto 22 PNGs are not Gen22 atlases.** The downloaded
+`fp04rb_new_rig.blend` and `fp04rb.zip` describe our base model's original UVs,
+which also differ from Monoposto's sheet and from our repacked runtime atlas.
+Neither resizing nor renaming those PNGs converts the panel mapping. Transfer
+the design to the exported guides, or supply the matching source mesh/UV
+correspondence for a proper bake. `--layout gen22` explicitly identifies the
+supported import layout; no Monoposto conversion is implied.
+
+## Road contact and cockpit visibility
+
+Wheel hubs and front uprights follow interpolated simulation contact heights;
+chassis heave, pitch and roll no longer lift the tyres with the sprung body.
+Hub placement accounts for the tilted tyre cylinder's lowest point. Close-range
+sun-shadow bias is reduced to keep contact shadows attached.
+
+The wheel has separate material instances for readable carbon and controls,
+plus a short-range cockpit daylight fill. Car body materials retain their own
+calibration. Only the fifteen top-row lamps respond to RPM/start lights; side
+warning lamps retain their geometry and stay off.

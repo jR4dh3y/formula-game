@@ -2,7 +2,7 @@
 # The downloaded blend is data. Its embedded Python must never execute.
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-blender=${BLENDER:-/usr/sbin/blender}
+blender=${BLENDER:-blender}
 python=${PYTHON:-python3}
 source=${GEN22_SOURCE:-$repo/raw/gen22/fp04rb_new_rig.blend}
 output=${1:-${ASSET_DIR:-$repo/assets}/cars/gen22}

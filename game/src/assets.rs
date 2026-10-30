@@ -456,6 +456,24 @@ fn pose_transform(pose: &Pose) -> Transform {
         ))
 }
 
+/// Keep unsprung wheel geometry on its road contact while the chassis pitches,
+/// rolls and heaves. The tyre is a cylinder: its axle tilt also changes the
+/// distance from hub to its lowest point.
+fn grounded_hub(
+    chassis: &Transform,
+    rest: Vec3,
+    rotation: Quat,
+    road: f32,
+    radius: f32,
+    width: f32,
+) -> Vec3 {
+    let axle_y = (chassis.rotation * rotation * Vec3::X).y.abs().min(1.);
+    let vertical_radius = radius * (1. - axle_y * axle_y).sqrt() + width * 0.5 * axle_y;
+    let mut world = chassis.transform_point(rest);
+    world.y = road + vertical_radius;
+    chassis.compute_affine().inverse().transform_point3(world)
+}
+
 #[allow(clippy::type_complexity)]
 pub fn sync_cars(
     session: Res<Session>,
@@ -508,6 +526,16 @@ pub fn sync_cars(
         transform.rotation = Quat::from_rotation_y(steer)
             * visual.rest.rotation
             * Quat::from_rotation_x(pose.wheels[visual.wheel] as f32);
+        let chassis = pose_transform(pose);
+        let wheel = &session.race.entrants[visual.entrant].car.spec.wheels[visual.wheel];
+        transform.translation = grounded_hub(
+            &chassis,
+            visual.rest.translation,
+            transform.rotation,
+            pose.ground[visual.wheel] as f32,
+            wheel.radius as f32,
+            wheel.width as f32,
+        );
     }
     for (visual, mut transform) in &mut steering_wheels {
         *transform = visual.rest;
@@ -524,12 +552,27 @@ pub fn sync_cars(
             // Driver looks along local +Z: left (+X) moves down for an anticlockwise turn.
             RigKind::Steering => Quat::from_rotation_z(-pose.steer as f32 * 6.),
             RigKind::Upright => Quat::from_rotation_y(pose.steer as f32),
-            RigKind::Drs => Quat::from_rotation_x(if session.drs_open {
-                session.rig.drs.open_angle
-            } else {
-                0.
-            }),
+            RigKind::Drs => {
+                Quat::from_rotation_x(if session.drs_open && part.entrant == session.player {
+                    session.rig.drs.open_angle
+                } else {
+                    0.
+                })
+            }
         };
+        if matches!(part.kind, RigKind::Upright) {
+            let car = &session.race.entrants[part.entrant].car;
+            let index = if part.rest.translation.x > 0. { 0 } else { 1 };
+            let wheel = &car.spec.wheels[index];
+            transform.translation = grounded_hub(
+                &pose_transform(pose),
+                part.rest.translation,
+                part.rest.rotation * rotation,
+                pose.ground[index] as f32,
+                wheel.radius as f32,
+                wheel.width as f32,
+            );
+        }
         transform.rotation = part.rest.rotation * rotation;
     }
     for (driver, mut weights) in &mut drivers {
@@ -669,6 +712,39 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
 #[cfg(test)]
 mod livery_tests {
     use super::*;
+    #[test]
+    fn tyre_geometry_meets_the_road_during_chassis_heave_pitch_and_roll() {
+        for (height, pitch, roll, steer) in [
+            (0.2, 0., 0., 0.),
+            (-0.1, 0.12, -0.08, 0.3),
+            (0.3, -0.08, 0.15, -0.25),
+        ] {
+            let chassis = Transform::from_xyz(3., height, 7.).with_rotation(Quat::from_euler(
+                EulerRot::YXZ,
+                0.7,
+                pitch,
+                roll,
+            ));
+            let rest = Vec3::new(0.9, 0.36, 1.8);
+            let rotation = Quat::from_rotation_y(steer) * Quat::from_rotation_x(1.7);
+            let hub = grounded_hub(&chassis, rest, rotation, 0.05, 0.36, 0.3);
+            let mut lowest = f32::INFINITY;
+            // Sample an actual cylindrical tread rather than repeating the hub formula.
+            for side in [-0.15, 0.15] {
+                for sample in 0..720 {
+                    let angle = sample as f32 * std::f32::consts::TAU / 720.;
+                    let vertex = Vec3::new(side, angle.cos() * 0.36, angle.sin() * 0.36);
+                    lowest = lowest.min(chassis.transform_point(hub + rotation * vertex).y);
+                }
+            }
+            assert!((lowest - 0.05).abs() < 1e-4, "tyre bottom {lowest}");
+            let actual = chassis.transform_point(hub);
+            let original = chassis.transform_point(rest);
+            assert!((actual.x - original.x).abs() < 1e-5);
+            assert!((actual.z - original.z).abs() < 1e-5);
+        }
+    }
+
     #[test]
     fn shifts_flick_the_matching_paddle_and_release_it() {
         assert_eq!(shift_pull(f32::INFINITY), 0.);

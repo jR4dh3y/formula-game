@@ -71,6 +71,18 @@ pub fn update(
         session.controls = Controls::default();
         return;
     }
+    // This is the flap presentation control; race-zone eligibility and DRS
+    // aerodynamic effects are not implemented yet.
+    if keys.just_pressed(KeyCode::KeyF) && session.rig.drs.open_angle != 0. {
+        session.drs_open ^= true;
+    }
+    if session.controls.brake > 0.02
+        || keys.pressed(KeyCode::KeyS)
+        || keys.pressed(KeyCode::ArrowDown)
+        || session.race.phase != racecraft_sim::Phase::Racing
+    {
+        session.drs_open = false;
+    }
     for (key, mode) in [
         (KeyCode::Digit1, Mode::Cockpit),
         (KeyCode::Digit2, Mode::Tv),

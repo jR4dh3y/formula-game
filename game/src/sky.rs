@@ -26,8 +26,9 @@ pub fn setup(commands: &mut Commands, media: &mut Assets<ScatteringMedium>, sun:
             illuminance: 65_000.0,
             shadow_maps_enabled: true,
             contact_shadows_enabled: true,
+            // Small close-range biases keep tyre contact shadows attached.
             shadow_depth_bias: 0.01,
-            shadow_normal_bias: 0.6,
+            shadow_normal_bias: 0.3,
             ..default()
         },
         Transform::IDENTITY.looking_to(sun, Vec3::Y),

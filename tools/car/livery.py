@@ -11,6 +11,9 @@ import time
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from import_livery import apply_overrides
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -155,6 +158,7 @@ def main():
     parser.add_argument('--teams',type=Path,default=ROOT/'tools/car/teams.json')
     parser.add_argument('--bake',type=Path,default=ROOT/'raw/gen22/bake')
     parser.add_argument('--output',type=Path,default=ROOT/'assets/cars/gen22')
+    parser.add_argument('--overrides',type=Path,default=ROOT/'raw/gen22/liveries')
     parser.add_argument('--wait-seconds',type=float,default=120)
     args = parser.parse_args()
     deadline = time.monotonic()+args.wait_seconds
@@ -172,6 +176,7 @@ def main():
         print('LIVERY',team['short'],flush=True)
     args.output.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(args.teams,args.output/'teams.json')
+    apply_overrides(args.output, args.overrides, data)
 
 
 if __name__ == '__main__': main()

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import sys
 import math
+import tempfile
 
 import bpy
 from mathutils import Vector, Matrix
@@ -99,10 +100,13 @@ def source_comparison(args):
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('directory',type=Path)
-    parser.add_argument('--output',type=Path,default=Path('/tmp/gen22-previews'))
+    parser.add_argument('--output',type=Path)
     parser.add_argument('--source-comparison',action='store_true')
     parser.add_argument('--teams',nargs='+',default=['redbull','ferrari','mclaren','mercedes'])
     args=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
+    if args.output is None:
+        args.output=Path(tempfile.mkdtemp(prefix='gen22-previews-'))
+    print('PREVIEW OUTPUT',args.output,flush=True)
     if args.source_comparison:
         source_comparison(args);return
     bpy.ops.wm.read_factory_settings(use_empty=True)

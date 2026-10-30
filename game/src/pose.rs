@@ -21,6 +21,8 @@ pub struct Pose {
     pub roll: f64,
     pub steer: f64,
     pub wheels: [f64; 4],
+    /// Interpolated contact heights, independent of sprung chassis movement.
+    pub ground: [f64; 4],
 }
 
 fn angle_lerp(from: f64, to: f64, t: f64) -> f64 {
@@ -36,6 +38,7 @@ impl Pose {
             roll: car.roll,
             steer: car.steer_angle,
             wheels: std::array::from_fn(|index| car.wheels[index].rotation),
+            ground: std::array::from_fn(|index| car.wheels[index].ground_height),
         }
     }
 
@@ -48,6 +51,9 @@ impl Pose {
             steer: self.steer + (next.steer - self.steer) * t,
             wheels: std::array::from_fn(|index| {
                 angle_lerp(self.wheels[index], next.wheels[index], t)
+            }),
+            ground: std::array::from_fn(|index| {
+                self.ground[index] + (next.ground[index] - self.ground[index]) * t
             }),
         }
     }
