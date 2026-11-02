@@ -77,8 +77,9 @@ def source_meshes():
     for obj in records: obj.matrix_world=Matrix.Translation((0,0,-ground))@obj.matrix_world
     for obj in list(bpy.data.objects):
         if obj not in records: bpy.data.objects.remove(obj,do_unlink=True)
-    # Apply neutral stock paint to the source reference as well.
+    # Apply the supplied original-UV artwork to the source reference as well.
     # Leave native Cycles shaders on all wheel/control hardware.
+    textures=Path('raw/gen22/source-textures').resolve()
     for obj in records:
         name=obj.name.removeprefix('Reference ')
         part=source_materials.PARTS.get(name)
@@ -89,9 +90,9 @@ def source_meshes():
             mat=mat.copy();obj.data.materials[slot]=mat
             shader=next((n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'),None)
             if shader:
-                for link in list(shader.inputs['Base Color'].links):
-                    mat.node_tree.links.remove(link)
-                shader.inputs['Base Color'].default_value=(.32,.34,.36,1)
+                tex=mat.node_tree.nodes.new('ShaderNodeTexImage')
+                tex.image=bpy.data.images.load(str(textures/'textures_audi'/('textures_audi_'+part+'.png')))
+                mat.node_tree.links.new(tex.outputs['Color'],shader.inputs['Base Color'])
     # Source embeds duplicate 8K/17K images. Bound review texture memory without
     # changing the full-resolution source geometry or its material graph.
     bpy.data.orphans_purge(do_recursive=True)

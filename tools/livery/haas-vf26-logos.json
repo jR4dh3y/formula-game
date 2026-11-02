@@ -1,0 +1,249 @@
+[
+  {
+    "source": "ic-source.jpg",
+    "output": "ic-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2025-12/ic.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "ic-source.jpg",
+    "output": "ic-white.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2025-12/ic.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#F5F5F5",
+    "dark_ink": 170
+  },
+  {
+    "source": "automation-source.png",
+    "output": "automation-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2020-03/Haas%20Automation%402x.png",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "crop": [
+      0,
+      0,
+      1,
+      0.91
+    ]
+  },
+  {
+    "source": "playngo-source.jpg",
+    "output": "playngo-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-01/png_colour.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true
+  },
+  {
+    "source": "commscope-source.jpg",
+    "output": "commscope-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2026-01/cs-logo.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "fix-source.jpg",
+    "output": "fix-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2026-01/fix-network_logo_1.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "color": "#111111",
+    "white_ink": true
+  },
+  {
+    "source": "mphasis-source.jpg",
+    "output": "mphasis-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-11/mphasis_logo_black_1080px.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "mphasis-source.jpg",
+    "output": "mphasis-white.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-11/mphasis_logo_black_1080px.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#F5F5F5",
+    "dark_ink": 170
+  },
+  {
+    "source": "orion180-source.jpg",
+    "output": "orion180-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-10/website_logos_orion180_black_hoz.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "orion180-source.jpg",
+    "output": "orion180-white.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-10/website_logos_orion180_black_hoz.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#F5F5F5",
+    "dark_ink": 170
+  },
+  {
+    "source": "ruckus-source.png",
+    "output": "ruckus-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2026-07/ruckus_0.png",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "ruckus-source.png",
+    "output": "ruckus-white.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2026-07/ruckus_0.png",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "color": "#F5F5F5",
+    "dark_ink": 170
+  },
+  {
+    "source": "singha-source.jpg",
+    "output": "singha-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2026-02/singha_logo.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "uchicago-source.jpg",
+    "output": "uchicago-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2024-11/ucm_logo.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "zoomex-source.jpg",
+    "output": "zoomex-black.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2025-03/zoomex_logo.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#111111",
+    "dark_ink": 170
+  },
+  {
+    "source": "zoomex-source.jpg",
+    "output": "zoomex-white.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2025-03/zoomex_logo.jpg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "remove_all_white": true,
+    "color": "#F5F5F5",
+    "dark_ink": 170
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-white.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "white"
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-black.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "#111111"
+  },
+  {
+    "source": "number31-photo.jpg",
+    "output": "number31.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-24-01-23-11-20-00-5-10-Photos-16x9-EO.0006.jpg",
+    "source_crop": [
+      918,
+      438,
+      1019,
+      489
+    ],
+    "notes": "Exact photographic glyph silhouettes, limited source resolution; no replacement font.",
+    "dark_ink": 170,
+    "color": "#111111"
+  },
+  {
+    "source": "automation-source.png",
+    "output": "haas-side.png",
+    "url": "https://cdn.haasf1team.com/s3fs-public/2020-03/Haas%20Automation%402x.png",
+    "white_ink": true,
+    "color": "#111111",
+    "crop": [
+      0,
+      0.6,
+      1,
+      0.9
+    ],
+    "notes": "Genuine italic HAAS lettering isolated from official Haas Automation artwork."
+  },
+  {
+    "source": "gr-colour-source.png",
+    "output": "gr.png",
+    "url": "https://images.seeklogo.com/logo-png/31/1/toyota-gazoo-racing-logo-png_seeklogo-310410.png",
+    "remove_white": true,
+    "notes": "Genuine GR colour monogram, no Toyota text.",
+    "source_crop": [
+      20,
+      225,
+      300,
+      365
+    ]
+  },
+  {
+    "source": "tgr-official.svg",
+    "output": "gr-g.png",
+    "url": "https://www.haasf1team.com/themes/haas/assets/logos/new/TGRHF1_Team_Logo_Full_Vert.svg",
+    "svg_paths": [
+      1
+    ],
+    "color": "#101214",
+    "notes": "Genuine G/R letter paths from official TGR Haas brand artwork. Text and team crest excluded.",
+    "source_crop": [
+      1390,
+      2280,
+      2650,
+      3175
+    ]
+  },
+  {
+    "source": "tgr-official.svg",
+    "output": "gr-r.png",
+    "url": "https://www.haasf1team.com/themes/haas/assets/logos/new/TGRHF1_Team_Logo_Full_Vert.svg",
+    "svg_paths": [
+      2
+    ],
+    "color": "#E7192B",
+    "notes": "Genuine G/R letter paths from official TGR Haas brand artwork. Text and team crest excluded.",
+    "source_crop": [
+      2600,
+      2280,
+      4096,
+      3175
+    ]
+  }
+]

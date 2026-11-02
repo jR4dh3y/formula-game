@@ -1,0 +1,1674 @@
+{
+  "schema": 1,
+  "team": "astonmartin",
+  "car": "amr26",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "reference": "~/.cache/livery-2d/astonmartin/spec.md",
+  "palette": {
+    "green": "#005E56",
+    "lime": "#D2EA22",
+    "carbon": "#101214",
+    "white": "#F5F5F5",
+    "wingblue": "#0785B8"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "green",
+      "base": [
+        {
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "name": "Lower sidepod carbon underside",
+          "polygon": [
+            [
+              0.0,
+              0.95
+            ],
+            [
+              0.18,
+              0.84
+            ],
+            [
+              0.38,
+              0.74
+            ],
+            [
+              0.7,
+              0.72
+            ],
+            [
+              0.95,
+              0.84
+            ],
+            [
+              1.0,
+              0.94
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "panel": "sidepod-left",
+          "color": "lime",
+          "name": "Thin lime shoulder boundary",
+          "polygon": [
+            [
+              0.08,
+              0.85
+            ],
+            [
+              0.38,
+              0.73
+            ],
+            [
+              0.7,
+              0.71
+            ],
+            [
+              0.95,
+              0.82
+            ],
+            [
+              0.95,
+              0.84
+            ],
+            [
+              0.7,
+              0.73
+            ],
+            [
+              0.38,
+              0.75
+            ],
+            [
+              0.08,
+              0.87
+            ]
+          ]
+        },
+        {
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "name": "Lower sidepod carbon underside",
+          "polygon": [
+            [
+              1.0,
+              0.95
+            ],
+            [
+              0.82,
+              0.84
+            ],
+            [
+              0.62,
+              0.74
+            ],
+            [
+              0.3,
+              0.72
+            ],
+            [
+              0.05,
+              0.84
+            ],
+            [
+              0.0,
+              0.94
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "panel": "sidepod-right",
+          "color": "lime",
+          "name": "Thin lime shoulder boundary",
+          "polygon": [
+            [
+              0.92,
+              0.85
+            ],
+            [
+              0.62,
+              0.73
+            ],
+            [
+              0.3,
+              0.71
+            ],
+            [
+              0.05,
+              0.82
+            ],
+            [
+              0.05,
+              0.84
+            ],
+            [
+              0.3,
+              0.73
+            ],
+            [
+              0.62,
+              0.75
+            ],
+            [
+              0.92,
+              0.87
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-left",
+          "color": "carbon",
+          "name": "Engine cover fin dark strip",
+          "polygon": [
+            [
+              0.05,
+              0.0
+            ],
+            [
+              0.95,
+              0.0
+            ],
+            [
+              0.95,
+              0.09
+            ],
+            [
+              0.05,
+              0.09
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-right",
+          "color": "carbon",
+          "name": "Engine cover fin dark strip",
+          "polygon": [
+            [
+              0.05,
+              0.0
+            ],
+            [
+              0.95,
+              0.0
+            ],
+            [
+              0.95,
+              0.09
+            ],
+            [
+              0.05,
+              0.09
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-left",
+          "color": "carbon",
+          "name": "Airbox flank carbon",
+          "polygon": [
+            [
+              0.08,
+              0.09
+            ],
+            [
+              0.38,
+              0.09
+            ],
+            [
+              0.38,
+              0.22
+            ],
+            [
+              0.08,
+              0.22
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-right",
+          "color": "carbon",
+          "name": "Airbox flank carbon",
+          "polygon": [
+            [
+              0.62,
+              0.09
+            ],
+            [
+              0.92,
+              0.09
+            ],
+            [
+              0.92,
+              0.22
+            ],
+            [
+              0.62,
+              0.22
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-left",
+          "color": "lime",
+          "name": "Airbox intake lime trim",
+          "polygon": [
+            [
+              0.06,
+              0.09
+            ],
+            [
+              0.08,
+              0.09
+            ],
+            [
+              0.08,
+              0.22
+            ],
+            [
+              0.06,
+              0.22
+            ]
+          ]
+        },
+        {
+          "panel": "engine-cover-right",
+          "color": "lime",
+          "name": "Airbox intake lime trim",
+          "polygon": [
+            [
+              0.92,
+              0.09
+            ],
+            [
+              0.94,
+              0.09
+            ],
+            [
+              0.94,
+              0.22
+            ],
+            [
+              0.92,
+              0.22
+            ]
+          ]
+        },
+        {
+          "panel": "nose-side-left",
+          "color": "carbon",
+          "name": "nose-side-left carbon",
+          "polygon": [
+            [
+              0.0,
+              0.85
+            ],
+            [
+              0.4,
+              0.79
+            ],
+            [
+              0.8,
+              0.79
+            ],
+            [
+              1.0,
+              0.93
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "panel": "nose-side-left",
+          "color": "lime",
+          "name": "nose-side-left lime",
+          "polygon": [
+            [
+              0.02,
+              0.75
+            ],
+            [
+              0.45,
+              0.67
+            ],
+            [
+              0.85,
+              0.62
+            ],
+            [
+              1.0,
+              0.72
+            ],
+            [
+              1.0,
+              0.75
+            ],
+            [
+              0.85,
+              0.65
+            ],
+            [
+              0.45,
+              0.7
+            ],
+            [
+              0.02,
+              0.78
+            ]
+          ]
+        },
+        {
+          "panel": "nose-side-right",
+          "color": "carbon",
+          "name": "nose-side-right carbon",
+          "polygon": [
+            [
+              1.0,
+              0.85
+            ],
+            [
+              0.6,
+              0.79
+            ],
+            [
+              0.2,
+              0.79
+            ],
+            [
+              0.0,
+              0.93
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "panel": "nose-side-right",
+          "color": "lime",
+          "name": "nose-side-right lime",
+          "polygon": [
+            [
+              0.98,
+              0.75
+            ],
+            [
+              0.55,
+              0.67
+            ],
+            [
+              0.15,
+              0.62
+            ],
+            [
+              0.0,
+              0.72
+            ],
+            [
+              0.0,
+              0.75
+            ],
+            [
+              0.15,
+              0.65
+            ],
+            [
+              0.55,
+              0.7
+            ],
+            [
+              0.98,
+              0.78
+            ]
+          ]
+        },
+        {
+          "panel": "nose-top",
+          "color": "carbon",
+          "name": "nose-top carbon tip",
+          "polygon": [
+            [
+              0.0,
+              0.955
+            ],
+            [
+              1.0,
+              0.955
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "panel": "nose-top",
+          "color": "lime",
+          "name": "nose-top left lime edge",
+          "polygon": [
+            [
+              0.025,
+              0.05
+            ],
+            [
+              0.06,
+              0.05
+            ],
+            [
+              0.06,
+              0.955
+            ],
+            [
+              0.025,
+              0.955
+            ]
+          ]
+        },
+        {
+          "panel": "nose-top",
+          "color": "lime",
+          "name": "nose-top right lime edge",
+          "polygon": [
+            [
+              0.94,
+              0.05
+            ],
+            [
+              0.975,
+              0.05
+            ],
+            [
+              0.975,
+              0.955
+            ],
+            [
+              0.94,
+              0.955
+            ]
+          ]
+        },
+        {
+          "panel": "halo-front",
+          "color": "green",
+          "name": "halo-front green crown"
+        },
+        {
+          "panel": "halo-left",
+          "color": "carbon",
+          "name": "halo-left carbon rail"
+        },
+        {
+          "panel": "halo-right",
+          "color": "carbon",
+          "name": "halo-right carbon rail"
+        }
+      ],
+      "stickers": [
+        {
+          "image": "lime-triangle-pattern.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "width": 0.46,
+          "flip": "auto",
+          "allow_shared": true,
+          "name": "Tapered lime shoulder with dark triangles",
+          "rotation": 0
+        },
+        {
+          "image": "aramco-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.5,
+            0.56
+          ],
+          "width": 0.32,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "boss-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.26,
+            0.42
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "valvoline-horizontal.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.6,
+            0.38
+          ],
+          "width": 0.1,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "atlas-air-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.85,
+            0.88
+          ],
+          "width": 0.07,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "krown-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.75,
+            0.88
+          ],
+          "width": 0.06,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "lime-triangle-pattern-right.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "width": 0.46,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "name": "Tapered lime shoulder with dark triangles"
+        },
+        {
+          "image": "aramco-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.5,
+            0.56
+          ],
+          "width": 0.32,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "boss-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.74,
+            0.42
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "valvoline-horizontal.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.4,
+            0.38
+          ],
+          "width": 0.1,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "atlas-air-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.15,
+            0.88
+          ],
+          "width": 0.07,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "krown-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.25,
+            0.88
+          ],
+          "width": 0.06,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "aston-martin-fin-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.5,
+            0.045
+          ],
+          "width": 0.32,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "coreweave-horizontal.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.22,
+            0.15
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.44,
+            0.3
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "honda-powered-by.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.72,
+            0.34
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "aston-martin-fin-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.5,
+            0.045
+          ],
+          "width": 0.32,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "coreweave-horizontal.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.78,
+            0.15
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.56,
+            0.3
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "honda-powered-by.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.28,
+            0.34
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "pepperstone-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.85,
+            0.2
+          ],
+          "width": 0.19,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "aston-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.85,
+            0.42
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "coinpayments-horizontal.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.32,
+            0.68
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "eight-sleep-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.14,
+            0.8
+          ],
+          "width": 0.1,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "fia-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.55,
+            0.82
+          ],
+          "width": 0.07,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "image": "pepperstone-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.15,
+            0.2
+          ],
+          "width": 0.19,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "aston-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.15,
+            0.42
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "coinpayments-horizontal.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.68,
+            0.68
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "eight-sleep-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.86,
+            0.8
+          ],
+          "width": 0.1,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "fia-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.45,
+            0.82
+          ],
+          "width": 0.07,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "image": "cognizant-word.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.14
+          ],
+          "width": 0.55,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.23
+          ],
+          "width": 0.36,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "number14-clean.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.34
+          ],
+          "width": 0.34,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "honda-full-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.47
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "nexgen-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.58
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "xerox-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.67
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "netapp-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.74
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "pirelli-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.8
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "valvoline-v.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.85
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "valvoline-word.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.89
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "aston-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.93
+          ],
+          "width": 0.34,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "cw-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.975
+          ],
+          "width": 0.14,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "top-cowl-left",
+          "position": [
+            0.5,
+            0.35
+          ],
+          "width": 0.25,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "top-cowl-right",
+          "position": [
+            0.5,
+            0.35
+          ],
+          "width": 0.25,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "nexgen-white.png",
+          "panel": "halo-front",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.45,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "breitling-word.png",
+          "panel": "halo-left",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2780,
+                630
+              ],
+              [
+                2860,
+                614
+              ],
+              [
+                2940,
+                608
+              ],
+              [
+                3020,
+                612
+              ]
+            ],
+            [
+              [
+                2780,
+                645
+              ],
+              [
+                2860,
+                629
+              ],
+              [
+                2940,
+                623
+              ],
+              [
+                3020,
+                627
+              ]
+            ]
+          ]
+        },
+        {
+          "image": "breitling-word.png",
+          "panel": "halo-right",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                620,
+                612
+              ],
+              [
+                700,
+                608
+              ],
+              [
+                780,
+                614
+              ],
+              [
+                860,
+                630
+              ]
+            ],
+            [
+              [
+                620,
+                627
+              ],
+              [
+                700,
+                623
+              ],
+              [
+                780,
+                629
+              ],
+              [
+                860,
+                645
+              ]
+            ]
+          ]
+        },
+        {
+          "image": "cognition-white.png",
+          "panel": "halo-left",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                3080,
+                616
+              ],
+              [
+                3150,
+                624
+              ],
+              [
+                3230,
+                636
+              ]
+            ],
+            [
+              [
+                3080,
+                628
+              ],
+              [
+                3150,
+                636
+              ],
+              [
+                3230,
+                648
+              ]
+            ]
+          ]
+        },
+        {
+          "image": "cognition-white.png",
+          "panel": "halo-right",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                410,
+                636
+              ],
+              [
+                490,
+                624
+              ],
+              [
+                560,
+                616
+              ]
+            ],
+            [
+              [
+                410,
+                648
+              ],
+              [
+                490,
+                636
+              ],
+              [
+                560,
+                628
+              ]
+            ]
+          ]
+        },
+        {
+          "image": "valvoline-word.png",
+          "panel": "halo-left",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.4,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                3300,
+                642
+              ],
+              [
+                3360,
+                656
+              ],
+              [
+                3420,
+                676
+              ]
+            ],
+            [
+              [
+                3300,
+                654
+              ],
+              [
+                3360,
+                668
+              ],
+              [
+                3420,
+                688
+              ]
+            ]
+          ]
+        },
+        {
+          "image": "valvoline-word.png",
+          "panel": "halo-right",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.4,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                220,
+                676
+              ],
+              [
+                280,
+                656
+              ],
+              [
+                340,
+                642
+              ]
+            ],
+            [
+              [
+                220,
+                688
+              ],
+              [
+                280,
+                668
+              ],
+              [
+                340,
+                654
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "panel": "front-wing-endplate-left-outer",
+          "color": "green",
+          "name": "front-wing-endplate-left-outer green"
+        },
+        {
+          "panel": "front-wing-endplate-right-outer",
+          "color": "green",
+          "name": "front-wing-endplate-right-outer green"
+        }
+      ],
+      "stickers": [
+        {
+          "image": "glenfiddich-full-white.png",
+          "panel": "front-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.85,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "glenfiddich-full-white.png",
+          "panel": "front-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.85,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "cognizant-word.png",
+          "panel": "front-wing-element-01-top",
+          "position": [
+            0.28,
+            0.65
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "image": "cognizant-word.png",
+          "panel": "front-wing-element-01-top",
+          "position": [
+            0.72,
+            0.65
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "image": "aramco-white.png",
+          "panel": "front-wing-element-02-shared-top-bottom",
+          "position": [
+            0.26,
+            0.5
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "clip": false
+        },
+        {
+          "image": "aramco-white.png",
+          "panel": "front-wing-element-02-shared-top-bottom",
+          "position": [
+            0.74,
+            0.5
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "clip": false
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "panel": "rear-wing-main-top",
+          "color": "wingblue",
+          "name": "rear-wing-main-top wingblue"
+        },
+        {
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "green",
+          "name": "rear-wing-endplate-left-outer green"
+        },
+        {
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "green",
+          "name": "rear-wing-endplate-right-outer green"
+        }
+      ],
+      "stickers": [
+        {
+          "image": "aramco-white.png",
+          "panel": "rear-wing-main-top",
+          "position": [
+            0.5,
+            0.49
+          ],
+          "width": 0.7,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "coinbase-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.26
+          ],
+          "width": 0.58,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "coinbase-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.26
+          ],
+          "width": 0.58,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "servicenow-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.68
+          ],
+          "width": 0.56,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "servicenow-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.68
+          ],
+          "width": 0.56,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "valvoline-horizontal.png",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.6,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                3410,
+                3260
+              ],
+              [
+                3412,
+                2630
+              ],
+              [
+                3415,
+                2000
+              ],
+              [
+                3412,
+                1370
+              ],
+              [
+                3410,
+                740
+              ]
+            ],
+            [
+              [
+                3500,
+                3260
+              ],
+              [
+                3530,
+                2630
+              ],
+              [
+                3540,
+                2000
+              ],
+              [
+                3530,
+                1370
+              ],
+              [
+                3500,
+                740
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "green",
+      "base": [],
+      "stickers": [
+        {
+          "image": "boss-white.png",
+          "panel": "mirrors-left-01",
+          "position": [
+            0.5,
+            0.48
+          ],
+          "width": 0.75,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "boss-white.png",
+          "panel": "mirrors-right-06",
+          "position": [
+            0.5,
+            0.48
+          ],
+          "width": 0.75,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "mirrors-left-03",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.7,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "maaden-white.png",
+          "panel": "mirrors-right-08",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.7,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "image": "cognizant-word.png",
+          "panel": "floor-left-03",
+          "position": [
+            0.15,
+            0.5
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "circle8-white.png",
+          "panel": "floor-left-03",
+          "position": [
+            0.07,
+            0.5
+          ],
+          "width": 0.09,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "cognizant-word.png",
+          "panel": "floor-right-04",
+          "position": [
+            0.85,
+            0.5
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "image": "circle8-white.png",
+          "panel": "floor-right-04",
+          "position": [
+            0.93,
+            0.5
+          ],
+          "width": 0.09,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    }
+  }
+}

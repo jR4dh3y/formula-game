@@ -21,14 +21,15 @@ class BuildArgumentsTests(unittest.TestCase):
             script = Path(__file__).with_name('build_gen22.sh')
             subprocess.run(['bash', str(script), str(root / 'output')], env=env, check=True)
             arguments = [json.loads(line) for line in calls.read_text().splitlines()]
-            self.assertEqual(len(arguments), 3)
-            for args in arguments[1:]:
+            self.assertEqual(len(arguments), 4)
+            self.assertIn('--dark-wireframe', arguments[0])
+            for args in arguments[2:]:
                 self.assertIn('--disable-autoexec', args)
                 self.assertIn('--python-exit-code', args)
-            conversion = arguments[1]
-            self.assertIn(str(textures), arguments[0])
+            conversion = arguments[2]
+            self.assertIn(str(textures), arguments[1])
             self.assertTrue(conversion[conversion.index('--textures')+1].endswith('/textures'))
-            self.assertNotIn('--template-year', conversion)
+            self.assertEqual(conversion[conversion.index('--template-year')+1], '2025')
 
 
 

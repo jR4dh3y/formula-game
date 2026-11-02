@@ -39,3 +39,13 @@ Cargo formatting, opening-traffic regression, seven standalone car tests and
 two package tests. The Vulkan `rendered_car_review` passed using the newly
 rebuilt stock assets and produced 13 captures; the side view was visually
 checked for neutral body paint. Windows/AppImage release binaries were not rebuilt.
+
+On the stacked livery branch, the stock exporter still embeds no team body artwork.
+Native UV0 team maps can be applied to the core stock GLBs without rebuilding them.
+The optional template-authoring path adds UV1 for its separate template workflow.
+
+Stacked livery checks passed: workspace tests (78 game, 44 simulation), six
+focused material tests, Python livery suite (60 run, four skipped), Clippy,
+formatting and package tests. Vulkan review passed with McLaren native UV0
+textures applied to the exact core stock GLBs, with 13 captures. This verifies
+the branch boundary and runtime binding, not reference-photo quality.

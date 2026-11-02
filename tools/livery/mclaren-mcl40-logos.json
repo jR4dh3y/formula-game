@@ -1,0 +1,403 @@
+[
+  {
+    "source": "gemini.png",
+    "output": "gemini-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1j70U37xISpoFPFeGUKDCx/d7af6507c1b0d229f3691549a47d48de/Gemini-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "gemini.png",
+    "output": "gemini-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1j70U37xISpoFPFeGUKDCx/d7af6507c1b0d229f3691549a47d48de/Gemini-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "okx.png",
+    "output": "okx-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/7GtdXiUvxoozRm823EYw7u/efad0599932e7eb087e859bc338ae022/TEST-320x180-OKX__1_.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "okx.png",
+    "output": "okx-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/7GtdXiUvxoozRm823EYw7u/efad0599932e7eb087e859bc338ae022/TEST-320x180-OKX__1_.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "dp-world.png",
+    "output": "dp-world-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3SqbFGNOHeMr2GQpoDOyJS/2368fbdc4b32bbb85c5b4e502870cc86/DPWorld-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "dp-world.png",
+    "output": "dp-world-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3SqbFGNOHeMr2GQpoDOyJS/2368fbdc4b32bbb85c5b4e502870cc86/DPWorld-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "allwyn.png",
+    "output": "allwyn-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4UTq3cmiXU9eV5yct5TIbj/708fd483d4c3df8daf73ce91b1a5d058/Allwyn-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "allwyn.png",
+    "output": "allwyn-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4UTq3cmiXU9eV5yct5TIbj/708fd483d4c3df8daf73ce91b1a5d058/Allwyn-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "cisco.png",
+    "output": "cisco-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4xkddFed42KAVnGwd1dRRK/ed548bbc8d95fffed1620cf32c8259e7/Cisco-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "cisco.png",
+    "output": "cisco-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4xkddFed42KAVnGwd1dRRK/ed548bbc8d95fffed1620cf32c8259e7/Cisco-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "dell-technologies.png",
+    "output": "dell-technologies-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/01o0VUyYNunzSU40fL0xle/1f524ddd787dabe9ef0d24640bea8a71/Dell-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "dell-technologies.png",
+    "output": "dell-technologies-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/01o0VUyYNunzSU40fL0xle/1f524ddd787dabe9ef0d24640bea8a71/Dell-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "deloitte.png",
+    "output": "deloitte-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/61M4pK17JMG7C3NlscNHLD/0222c28469082e0db785099ab4e54275/Deloitte-160x90.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "deloitte.png",
+    "output": "deloitte-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/61M4pK17JMG7C3NlscNHLD/0222c28469082e0db785099ab4e54275/Deloitte-160x90.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "dropbox.png",
+    "output": "dropbox-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3XanD7IsZwmoZfLougOL3l/4c67c232879ea9a1241eb76fbf973256/Dropbox-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "dropbox.png",
+    "output": "dropbox-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3XanD7IsZwmoZfLougOL3l/4c67c232879ea9a1241eb76fbf973256/Dropbox-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "alteryx.png",
+    "output": "alteryx-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/73L6rINf9zcr5Ctc8SAB4Y/40f05ed9e35c24886a8016daba5c4f1f/Alteryx-2026-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "alteryx.png",
+    "output": "alteryx-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/73L6rINf9zcr5Ctc8SAB4Y/40f05ed9e35c24886a8016daba5c4f1f/Alteryx-2026-Blk320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "richard-mille.png",
+    "output": "richard-mille-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/17HoBghPhFyyY2CuyGEtZB/1414116fecb205646e38d8ed9297858c/Richard_Mille_-_260x150.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "richard-mille.png",
+    "output": "richard-mille-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/17HoBghPhFyyY2CuyGEtZB/1414116fecb205646e38d8ed9297858c/Richard_Mille_-_260x150.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "rubrik.png",
+    "output": "rubrik-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/6cNVIGaGRvMZonF76gly28/31e7634705154c0e007014af2f75892c/Rubrik-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "rubrik.png",
+    "output": "rubrik-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/6cNVIGaGRvMZonF76gly28/31e7634705154c0e007014af2f75892c/Rubrik-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "pirelli.png",
+    "output": "pirelli-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4F3sa7UwLagsGd9JbfyfWM/bb4474443d2dda8c979764fd17a8223c/Pirelli-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "pirelli.png",
+    "output": "pirelli-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/4F3sa7UwLagsGd9JbfyfWM/bb4474443d2dda8c979764fd17a8223c/Pirelli-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "okta.png",
+    "output": "okta-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1Ddoo1vBJmhk2h814vpKyN/dc350eac56e3429d53914632f25a212f/Okta-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "okta.png",
+    "output": "okta-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1Ddoo1vBJmhk2h814vpKyN/dc350eac56e3429d53914632f25a212f/Okta-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "fxpro.png",
+    "output": "fxpro-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/LrnOD6J5CiCdfNiRmAaNS/1d3451cee932e2074f671a83fc121e8b/FxPro-160x90-Blk.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "fxpro.png",
+    "output": "fxpro-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/LrnOD6J5CiCdfNiRmAaNS/1d3451cee932e2074f671a83fc121e8b/FxPro-160x90-Blk.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "freshworks.png",
+    "output": "freshworks-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3OUJfyKPXuvk4K2STk1snr/863bf5a57ac88d08ed930fd46f5002ee/Freshworks-Blk-320x180-9-.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "freshworks.png",
+    "output": "freshworks-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/3OUJfyKPXuvk4K2STk1snr/863bf5a57ac88d08ed930fd46f5002ee/Freshworks-Blk-320x180-9-.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "jack-daniels.png",
+    "output": "jack-daniels-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/7w6BBSsGwMMn6ucWSKwL9k/af25e91421f652adbb0e8bb3d967edee/JackDaniels-Blk320x180_2024.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "jack-daniels.png",
+    "output": "jack-daniels-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/7w6BBSsGwMMn6ucWSKwL9k/af25e91421f652adbb0e8bb3d967edee/JackDaniels-Blk320x180_2024.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "groq.png",
+    "output": "groq-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/35bcCSFYgFFRmM0E82nbdz/bb0b8cf85c66adfd23e823c122bbe75a/Groq_2025_Update_V2-160x90.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "groq.png",
+    "output": "groq-black.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/35bcCSFYgFFRmM0E82nbdz/bb0b8cf85c66adfd23e823c122bbe75a/Groq_2025_Update_V2-160x90.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "mastercard.png",
+    "output": "mastercard-colour.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1wzHYafq413hRXGYwjncdB/5283141e79a3687a077bdcb1a9802f1d/McL-MC-3-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0.54,
+      0,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "mastercard.png",
+    "output": "mclaren-papaya.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1wzHYafq413hRXGYwjncdB/5283141e79a3687a077bdcb1a9802f1d/McL-MC-3-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0,
+      0,
+      0.45,
+      1
+    ]
+  },
+  {
+    "source": "gemini-google-colour.svg",
+    "output": "gemini-star.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Google_Gemini_logo_2025.svg",
+    "notes": "Google Gemini multicolour vector star. Wikimedia reproduction; trademark.",
+    "crop": [
+      0,
+      0,
+      0.226,
+      1
+    ]
+  },
+  {
+    "source": "gemini.png",
+    "output": "gemini-word-white.png",
+    "url": "https://images.ctfassets.net/gy95mqeyjg28/1j70U37xISpoFPFeGUKDCx/d7af6507c1b0d229f3691549a47d48de/Gemini-Blk-320x180.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0.235,
+      0,
+      1,
+      1
+    ],
+    "color": "white"
+  },
+  {
+    "source": "dewalt-1.svg",
+    "output": "dewalt-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/dewalt-1.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "webex.svg",
+    "output": "webex-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/webex.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_all_white": true,
+    "crop": [
+      0,
+      0,
+      1,
+      0.72
+    ],
+    "color": "black"
+  },
+  {
+    "source": "photo-launch-00.jpg",
+    "output": "number1.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/02/racefansdotnet-24-02-09-15-30-08-6-a.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "source_crop": [
+      929,
+      518,
+      975,
+      560
+    ],
+    "dark_ink": 90,
+    "color": "black"
+  },
+  {
+    "source": "photo-launch-04.jpg",
+    "output": "velo-black.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/02/racefansdotnet-24-02-09-15-30-34-2-e.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "dark_ink": 135,
+    "color": "black",
+    "source_quad": [
+      867,
+      576,
+      865,
+      596,
+      946,
+      603,
+      947,
+      583
+    ],
+    "rectified_size": [
+      240,
+      64
+    ]
+  },
+  {
+    "source": "photo-launch-01.jpg",
+    "output": "oneflight-black.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/02/racefansdotnet-24-02-09-15-30-14-5-b.jpg",
+    "notes": "Actual 2026 launch wing wordmark, photographed crop rotated upright; photo edge quality requires visual review.",
+    "dark_ink": 145,
+    "color": "black",
+    "source_quad": [
+      1693,
+      553,
+      1735,
+      543,
+      1704,
+      448,
+      1662,
+      458
+    ],
+    "rectified_size": [
+      360,
+      126
+    ]
+  }
+]

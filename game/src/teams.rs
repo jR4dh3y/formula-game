@@ -183,6 +183,8 @@ impl Teams {
 /// Rig metadata is deliberately game-side; CarGeometry ignores these extra JSON keys.
 #[derive(Clone, Default, Deserialize)]
 pub struct Rig {
+    /// Template layout authored in TEXCOORD_1; absent on older asset packages.
+    pub livery_template: Option<u16>,
     pub cockpit_eye: Option<[f64; 3]>,
     #[serde(default)]
     pub drs: Drs,

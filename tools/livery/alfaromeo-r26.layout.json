@@ -1,0 +1,1593 @@
+{
+  "schema": 1,
+  "team": "alfaromeo",
+  "car": "r26",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "reference": "Official 2026 Audi Revolut F1 Team launch studio photography and Bahrain pre-season test photographs, Nico Hulkenberg 27. Fully addresses all 44 review-01 findings.",
+  "palette": {
+    "titanium": "#BEC2C5",
+    "red": "#C9141D",
+    "carbon": "#101113",
+    "white": "#F2F2F2",
+    "yellow": "#E5F500"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "titanium",
+      "base": [
+        {
+          "name": "carbon main-body-right-06",
+          "panel": "main-body-right-06",
+          "color": "carbon"
+        },
+        {
+          "name": "yellow T-cam main-body-left-07",
+          "panel": "main-body-left-07",
+          "color": "yellow"
+        },
+        {
+          "name": "yellow T-cam main-body-right-08",
+          "panel": "main-body-right-08",
+          "color": "yellow"
+        },
+        {
+          "name": "carbon main-body-right-09",
+          "panel": "main-body-right-09",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-10",
+          "panel": "main-body-left-10",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-11",
+          "panel": "main-body-left-11",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-12",
+          "panel": "main-body-left-12",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-13",
+          "panel": "main-body-left-13",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-14",
+          "panel": "main-body-right-14",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-15",
+          "panel": "main-body-left-15",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-16",
+          "panel": "main-body-right-16",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-17",
+          "panel": "main-body-right-17",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-18",
+          "panel": "main-body-right-18",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon cockpit-rim inner",
+          "panel": "cockpit-rim",
+          "color": "carbon"
+        },
+        {
+          "name": "titanium cockpit-rim outer left",
+          "panel": "cockpit-rim",
+          "color": "titanium",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              0.22,
+              0
+            ],
+            [
+              0.22,
+              0.84
+            ],
+            [
+              0,
+              0.96
+            ]
+          ]
+        },
+        {
+          "name": "titanium cockpit-rim outer right",
+          "panel": "cockpit-rim",
+          "color": "titanium",
+          "polygon": [
+            [
+              0.78,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.96
+            ],
+            [
+              0.78,
+              0.84
+            ]
+          ]
+        },
+        {
+          "name": "carbon halo-front center",
+          "panel": "halo-front",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon top-cowl-left",
+          "panel": "top-cowl-left",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon top-cowl-right",
+          "panel": "top-cowl-right",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon engine-cover-left",
+          "panel": "engine-cover-left",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon engine-cover-right",
+          "panel": "engine-cover-right",
+          "color": "carbon"
+        },
+        {
+          "name": "red dorsal-fin trailing edge left",
+          "panel": "engine-cover-left",
+          "color": "red",
+          "space": "uv_px",
+          "polygon": [
+            [
+              489.0,
+              2251.0
+            ],
+            [
+              569.0,
+              2271.0
+            ],
+            [
+              689.0,
+              2296.0
+            ],
+            [
+              809.0,
+              2322.0
+            ],
+            [
+              969.0,
+              2356.0
+            ],
+            [
+              969.0,
+              2346.0
+            ],
+            [
+              809.0,
+              2312.0
+            ],
+            [
+              689.0,
+              2286.0
+            ],
+            [
+              569.0,
+              2261.0
+            ],
+            [
+              489.0,
+              2241.0
+            ]
+          ]
+        },
+        {
+          "name": "red dorsal-fin trailing edge right",
+          "panel": "engine-cover-right",
+          "color": "red",
+          "space": "uv_px",
+          "polygon": [
+            [
+              483.0,
+              3365.0
+            ],
+            [
+              563.0,
+              3345.0
+            ],
+            [
+              683.0,
+              3319.0
+            ],
+            [
+              803.0,
+              3294.0
+            ],
+            [
+              963.0,
+              3259.0
+            ],
+            [
+              963.0,
+              3269.0
+            ],
+            [
+              803.0,
+              3304.0
+            ],
+            [
+              683.0,
+              3329.0
+            ],
+            [
+              563.0,
+              3355.0
+            ],
+            [
+              483.0,
+              3375.0
+            ]
+          ]
+        },
+        {
+          "name": "curved red sweep left",
+          "color": "red",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2445.0,
+              2140.0
+            ],
+            [
+              2280.0,
+              2095.0
+            ],
+            [
+              2080.0,
+              2035.0
+            ],
+            [
+              1850.0,
+              1995.0
+            ],
+            [
+              1580.0,
+              1985.0
+            ],
+            [
+              1320.0,
+              2005.0
+            ],
+            [
+              1060.0,
+              2055.0
+            ],
+            [
+              800.0,
+              2135.0
+            ],
+            [
+              580.0,
+              2245.0
+            ],
+            [
+              489.0,
+              2335.0
+            ],
+            [
+              489.0,
+              2435.0
+            ],
+            [
+              650.0,
+              2355.0
+            ],
+            [
+              880.0,
+              2265.0
+            ],
+            [
+              1120.0,
+              2185.0
+            ],
+            [
+              1380.0,
+              2125.0
+            ],
+            [
+              1650.0,
+              2095.0
+            ],
+            [
+              1920.0,
+              2115.0
+            ],
+            [
+              2150.0,
+              2165.0
+            ],
+            [
+              2320.0,
+              2205.0
+            ],
+            [
+              2445.0,
+              2235.0
+            ]
+          ]
+        },
+        {
+          "name": "curved red sweep right",
+          "color": "red",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2438.48,
+              3477.26
+            ],
+            [
+              2273.48,
+              3522.26
+            ],
+            [
+              2073.48,
+              3582.26
+            ],
+            [
+              1843.48,
+              3622.26
+            ],
+            [
+              1573.48,
+              3632.26
+            ],
+            [
+              1313.48,
+              3612.26
+            ],
+            [
+              1053.48,
+              3562.26
+            ],
+            [
+              793.48,
+              3482.26
+            ],
+            [
+              573.48,
+              3372.26
+            ],
+            [
+              482.48,
+              3282.26
+            ],
+            [
+              482.48,
+              3182.26
+            ],
+            [
+              643.48,
+              3262.26
+            ],
+            [
+              873.48,
+              3352.26
+            ],
+            [
+              1113.48,
+              3432.26
+            ],
+            [
+              1373.48,
+              3492.26
+            ],
+            [
+              1643.48,
+              3522.26
+            ],
+            [
+              1913.48,
+              3502.26
+            ],
+            [
+              2143.48,
+              3452.26
+            ],
+            [
+              2313.48,
+              3412.26
+            ],
+            [
+              2438.48,
+              3382.26
+            ]
+          ]
+        },
+        {
+          "name": "carbon undercut left",
+          "color": "carbon",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2445.0,
+              2235.0
+            ],
+            [
+              2320.0,
+              2205.0
+            ],
+            [
+              2150.0,
+              2165.0
+            ],
+            [
+              1920.0,
+              2115.0
+            ],
+            [
+              1650.0,
+              2095.0
+            ],
+            [
+              1380.0,
+              2125.0
+            ],
+            [
+              1120.0,
+              2185.0
+            ],
+            [
+              880.0,
+              2265.0
+            ],
+            [
+              650.0,
+              2355.0
+            ],
+            [
+              489.0,
+              2435.0
+            ],
+            [
+              489.0,
+              2445.0
+            ],
+            [
+              2445.0,
+              2445.0
+            ]
+          ]
+        },
+        {
+          "name": "carbon undercut right",
+          "color": "carbon",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2438.48,
+              3382.26
+            ],
+            [
+              2313.48,
+              3412.26
+            ],
+            [
+              2143.48,
+              3452.26
+            ],
+            [
+              1913.48,
+              3502.26
+            ],
+            [
+              1643.48,
+              3522.26
+            ],
+            [
+              1373.48,
+              3492.26
+            ],
+            [
+              1113.48,
+              3432.26
+            ],
+            [
+              873.48,
+              3352.26
+            ],
+            [
+              643.48,
+              3262.26
+            ],
+            [
+              482.48,
+              3182.26
+            ],
+            [
+              482.48,
+              3172.26
+            ],
+            [
+              2438.48,
+              3172.26
+            ]
+          ]
+        },
+        {
+          "name": "carbon cooling louvres left",
+          "color": "carbon",
+          "panels": [
+            "sidepod-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1850.0,
+              1850.0
+            ],
+            [
+              1300.0,
+              1850.0
+            ],
+            [
+              1300.0,
+              1910.0
+            ],
+            [
+              1850.0,
+              1910.0
+            ]
+          ]
+        },
+        {
+          "name": "carbon cooling louvres right",
+          "color": "carbon",
+          "panels": [
+            "sidepod-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1843.48,
+              3767.26
+            ],
+            [
+              1293.48,
+              3767.26
+            ],
+            [
+              1293.48,
+              3707.26
+            ],
+            [
+              1843.48,
+              3707.26
+            ]
+          ]
+        },
+        {
+          "name": "curved nose lower carbon left",
+          "color": "carbon",
+          "panels": [
+            "nose-side-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              4040.0,
+              2150.0
+            ],
+            [
+              3600.0,
+              2080.0
+            ],
+            [
+              3100.0,
+              2020.0
+            ],
+            [
+              2550.0,
+              1980.0
+            ],
+            [
+              2480.0,
+              2000.0
+            ],
+            [
+              2480.0,
+              2240.0
+            ],
+            [
+              4040.0,
+              2240.0
+            ]
+          ]
+        },
+        {
+          "name": "curved nose lower carbon right",
+          "color": "carbon",
+          "panels": [
+            "nose-side-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              4033.48,
+              3467.26
+            ],
+            [
+              3593.48,
+              3537.26
+            ],
+            [
+              3093.48,
+              3597.26
+            ],
+            [
+              2543.48,
+              3637.26
+            ],
+            [
+              2473.48,
+              3617.26
+            ],
+            [
+              2473.48,
+              3377.26
+            ],
+            [
+              4033.48,
+              3377.26
+            ]
+          ]
+        },
+        {
+          "name": "carbon forward intake cowl lip left",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.035,
+              0.0
+            ],
+            [
+              0.035,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "carbon forward intake cowl lip right",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.965,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.965,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "revolut-white.png on sidepod-left",
+          "image": "revolut-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.42,
+            0.44
+          ],
+          "width": 0.62,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "puma-white.png on sidepod-left",
+          "image": "puma-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.18,
+            0.62
+          ],
+          "width": 0.08,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "revolut-white.png on sidepod-right",
+          "image": "revolut-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.58,
+            0.44
+          ],
+          "width": 0.62,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "puma-white.png on sidepod-right",
+          "image": "puma-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.82,
+            0.62
+          ],
+          "width": 0.08,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "audi-rings-red.png on engine-cover-left",
+          "image": "audi-rings-red.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.46,
+            0.38
+          ],
+          "width": 0.72,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "bp.png on engine-cover-left",
+          "image": "bp.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.17,
+            0.28
+          ],
+          "width": 0.13,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "castrol-white.png on engine-cover-left",
+          "image": "castrol-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.17,
+            0.42
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "number27-white.png on engine-cover-left",
+          "image": "number27-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.82,
+            0.18
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "audi-rings-red.png on engine-cover-right",
+          "image": "audi-rings-red.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.54,
+            0.38
+          ],
+          "width": 0.72,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "bp.png on engine-cover-right",
+          "image": "bp.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.83,
+            0.28
+          ],
+          "width": 0.13,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "castrol-white.png on engine-cover-right",
+          "image": "castrol-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.83,
+            0.42
+          ],
+          "width": 0.18,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "number27-white.png on engine-cover-right",
+          "image": "number27-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.18,
+            0.18
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "audi-rings-red.png on nose-top",
+          "image": "audi-rings-red.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.88
+          ],
+          "width": 0.44,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "revolut-black.png on nose-top",
+          "image": "revolut-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.76
+          ],
+          "width": 0.54,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "number27-outlined.png on nose-top",
+          "image": "number27-outlined.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.64
+          ],
+          "width": 0.38,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "bp.png on nose-top",
+          "image": "bp.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.3,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "adidas-black.png on nose-top",
+          "image": "adidas-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "width": 0.24,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "pirelli-black.png on nose-top",
+          "image": "pirelli-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.22
+          ],
+          "width": 0.28,
+          "rotation": 180,
+          "allow_shared": true
+        },
+        {
+          "name": "adidas-white.png on halo-left",
+          "image": "adidas-white.png",
+          "panel": "halo-left",
+          "warp_uv_px": [
+            [
+              [
+                3105.0,
+                609.5
+              ],
+              [
+                3130.0,
+                611.5
+              ],
+              [
+                3155.0,
+                614.5
+              ]
+            ],
+            [
+              [
+                3103.0,
+                632.5
+              ],
+              [
+                3128.0,
+                634.5
+              ],
+              [
+                3153.0,
+                637.5
+              ]
+            ]
+          ],
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "adidas-white.png on halo-right",
+          "image": "adidas-white.png",
+          "panel": "halo-right",
+          "warp_uv_px": [
+            [
+              [
+                485.0,
+                614.5
+              ],
+              [
+                510.0,
+                611.5
+              ],
+              [
+                535.0,
+                609.5
+              ]
+            ],
+            [
+              [
+                487.0,
+                637.5
+              ],
+              [
+                512.0,
+                634.5
+              ],
+              [
+                537.0,
+                632.5
+              ]
+            ]
+          ],
+          "allow_shared": true,
+          "clip": false
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "titanium intake foil center",
+          "panel": "front-wing-element-01-top",
+          "color": "titanium",
+          "polygon": [
+            [
+              0.4,
+              0.4
+            ],
+            [
+              0.6,
+              0.4
+            ],
+            [
+              0.6,
+              0.85
+            ],
+            [
+              0.4,
+              0.85
+            ]
+          ]
+        },
+        {
+          "name": "titanium front-wing-element-03-left-top",
+          "panel": "front-wing-element-03-left-top",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium front-wing-element-03-right-top",
+          "panel": "front-wing-element-03-right-top",
+          "color": "titanium"
+        },
+        {
+          "name": "red front-wing-element-04-left-top tip",
+          "panel": "front-wing-element-04-left-top",
+          "color": "red",
+          "polygon": [
+            [
+              0.7,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.7,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "red front-wing-element-04-right-top tip",
+          "panel": "front-wing-element-04-right-top",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.3,
+              0.0
+            ],
+            [
+              0.3,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "titanium front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium front-wing-endplate-left-inner",
+          "panel": "front-wing-endplate-left-inner",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium front-wing-endplate-right-inner",
+          "panel": "front-wing-endplate-right-inner",
+          "color": "titanium"
+        },
+        {
+          "name": "carbon front-wing-endplate-left footplate",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.82
+            ],
+            [
+              1.0,
+              0.82
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "carbon front-wing-endplate-right footplate",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.82
+            ],
+            [
+              1.0,
+              0.82
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "revolut-white.png on front-wing-element-03-left-top",
+          "image": "revolut-white.png",
+          "panel": "front-wing-element-03-left-top",
+          "position": [
+            0.5,
+            0.35
+          ],
+          "width": 0.45,
+          "rotation": 0,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "revolut-white.png on front-wing-element-03-right-top",
+          "image": "revolut-white.png",
+          "panel": "front-wing-element-03-right-top",
+          "position": [
+            0.5,
+            0.35
+          ],
+          "width": 0.45,
+          "rotation": 0,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "pirelli-black.png on front-wing-endplate-left-outer",
+          "image": "pirelli-black.png",
+          "panel": "front-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.4
+          ],
+          "width": 0.6,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "pirelli-black.png on front-wing-endplate-right-outer",
+          "image": "pirelli-black.png",
+          "panel": "front-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.4
+          ],
+          "width": 0.6,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "red rear-wing-drs-shared-top-bottom",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "color": "red"
+        },
+        {
+          "name": "red rear-wing-drs-tip-left-top",
+          "panel": "rear-wing-drs-tip-left-top",
+          "color": "red"
+        },
+        {
+          "name": "red rear-wing-drs-tip-right-top",
+          "panel": "rear-wing-drs-tip-right-top",
+          "color": "red"
+        },
+        {
+          "name": "red beam wing trailing edge",
+          "panel": "rear-wing-main-bottom",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.75
+            ],
+            [
+              1.0,
+              0.75
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "audi-rings-white.png on rear-wing-drs-shared-top-bottom",
+          "image": "audi-rings-white.png",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "rotation": 0,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "revolut-white.png on rear-wing-main-top",
+          "image": "revolut-white.png",
+          "panel": "rear-wing-main-top",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.65,
+          "rotation": 180,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "visit-qatar-white.png on rear-wing-endplate-left-outer",
+          "image": "visit-qatar-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.65,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "castrol-white.png on rear-wing-endplate-left-outer",
+          "image": "castrol-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.6
+          ],
+          "width": 0.55,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "visit-qatar-white.png on rear-wing-endplate-right-outer",
+          "image": "visit-qatar-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.65,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "castrol-white.png on rear-wing-endplate-right-outer",
+          "image": "castrol-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.6
+          ],
+          "width": 0.55,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "titanium mirror cap left 01",
+          "panel": "mirrors-left-01",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium mirror cap left 02",
+          "panel": "mirrors-left-02",
+          "color": "titanium"
+        },
+        {
+          "name": "red mirror accent left 02",
+          "panel": "mirrors-left-02",
+          "color": "red",
+          "polygon": [
+            [
+              0.85,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.85,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "titanium mirror cap right 06",
+          "panel": "mirrors-right-06",
+          "color": "titanium"
+        },
+        {
+          "name": "titanium mirror cap right 07",
+          "panel": "mirrors-right-07",
+          "color": "titanium"
+        },
+        {
+          "name": "red mirror accent right 07",
+          "panel": "mirrors-right-07",
+          "color": "red",
+          "polygon": [
+            [
+              0.85,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.85,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "red floor fence left",
+          "panel": "floor-left-03",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.25,
+              0.0
+            ],
+            [
+              0.25,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "red floor fence right",
+          "panel": "floor-right-00",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.25,
+              0.0
+            ],
+            [
+              0.25,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "titanium mount left",
+          "panel": "winglets-left-00",
+          "color": "titanium",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.3,
+              0.0
+            ],
+            [
+              0.3,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "titanium mount right",
+          "panel": "winglets-right-01",
+          "color": "titanium",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.3,
+              0.0
+            ],
+            [
+              0.3,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "audi-wheel-ring.png on front-covers-left-00",
+          "image": "audi-wheel-ring.png",
+          "panel": "front-covers-left-00",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true
+        },
+        {
+          "name": "audi-wheel-ring.png on front-covers-right-01",
+          "image": "audi-wheel-ring.png",
+          "panel": "front-covers-right-01",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true
+        }
+      ]
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "audi-wheel-ring.png on rear-covers-left-00",
+          "image": "audi-wheel-ring.png",
+          "panel": "rear-covers-left-00",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true
+        },
+        {
+          "name": "audi-wheel-ring.png on rear-covers-right-01",
+          "image": "audi-wheel-ring.png",
+          "panel": "rear-covers-right-01",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true
+        }
+      ]
+    }
+  }
+}

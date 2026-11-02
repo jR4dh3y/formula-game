@@ -1,0 +1,1539 @@
+{
+  "schema": 1,
+  "team": "alphatauri",
+  "car": "vcarb03",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "palette": {
+    "body_white": "#F4F5F7",
+    "metallic_blue": "#1B3B6F",
+    "bull_red": "#D2003C",
+    "bull_sun": "#FFCC00",
+    "carbon": "#101113"
+  },
+  "parts": {
+    "main_body": {
+      "color": "body_white",
+      "base": [
+        {
+          "name": "Carbon cockpit-rim interior",
+          "panel": "cockpit-rim",
+          "color": "carbon"
+        },
+        {
+          "name": "Blue sidepod-left undercut",
+          "panel": "sidepod-left",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.9
+            ],
+            [
+              0.15,
+              0.89
+            ],
+            [
+              0.35,
+              0.89
+            ],
+            [
+              0.55,
+              0.91
+            ],
+            [
+              0.75,
+              0.92
+            ],
+            [
+              0.9,
+              0.9
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Blue sidepod-right undercut",
+          "panel": "sidepod-right",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.9
+            ],
+            [
+              0.15,
+              0.89
+            ],
+            [
+              0.35,
+              0.89
+            ],
+            [
+              0.55,
+              0.91
+            ],
+            [
+              0.75,
+              0.92
+            ],
+            [
+              0.9,
+              0.9
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Blue nose-side-left lower",
+          "panel": "nose-side-left",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.78
+            ],
+            [
+              0.25,
+              0.8
+            ],
+            [
+              0.55,
+              0.85
+            ],
+            [
+              0.85,
+              0.9
+            ],
+            [
+              1.0,
+              0.92
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Blue nose-side-right lower",
+          "panel": "nose-side-right",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.78
+            ],
+            [
+              0.25,
+              0.8
+            ],
+            [
+              0.55,
+              0.85
+            ],
+            [
+              0.85,
+              0.9
+            ],
+            [
+              1.0,
+              0.92
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Carbon nose tip",
+          "panel": "nose-top",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.91
+            ],
+            [
+              0.15,
+              0.92
+            ],
+            [
+              0.3,
+              0.94
+            ],
+            [
+              0.5,
+              0.95
+            ],
+            [
+              0.7,
+              0.94
+            ],
+            [
+              0.85,
+              0.92
+            ],
+            [
+              1.0,
+              0.91
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Yellow number-badge nose-top",
+          "panel": "nose-top",
+          "color": "bull_sun",
+          "polygon": [
+            [
+              0.32,
+              0.47
+            ],
+            [
+              0.5,
+              0.46
+            ],
+            [
+              0.68,
+              0.47
+            ],
+            [
+              0.74,
+              0.52
+            ],
+            [
+              0.72,
+              0.6
+            ],
+            [
+              0.5,
+              0.62
+            ],
+            [
+              0.28,
+              0.6
+            ],
+            [
+              0.26,
+              0.52
+            ]
+          ]
+        },
+        {
+          "name": "Blue dorsal spine top-cowl-left",
+          "panel": "top-cowl-left",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.15
+            ],
+            [
+              0.0,
+              0.15
+            ]
+          ]
+        },
+        {
+          "name": "Blue dorsal spine top-cowl-right",
+          "panel": "top-cowl-right",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.15
+            ],
+            [
+              0.0,
+              0.15
+            ]
+          ]
+        },
+        {
+          "name": "Blue dorsal spine engine-cover-left",
+          "panel": "engine-cover-left",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.16
+            ],
+            [
+              0.0,
+              0.16
+            ]
+          ]
+        },
+        {
+          "name": "Blue dorsal spine engine-cover-right",
+          "panel": "engine-cover-right",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.16
+            ],
+            [
+              0.0,
+              0.16
+            ]
+          ]
+        },
+        {
+          "name": "White cockpit-rim left rail",
+          "panel": "cockpit-rim",
+          "color": "body_white",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.22,
+              0.0
+            ],
+            [
+              0.22,
+              0.84
+            ],
+            [
+              0.0,
+              0.96
+            ]
+          ]
+        },
+        {
+          "name": "White cockpit-rim right rail",
+          "panel": "cockpit-rim",
+          "color": "body_white",
+          "polygon": [
+            [
+              0.78,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.96
+            ],
+            [
+              0.78,
+              0.84
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "HUGO sidepod-left",
+          "panel": "sidepod-left",
+          "image": "hugo-black.png",
+          "position": [
+            0.52,
+            0.48
+          ],
+          "width": 0.52,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "NEFT Vodka sidepod-left",
+          "panel": "sidepod-left",
+          "image": "neft-vodka-black.png",
+          "position": [
+            0.16,
+            0.35
+          ],
+          "width": 0.12,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "ThreatLocker sidepod-left",
+          "panel": "sidepod-left",
+          "image": "threatlocker-black.png",
+          "position": [
+            0.2,
+            0.82
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "CONFLUENT sidepod-left",
+          "panel": "sidepod-left",
+          "image": "confluent-black.png",
+          "position": [
+            0.34,
+            0.8
+          ],
+          "width": 0.16,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Dynatrace sidepod-left",
+          "panel": "sidepod-left",
+          "image": "dynatrace-black.png",
+          "position": [
+            0.52,
+            0.8
+          ],
+          "width": 0.15,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Siemens sidepod-left",
+          "panel": "sidepod-left",
+          "image": "siemens-teal.png",
+          "position": [
+            0.7,
+            0.8
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Ford Racing sidepod-left",
+          "panel": "sidepod-left",
+          "image": "ford-racing-white.png",
+          "position": [
+            0.86,
+            0.8
+          ],
+          "width": 0.11,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "HUGO sidepod-right",
+          "panel": "sidepod-right",
+          "image": "hugo-black.png",
+          "position": [
+            0.52,
+            0.48
+          ],
+          "width": 0.52,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "NEFT Vodka sidepod-right",
+          "panel": "sidepod-right",
+          "image": "neft-vodka-black.png",
+          "position": [
+            0.16,
+            0.35
+          ],
+          "width": 0.12,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Roboze sidepod-right",
+          "panel": "sidepod-right",
+          "image": "roboze-black.png",
+          "position": [
+            0.2,
+            0.82
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "CONFLUENT sidepod-right",
+          "panel": "sidepod-right",
+          "image": "confluent-black.png",
+          "position": [
+            0.34,
+            0.8
+          ],
+          "width": 0.16,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Dynatrace sidepod-right",
+          "panel": "sidepod-right",
+          "image": "dynatrace-black.png",
+          "position": [
+            0.52,
+            0.8
+          ],
+          "width": 0.15,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Siemens sidepod-right",
+          "panel": "sidepod-right",
+          "image": "siemens-teal.png",
+          "position": [
+            0.7,
+            0.8
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Ford Racing sidepod-right",
+          "panel": "sidepod-right",
+          "image": "ford-racing-white.png",
+          "position": [
+            0.86,
+            0.8
+          ],
+          "width": 0.11,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Bull sun engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "bull-sun.png",
+          "position": [
+            0.42,
+            0.36
+          ],
+          "width": 0.34,
+          "allow_shared": true,
+          "flip": "auto",
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Bull red engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "bull-red-flipped.png",
+          "position": [
+            0.48,
+            0.38
+          ],
+          "width": 0.58,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Randstad engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "randstad-white.png",
+          "position": [
+            0.38,
+            0.12
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Barilla engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "barilla-white.png",
+          "position": [
+            0.24,
+            0.12
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Number 30 engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "number30-black.png",
+          "position": [
+            0.16,
+            0.35
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Bull sun engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "bull-sun.png",
+          "position": [
+            0.42,
+            0.36
+          ],
+          "width": 0.34,
+          "allow_shared": true,
+          "flip": "auto",
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Bull red engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "bull-red.png",
+          "position": [
+            0.48,
+            0.38
+          ],
+          "width": 0.58,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Randstad engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "randstad-white.png",
+          "position": [
+            0.38,
+            0.12
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Barilla engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "barilla-white.png",
+          "position": [
+            0.24,
+            0.12
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Number 30 engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "number30-black.png",
+          "position": [
+            0.16,
+            0.35
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App nose-top",
+          "panel": "nose-top",
+          "image": "cash-app-black.png",
+          "position": [
+            0.5,
+            0.28
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "VISA nose-top",
+          "panel": "nose-top",
+          "image": "visa-blue.png",
+          "position": [
+            0.5,
+            0.38
+          ],
+          "width": 0.35,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "Number 30 nose-top",
+          "panel": "nose-top",
+          "image": "number30-black.png",
+          "position": [
+            0.5,
+            0.55
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "TUDOR nose-top",
+          "panel": "nose-top",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.7
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "Pirelli nose-top",
+          "panel": "nose-top",
+          "image": "pirelli-oval.png",
+          "position": [
+            0.5,
+            0.83
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "VISA nose-side-left",
+          "panel": "nose-side-left",
+          "image": "visa-blue.png",
+          "position": [
+            0.82,
+            0.45
+          ],
+          "width": 0.18,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR nose-side-left",
+          "panel": "nose-side-left",
+          "image": "tudor-black.png",
+          "position": [
+            0.64,
+            0.45
+          ],
+          "width": 0.16,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Dynatrace nose-side-left",
+          "panel": "nose-side-left",
+          "image": "dynatrace-black.png",
+          "position": [
+            0.48,
+            0.45
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Siemens nose-side-left",
+          "panel": "nose-side-left",
+          "image": "siemens-white.png",
+          "position": [
+            0.48,
+            0.92
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "NEFT Vodka nose-side-left",
+          "panel": "nose-side-left",
+          "image": "neft-vodka-black.png",
+          "position": [
+            0.32,
+            0.45
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Pirelli nose-side-left",
+          "panel": "nose-side-left",
+          "image": "pirelli-oval.png",
+          "position": [
+            0.16,
+            0.45
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:left-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "VISA nose-side-right",
+          "panel": "nose-side-right",
+          "image": "visa-blue.png",
+          "position": [
+            0.82,
+            0.45
+          ],
+          "width": 0.18,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR nose-side-right",
+          "panel": "nose-side-right",
+          "image": "tudor-black.png",
+          "position": [
+            0.64,
+            0.45
+          ],
+          "width": 0.16,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Dynatrace nose-side-right",
+          "panel": "nose-side-right",
+          "image": "dynatrace-black.png",
+          "position": [
+            0.48,
+            0.45
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Siemens nose-side-right",
+          "panel": "nose-side-right",
+          "image": "siemens-white.png",
+          "position": [
+            0.48,
+            0.92
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "NEFT Vodka nose-side-right",
+          "panel": "nose-side-right",
+          "image": "neft-vodka-black.png",
+          "position": [
+            0.32,
+            0.45
+          ],
+          "width": 0.13,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Pirelli nose-side-right",
+          "panel": "nose-side-right",
+          "image": "pirelli-oval.png",
+          "position": [
+            0.16,
+            0.45
+          ],
+          "width": 0.14,
+          "face_mask": "main_body:right-side",
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR halo-left",
+          "panel": "halo-left",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.3,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App halo-left",
+          "panel": "halo-left",
+          "image": "cash-app-green.png",
+          "position": [
+            0.22,
+            0.5
+          ],
+          "width": 0.18,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR halo-right",
+          "panel": "halo-right",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.3,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App halo-right",
+          "panel": "halo-right",
+          "image": "cash-app-green.png",
+          "position": [
+            0.22,
+            0.5
+          ],
+          "width": 0.18,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR shield halo-front",
+          "panel": "halo-front",
+          "image": "tudor-shield-black.png",
+          "position": [
+            0.5,
+            0.87
+          ],
+          "width": 0.12,
+          "flip": "auto"
+        },
+        {
+          "name": "CONFLUENT halo-left inner",
+          "panel": "halo-left",
+          "image": "confluent-black.png",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "width": 0.18,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "CONFLUENT halo-right inner",
+          "panel": "halo-right",
+          "image": "confluent-black.png",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "width": 0.18,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "Blue leading edge pinstripe front-wing-element-01-top",
+          "panel": "front-wing-element-01-top",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.88
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "White front-wing-element-02-shared-top-bottom",
+          "panel": "front-wing-element-02-shared-top-bottom",
+          "color": "body_white"
+        },
+        {
+          "name": "White front-wing-element-03-left-top",
+          "panel": "front-wing-element-03-left-top",
+          "color": "body_white"
+        },
+        {
+          "name": "White front-wing-element-03-right-top",
+          "panel": "front-wing-element-03-right-top",
+          "color": "body_white"
+        },
+        {
+          "name": "White front-wing-element-04-left-top",
+          "panel": "front-wing-element-04-left-top",
+          "color": "body_white"
+        },
+        {
+          "name": "White front-wing-element-04-right-top",
+          "panel": "front-wing-element-04-right-top",
+          "color": "body_white"
+        },
+        {
+          "name": "Blue stripe front-wing-element-04-left-top",
+          "panel": "front-wing-element-04-left-top",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.85
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Blue stripe front-wing-element-04-right-top",
+          "panel": "front-wing-element-04-right-top",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.85
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "White front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "body_white"
+        },
+        {
+          "name": "White front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "body_white"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "Cash App front-wing-endplate-left",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "cash-app-green.png",
+          "position": [
+            0.5,
+            0.25
+          ],
+          "width": 0.4,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR front-wing-endplate-left",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.38,
+          "flip": "auto"
+        },
+        {
+          "name": "Pirelli front-wing-endplate-left",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "pirelli-oval.png",
+          "position": [
+            0.5,
+            0.78
+          ],
+          "width": 0.4,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App front-wing-endplate-right",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "cash-app-green.png",
+          "position": [
+            0.5,
+            0.25
+          ],
+          "width": 0.4,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR front-wing-endplate-right",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.38,
+          "flip": "auto"
+        },
+        {
+          "name": "Pirelli front-wing-endplate-right",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "pirelli-oval.png",
+          "position": [
+            0.5,
+            0.78
+          ],
+          "width": 0.4,
+          "flip": "auto"
+        },
+        {
+          "name": "Mobil 1 front-wing-element-03-left",
+          "panel": "front-wing-element-03-left-top",
+          "image": "mobil1.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "Mobil 1 front-wing-element-03-right",
+          "panel": "front-wing-element-03-right-top",
+          "image": "mobil1.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "Blue rear-wing-main-top",
+          "panel": "rear-wing-main-top",
+          "color": "metallic_blue"
+        },
+        {
+          "name": "White rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "body_white"
+        },
+        {
+          "name": "White rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "body_white"
+        },
+        {
+          "name": "Blue lower endplate left",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.65
+            ],
+            [
+              1.0,
+              0.65
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Blue lower endplate right",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "metallic_blue",
+          "polygon": [
+            [
+              0.0,
+              0.65
+            ],
+            [
+              1.0,
+              0.65
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "VISA rear-wing-main-top",
+          "panel": "rear-wing-main-top",
+          "image": "visa-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.88,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "TUDOR rear-wing-endplate-left",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.52,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App rear-wing-endplate-left",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "cash-app-white.png",
+          "position": [
+            0.5,
+            0.72
+          ],
+          "width": 0.52,
+          "flip": "auto"
+        },
+        {
+          "name": "Ford Racing rear-wing-endplate-left",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "ford-racing-white.png",
+          "position": [
+            0.5,
+            0.88
+          ],
+          "width": 0.38,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR rear-wing-endplate-right",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "tudor-black.png",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.52,
+          "flip": "auto"
+        },
+        {
+          "name": "Cash App rear-wing-endplate-right",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "cash-app-white.png",
+          "position": [
+            0.5,
+            0.72
+          ],
+          "width": 0.52,
+          "flip": "auto"
+        },
+        {
+          "name": "Ford Racing rear-wing-endplate-right",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "ford-racing-white.png",
+          "position": [
+            0.5,
+            0.88
+          ],
+          "width": 0.38,
+          "flip": "auto"
+        },
+        {
+          "name": "Ford Racing rear-wing-drs",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "image": "ford-racing-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.3,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "TUDOR rear-wing-endplate-left-inner",
+          "panel": "rear-wing-endplate-left-inner",
+          "image": "tudor-white.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "TUDOR rear-wing-endplate-right-inner",
+          "panel": "rear-wing-endplate-right-inner",
+          "image": "tudor-white.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "White pod mirrors-left-01",
+          "panel": "mirrors-left-01",
+          "color": "body_white"
+        },
+        {
+          "name": "White pod mirrors-left-02",
+          "panel": "mirrors-left-02",
+          "color": "body_white"
+        },
+        {
+          "name": "White pod mirrors-right-06",
+          "panel": "mirrors-right-06",
+          "color": "body_white"
+        },
+        {
+          "name": "White pod mirrors-right-07",
+          "panel": "mirrors-right-07",
+          "color": "body_white"
+        },
+        {
+          "name": "Blue stalk mirrors-left-00",
+          "panel": "mirrors-left-00",
+          "color": "metallic_blue"
+        },
+        {
+          "name": "Blue stalk mirrors-right-05",
+          "panel": "mirrors-right-05",
+          "color": "metallic_blue"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "Mobil 1 mirrors-left-01",
+          "panel": "mirrors-left-01",
+          "image": "mobil1.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.4,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Mobil 1 mirrors-right-07",
+          "panel": "mirrors-right-07",
+          "image": "mobil1.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.4,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "Wheel ring front-covers-left-00",
+          "panel": "front-covers-left-00",
+          "image": "vcarb-wheel-ring.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Wheel ring front-covers-right-01",
+          "panel": "front-covers-right-01",
+          "image": "vcarb-wheel-ring.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "Wheel ring rear-covers-left-00",
+          "panel": "rear-covers-left-00",
+          "image": "vcarb-wheel-ring.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true,
+          "flip": "auto"
+        },
+        {
+          "name": "Wheel ring rear-covers-right-01",
+          "panel": "rear-covers-right-01",
+          "image": "vcarb-wheel-ring.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.95,
+          "allow_shared": true,
+          "flip": "auto"
+        }
+      ]
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "Yellow T-cam winglets-right-02",
+          "panel": "winglets-right-02",
+          "color": "bull_sun"
+        }
+      ],
+      "stickers": []
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    }
+  }
+}

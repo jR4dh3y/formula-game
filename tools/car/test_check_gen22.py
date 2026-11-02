@@ -1,6 +1,7 @@
 """Standalone contract checks require the roster without external team textures."""
 import importlib.util
 import json
+import struct
 from pathlib import Path
 import sys
 import tempfile
@@ -13,6 +14,13 @@ spec.loader.exec_module(checker)
 
 
 class CheckerTests(unittest.TestCase):
+    def test_metre_scaled_carbon_uvs_cannot_be_used_as_paint(self):
+        document = {'accessors': [{'type': 'VEC2', 'componentType': 5126,
+                                   'count': 2, 'bufferView': 0}], 'bufferViews': [{}]}
+        checker.check_template_uv(document, struct.pack('<4f', 0, 0, 1, 1), 0)
+        with self.assertRaisesRegex(AssertionError, 'outside template'):
+            checker.check_template_uv(document, struct.pack('<4f', 0, 0, 56, 56), 0)
+
     def test_roster_is_required_without_team_texture_directories(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

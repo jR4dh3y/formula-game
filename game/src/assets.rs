@@ -349,14 +349,19 @@ fn visual_ready(
                 }
             }
             if !car.shadow_only && material_names.contains(entity) {
-                commands.entity(entity).insert(CarSurface {
-                    lod: (car.entrant != session.player).then_some(if car.lod == Some(true) {
+                commands.entity(entity).insert(CarSurface(
+                    session
+                        .identities
+                        .get(car.entrant)
+                        .and_then(|identity| identity.as_ref())
+                        .map(|identity| identity.team.clone()),
+                    (car.entrant != session.player).then_some(if car.lod == Some(true) {
                         "lod2"
                     } else {
                         "lod1"
                     }),
-                    compound: session.race.entrants[car.entrant].car.setup.compound,
-                });
+                    session.race.entrants[car.entrant].car.setup.compound,
+                ));
             }
             let Ok((name, rest)) = nodes.get(entity) else {
                 continue;

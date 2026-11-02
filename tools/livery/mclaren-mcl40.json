@@ -1,0 +1,1983 @@
+{
+  "schema": 1,
+  "team": "mclaren",
+  "reference": "Actual 2026 MCL40 launch photos; ~/.cache/native-2026/mclaren/refs/SOURCES.tsv",
+  "frame": {
+    "origin": [
+      0.045,
+      0,
+      0
+    ],
+    "yaw": -0.007
+  },
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "palette": {
+    "papaya": "#FF8800",
+    "anthracite": "#242624",
+    "teal": "#00636A",
+    "carbon": "#101113",
+    "white": "#F2F2F2"
+  },
+  "parts": {
+    "main_body": {
+      "base": "papaya",
+      "regions": [
+        {
+          "color": "anthracite",
+          "where": {
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    -1,
+                    0.18
+                  ],
+                  [
+                    0.6,
+                    0.23
+                  ],
+                  [
+                    1.35,
+                    0.38
+                  ],
+                  [
+                    1.8,
+                    0.6
+                  ],
+                  [
+                    2.2,
+                    0.65
+                  ],
+                  [
+                    3.1,
+                    0.4
+                  ],
+                  [
+                    3.8,
+                    0.35
+                  ],
+                  [
+                    4.3,
+                    0.24
+                  ]
+                ],
+                "above": false,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "anthracite",
+          "where": {
+            "bounds": {
+              "y": [
+                2.3,
+                3.8
+              ]
+            },
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    2.3,
+                    0.83
+                  ],
+                  [
+                    2.55,
+                    0.72
+                  ],
+                  [
+                    2.9,
+                    0.66
+                  ],
+                  [
+                    3.25,
+                    0.63
+                  ],
+                  [
+                    3.6,
+                    0.75
+                  ],
+                  [
+                    3.8,
+                    0.88
+                  ]
+                ],
+                "above": true,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "teal",
+          "where": {
+            "bounds": {
+              "y": [
+                2.28,
+                3.24
+              ],
+              "z": [
+                1.0,
+                1.3
+              ]
+            }
+          }
+        },
+        {
+          "color": "carbon",
+          "where": {
+            "panels": [
+              3,
+              4,
+              5,
+              9
+            ]
+          }
+        },
+        {
+          "color": "carbon",
+          "where": {
+            "bounds": {
+              "y": [
+                -0.72,
+                -0.36
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "front_wing": {
+      "base": "carbon",
+      "regions": [
+        {
+          "color": "papaya",
+          "where": {
+            "bounds": {
+              "y": [
+                -0.75,
+                -0.48
+              ]
+            },
+            "panels": [
+              0,
+              3
+            ]
+          }
+        }
+      ]
+    },
+    "rear_wing": {
+      "base": "carbon",
+      "regions": [
+        {
+          "color": "papaya",
+          "where": {
+            "panels": [
+              1
+            ]
+          }
+        },
+        {
+          "color": "papaya",
+          "where": {
+            "bounds": {
+              "z": [
+                0.61,
+                1.0
+              ]
+            },
+            "panels": [
+              0,
+              6
+            ]
+          }
+        }
+      ]
+    },
+    "mirrors": {
+      "base": "teal",
+      "regions": []
+    },
+    "floor": {
+      "base": "carbon",
+      "regions": []
+    },
+    "cockpit_foam": {
+      "base": "carbon",
+      "regions": []
+    },
+    "front_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "rear_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "winglets": {
+      "base": "carbon",
+      "regions": []
+    }
+  },
+  "decals": [
+    {
+      "part": "main_body",
+      "image": "gemini-word-white.png",
+      "center": [
+        0.4,
+        2.96,
+        0.86
+      ],
+      "width": 0.83,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.72,
+            1.08
+          ],
+          "y": [
+            2.4,
+            3.5
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "gemini-word-white.png",
+      "center": [
+        -0.4,
+        2.96,
+        0.86
+      ],
+      "width": 0.83,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.72,
+            1.08
+          ],
+          "y": [
+            2.4,
+            3.5
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "gemini-star.png",
+      "center": [
+        0.4,
+        2.39,
+        0.86
+      ],
+      "width": 0.21,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.73,
+            1.05
+          ],
+          "y": [
+            2.2,
+            2.6
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "gemini-star.png",
+      "center": [
+        -0.4,
+        2.39,
+        0.86
+      ],
+      "width": 0.21,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.73,
+            1.05
+          ],
+          "y": [
+            2.2,
+            2.6
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "okx-white.png",
+      "center": [
+        0.4,
+        2.62,
+        0.46
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.34,
+            0.6
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "okx-white.png",
+      "center": [
+        -0.4,
+        2.62,
+        0.46
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.34,
+            0.6
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mastercard-colour.png",
+      "center": [
+        0.4,
+        3.07,
+        0.42
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.29,
+            0.58
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mastercard-colour.png",
+      "center": [
+        -0.4,
+        3.07,
+        0.42
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.29,
+            0.58
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "velo-black.png",
+      "center": [
+        0.4,
+        2.09,
+        0.57
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.48,
+            0.69
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "velo-black.png",
+      "center": [
+        -0.4,
+        2.09,
+        0.57
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.48,
+            0.69
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "allwyn-white.png",
+      "center": [
+        0.4,
+        2.51,
+        1.015
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.05,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.96,
+            1.1
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "allwyn-white.png",
+      "center": [
+        -0.4,
+        2.51,
+        1.015
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.05,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.96,
+            1.1
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "cisco-black.png",
+      "center": [
+        0.4,
+        2.18,
+        0.76
+      ],
+      "width": 0.21,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.66,
+            0.9
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "cisco-black.png",
+      "center": [
+        -0.4,
+        2.18,
+        0.76
+      ],
+      "width": 0.21,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.66,
+            0.9
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "richard-mille-black.png",
+      "center": [
+        0.4,
+        1.04,
+        0.53
+      ],
+      "width": 0.51,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.4,
+            0.67
+          ],
+          "y": [
+            0.65,
+            1.4
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "richard-mille-black.png",
+      "center": [
+        -0.4,
+        1.04,
+        0.53
+      ],
+      "width": 0.51,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.4,
+            0.67
+          ],
+          "y": [
+            0.65,
+            1.4
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "dp-world-white.png",
+      "center": [
+        0.4,
+        1.17,
+        0.42
+      ],
+      "width": 0.52,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.31,
+            0.51
+          ],
+          "y": [
+            0.8,
+            1.5
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "dp-world-white.png",
+      "center": [
+        -0.4,
+        1.17,
+        0.42
+      ],
+      "width": 0.52,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.31,
+            0.51
+          ],
+          "y": [
+            0.8,
+            1.5
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mclaren-papaya.png",
+      "center": [
+        0.4,
+        1.85,
+        0.3
+      ],
+      "width": 0.22,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.23,
+            0.42
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mclaren-papaya.png",
+      "center": [
+        -0.4,
+        1.85,
+        0.3
+      ],
+      "width": 0.22,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.23,
+            0.42
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number1.png",
+      "center": [
+        0.4,
+        3.53,
+        0.75
+      ],
+      "width": 0.14,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.64,
+            0.95
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number1.png",
+      "center": [
+        -0.4,
+        3.53,
+        0.75
+      ],
+      "width": 0.14,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.64,
+            0.95
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number1.png",
+      "center": [
+        0,
+        0.91,
+        0.5
+      ],
+      "width": 0.14,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "dell-technologies-black.png",
+      "center": [
+        0,
+        0.6,
+        0.5
+      ],
+      "width": 0.26,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "deloitte-black.png",
+      "center": [
+        0,
+        0.38,
+        0.5
+      ],
+      "width": 0.25,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "webex-black.png",
+      "center": [
+        0,
+        0.19,
+        0.5
+      ],
+      "width": 0.25,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "rubrik-black.png",
+      "center": [
+        0,
+        0.01,
+        0.5
+      ],
+      "width": 0.23,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "dewalt-black.png",
+      "center": [
+        0,
+        -0.17,
+        0.5
+      ],
+      "width": 0.23,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "pirelli-black.png",
+      "center": [
+        0,
+        -0.32,
+        0.5
+      ],
+      "width": 0.21,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "gemini-star.png",
+      "center": [
+        0,
+        -0.49,
+        0.5
+      ],
+      "width": 0.17,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mclaren-papaya.png",
+      "center": [
+        0,
+        -0.66,
+        0.5
+      ],
+      "width": 0.12,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "dropbox-black.png",
+      "center": [
+        0.6,
+        4.5,
+        0.77
+      ],
+      "width": 0.33,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          0
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "dropbox-black.png",
+      "center": [
+        -0.6,
+        4.5,
+        0.77
+      ],
+      "width": 0.33,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          6
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "groq-white.png",
+      "center": [
+        0.6,
+        4.5,
+        0.5
+      ],
+      "width": 0.18,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          0
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "groq-white.png",
+      "center": [
+        -0.6,
+        4.5,
+        0.5
+      ],
+      "width": 0.18,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          6
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "okx-black.png",
+      "center": [
+        0,
+        4.42,
+        0.9
+      ],
+      "width": 0.8,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        -1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "okx-black.png",
+      "center": [
+        0,
+        4.69,
+        0.925
+      ],
+      "width": 0.8,
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        0,
+        1,
+        0
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            4.57,
+            4.8
+          ],
+          "z": [
+            0.87,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "okta-white.png",
+      "center": [
+        0.27,
+        1.98,
+        0.872
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        -1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.19
+          ],
+          "z": [
+            0.81,
+            0.94
+          ]
+        }
+      },
+      "path": [
+        [
+          0.19,
+          1.8,
+          0.884
+        ],
+        [
+          0.268,
+          1.9,
+          0.879
+        ],
+        [
+          0.301,
+          2.0,
+          0.867
+        ],
+        [
+          0.322,
+          2.1,
+          0.853
+        ],
+        [
+          0.327,
+          2.16,
+          0.843
+        ]
+      ]
+    },
+    {
+      "part": "main_body",
+      "image": "okta-white.png",
+      "center": [
+        -0.27,
+        1.98,
+        0.872
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.19
+          ],
+          "z": [
+            0.81,
+            0.94
+          ]
+        }
+      },
+      "path": [
+        [
+          -0.327,
+          2.16,
+          0.843
+        ],
+        [
+          -0.322,
+          2.1,
+          0.853
+        ],
+        [
+          -0.301,
+          2.0,
+          0.867
+        ],
+        [
+          -0.268,
+          1.9,
+          0.879
+        ],
+        [
+          -0.19,
+          1.8,
+          0.884
+        ]
+      ]
+    },
+    {
+      "part": "main_body",
+      "image": "allwyn-white.png",
+      "center": [
+        0.46,
+        1.49,
+        0.67
+      ],
+      "width": 0.15,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            1.3,
+            1.7
+          ],
+          "z": [
+            0.6,
+            0.78
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "allwyn-white.png",
+      "center": [
+        -0.46,
+        1.49,
+        0.67
+      ],
+      "width": 0.15,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            1.3,
+            1.7
+          ],
+          "z": [
+            0.6,
+            0.78
+          ]
+        }
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "oneflight-black.png",
+      "center": [
+        0.6,
+        -0.59,
+        0.18
+      ],
+      "width": 0.48,
+      "right": [
+        0.9570244044334736,
+        0.2900073952828708,
+        0
+      ],
+      "up": [
+        -0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "oneflight-black.png",
+      "center": [
+        -0.6,
+        -0.59,
+        0.18
+      ],
+      "width": 0.48,
+      "right": [
+        0.9570244044334736,
+        -0.2900073952828708,
+        0
+      ],
+      "up": [
+        0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    }
+  ]
+}

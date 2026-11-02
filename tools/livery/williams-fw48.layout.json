@@ -1,0 +1,5789 @@
+{
+  "schema": 1,
+  "team": "williams",
+  "car": "fw48",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "reference": "Official February 2026 Williams FW48 studio launch photography, Albon 23 and Sainz 55. Full 48-item visual audit in ~/.cache/livery-2d/williams/ledger.md.",
+  "palette": {
+    "blue": "#082F8C",
+    "dark_blue": "#041638",
+    "cyan": "#00A3E0",
+    "copper": "#B8651D",
+    "white": "#F8F9FA",
+    "carbon": "#101216"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "blue",
+      "base": [
+        {
+          "name": "carbon main-body-right-06",
+          "panel": "main-body-right-06",
+          "color": "carbon"
+        },
+        {
+          "name": "duracell copper main-body-left-07",
+          "panel": "main-body-left-07",
+          "color": "copper"
+        },
+        {
+          "name": "duracell copper main-body-right-08",
+          "panel": "main-body-right-08",
+          "color": "copper"
+        },
+        {
+          "name": "carbon main-body-right-09",
+          "panel": "main-body-right-09",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-10",
+          "panel": "main-body-left-10",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-11",
+          "panel": "main-body-left-11",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-12",
+          "panel": "main-body-left-12",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-13",
+          "panel": "main-body-left-13",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-14",
+          "panel": "main-body-right-14",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-left-15",
+          "panel": "main-body-left-15",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-16",
+          "panel": "main-body-right-16",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-17",
+          "panel": "main-body-right-17",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon main-body-right-18",
+          "panel": "main-body-right-18",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon cockpit-rim",
+          "panel": "cockpit-rim",
+          "color": "carbon"
+        },
+        {
+          "name": "carbon lower undercut left",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.88
+            ],
+            [
+              0.15,
+              0.88
+            ],
+            [
+              0.3,
+              0.9
+            ],
+            [
+              0.5,
+              0.92
+            ],
+            [
+              0.7,
+              0.93
+            ],
+            [
+              0.85,
+              0.92
+            ],
+            [
+              1.0,
+              0.9
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "cyan pinstripe sidepod left",
+          "panel": "sidepod-left",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.0,
+              0.865
+            ],
+            [
+              0.15,
+              0.865
+            ],
+            [
+              0.3,
+              0.885
+            ],
+            [
+              0.5,
+              0.905
+            ],
+            [
+              0.7,
+              0.915
+            ],
+            [
+              0.85,
+              0.905
+            ],
+            [
+              1.0,
+              0.885
+            ],
+            [
+              1.0,
+              0.895
+            ],
+            [
+              0.85,
+              0.915
+            ],
+            [
+              0.7,
+              0.925
+            ],
+            [
+              0.5,
+              0.915
+            ],
+            [
+              0.3,
+              0.895
+            ],
+            [
+              0.15,
+              0.875
+            ],
+            [
+              0.0,
+              0.875
+            ]
+          ]
+        },
+        {
+          "name": "carbon forward intake left",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.07,
+              0.0
+            ],
+            [
+              0.12,
+              0.45
+            ],
+            [
+              0.08,
+              0.75
+            ],
+            [
+              0.0,
+              0.75
+            ]
+          ]
+        },
+        {
+          "name": "carbon lower undercut right",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              1.0,
+              0.88
+            ],
+            [
+              0.85,
+              0.88
+            ],
+            [
+              0.7,
+              0.9
+            ],
+            [
+              0.5,
+              0.92
+            ],
+            [
+              0.3,
+              0.93
+            ],
+            [
+              0.15,
+              0.92
+            ],
+            [
+              0.0,
+              0.9
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "cyan pinstripe sidepod right",
+          "panel": "sidepod-right",
+          "color": "cyan",
+          "polygon": [
+            [
+              1.0,
+              0.865
+            ],
+            [
+              0.85,
+              0.865
+            ],
+            [
+              0.7,
+              0.885
+            ],
+            [
+              0.5,
+              0.905
+            ],
+            [
+              0.3,
+              0.915
+            ],
+            [
+              0.15,
+              0.905
+            ],
+            [
+              0.0,
+              0.885
+            ],
+            [
+              0.0,
+              0.895
+            ],
+            [
+              0.15,
+              0.915
+            ],
+            [
+              0.3,
+              0.925
+            ],
+            [
+              0.5,
+              0.915
+            ],
+            [
+              0.7,
+              0.895
+            ],
+            [
+              0.85,
+              0.875
+            ],
+            [
+              1.0,
+              0.875
+            ]
+          ]
+        },
+        {
+          "name": "carbon forward intake right",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.93,
+              0.0
+            ],
+            [
+              0.88,
+              0.45
+            ],
+            [
+              0.92,
+              0.75
+            ],
+            [
+              1.0,
+              0.75
+            ]
+          ]
+        },
+        {
+          "name": "duracell copper airbox left",
+          "panel": "engine-cover-left",
+          "color": "copper",
+          "polygon": [
+            [
+              0.05,
+              0.0
+            ],
+            [
+              0.32,
+              0.0
+            ],
+            [
+              0.32,
+              0.22
+            ],
+            [
+              0.05,
+              0.22
+            ]
+          ]
+        },
+        {
+          "name": "duracell copper airbox right",
+          "panel": "engine-cover-right",
+          "color": "copper",
+          "polygon": [
+            [
+              0.95,
+              0.0
+            ],
+            [
+              0.68,
+              0.0
+            ],
+            [
+              0.68,
+              0.22
+            ],
+            [
+              0.95,
+              0.22
+            ]
+          ]
+        },
+        {
+          "name": "duracell black positive terminal left",
+          "panel": "engine-cover-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.05,
+              0.0
+            ],
+            [
+              0.32,
+              0.0
+            ],
+            [
+              0.32,
+              0.045
+            ],
+            [
+              0.05,
+              0.045
+            ]
+          ]
+        },
+        {
+          "name": "duracell black positive terminal right",
+          "panel": "engine-cover-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.95,
+              0.0
+            ],
+            [
+              0.68,
+              0.0
+            ],
+            [
+              0.68,
+              0.045
+            ],
+            [
+              0.95,
+              0.045
+            ]
+          ]
+        },
+        {
+          "name": "nose top tapered blue ribbon center",
+          "panel": "nose-top",
+          "color": "blue",
+          "polygon": [
+            [
+              0.22,
+              0.0
+            ],
+            [
+              0.78,
+              0.0
+            ],
+            [
+              0.88,
+              1.0
+            ],
+            [
+              0.12,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "nose top carbon flank left",
+          "panel": "nose-top",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.22,
+              0.0
+            ],
+            [
+              0.12,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "nose top carbon flank right",
+          "panel": "nose-top",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.78,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.88,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "shark fin cyan border line left",
+          "panel": "engine-cover-left",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.85,
+              0.02
+            ],
+            [
+              0.98,
+              0.02
+            ],
+            [
+              0.98,
+              0.45
+            ],
+            [
+              0.85,
+              0.45
+            ]
+          ]
+        },
+        {
+          "name": "shark fin cyan border line right",
+          "panel": "engine-cover-right",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.15,
+              0.02
+            ],
+            [
+              0.02,
+              0.02
+            ],
+            [
+              0.02,
+              0.45
+            ],
+            [
+              0.15,
+              0.45
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "williams-w-white.png on nose-top tip",
+          "image": "williams-w-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.08
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "number23-white.png on nose-top",
+          "image": "number23-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.2
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "komatsu-white.png on nose-top",
+          "image": "komatsu-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.42
+          ],
+          "width": 0.46,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "atlassian-white.png on nose-top",
+          "image": "atlassian-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.62
+          ],
+          "width": 0.48,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "pirelli-white.png on nose-side-left",
+          "image": "pirelli-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.35,
+            0.45
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "pirelli-white.png on nose-side-right",
+          "image": "pirelli-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.65,
+            0.45
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "duracell-white.png on engine-cover-left",
+          "image": "duracell-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.18,
+            0.11
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "duracell-white.png on engine-cover-right",
+          "image": "duracell-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.82,
+            0.11
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "atlassian-white.png on engine-cover-left",
+          "image": "atlassian-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.42,
+            0.38
+          ],
+          "width": 0.44,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "atlassian-white.png on engine-cover-right",
+          "image": "atlassian-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.58,
+            0.38
+          ],
+          "width": 0.44,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "number23-white.png on engine-cover-left",
+          "image": "number23-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.76,
+            0.22
+          ],
+          "width": 0.17,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "number23-white.png on engine-cover-right",
+          "image": "number23-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.24,
+            0.22
+          ],
+          "width": 0.17,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "komatsu-white.png on lower engine-cover-left",
+          "image": "komatsu-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.55,
+            0.72
+          ],
+          "width": 0.25,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "komatsu-white.png on lower engine-cover-right",
+          "image": "komatsu-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.45,
+            0.72
+          ],
+          "width": 0.25,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "barclays-white.png on sidepod-left",
+          "image": "barclays-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.55,
+            0.7
+          ],
+          "width": 0.52,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "barclays-white.png on sidepod-right",
+          "image": "barclays-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.45,
+            0.7
+          ],
+          "width": 0.52,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "stephens-white.png on sidepod-left",
+          "image": "stephens-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.2,
+            0.46
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "stephens-white.png on sidepod-right",
+          "image": "stephens-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.8,
+            0.46
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "keeper-white.png on sidepod-left",
+          "image": "keeper-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.22,
+            0.58
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "keeper-white.png on sidepod-right",
+          "image": "keeper-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.78,
+            0.58
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "claude-white.png on sidepod-left",
+          "image": "claude-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.42,
+            0.48
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "claude-white.png on sidepod-right",
+          "image": "claude-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.58,
+            0.48
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "kraken-white.png on sidepod-left",
+          "image": "kraken-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.72,
+            0.48
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "face_mask": "main_body:left-side",
+          "allow_shared": true
+        },
+        {
+          "name": "kraken-white.png on sidepod-right",
+          "image": "kraken-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.28,
+            0.48
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "face_mask": "main_body:right-side",
+          "allow_shared": true
+        },
+        {
+          "name": "wilkinson-white.png on halo-front",
+          "image": "wilkinson-white.png",
+          "panel": "halo-front",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.42,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "claude-symbol-white.png on halo-left",
+          "image": "claude-symbol-white.png",
+          "panel": "halo-left",
+          "position": [
+            0.18,
+            0.5
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "claude-symbol-white.png on halo-right",
+          "image": "claude-symbol-white.png",
+          "panel": "halo-right",
+          "position": [
+            0.18,
+            0.5
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "keeper-white.png on halo-left",
+          "image": "keeper-white.png",
+          "panel": "halo-left",
+          "position": [
+            0.38,
+            0.5
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "keeper-white.png on halo-right",
+          "image": "keeper-white.png",
+          "panel": "halo-right",
+          "position": [
+            0.38,
+            0.5
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "nuveen-white.png on halo-left",
+          "image": "nuveen-white.png",
+          "panel": "halo-left",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "nuveen-white.png on halo-right",
+          "image": "nuveen-white.png",
+          "panel": "halo-right",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "width": 0.3,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "vast-white.png on cockpit-rim left",
+          "image": "vast-white.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.18,
+            0.44
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "vast-white.png on cockpit-rim right",
+          "image": "vast-white.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.82,
+            0.44
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "driver-albon.png on cockpit-rim left",
+          "image": "driver-albon.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.32,
+            0.44
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "driver-albon.png on cockpit-rim right",
+          "image": "driver-albon.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.68,
+            0.44
+          ],
+          "width": 0.16,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "betway-white.png on cockpit-rim left",
+          "image": "betway-white.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.44,
+            0.44
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "betway-white.png on cockpit-rim right",
+          "image": "betway-white.png",
+          "panel": "cockpit-rim",
+          "position": [
+            0.56,
+            0.44
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "blue front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "blue"
+        },
+        {
+          "name": "blue front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "blue"
+        },
+        {
+          "name": "blue front-wing-endplate-left-inner",
+          "panel": "front-wing-endplate-left-inner",
+          "color": "blue"
+        },
+        {
+          "name": "blue front-wing-endplate-right-inner",
+          "panel": "front-wing-endplate-right-inner",
+          "color": "blue"
+        },
+        {
+          "name": "blue trailing chevron flap 3 left",
+          "panel": "front-wing-element-03-left-top",
+          "color": "blue",
+          "polygon": [
+            [
+              0.55,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.55
+            ],
+            [
+              0.75,
+              0.45
+            ]
+          ]
+        },
+        {
+          "name": "cyan accent tip flap 3 left",
+          "panel": "front-wing-element-03-left-top",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.82,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.35
+            ],
+            [
+              0.88,
+              0.25
+            ]
+          ]
+        },
+        {
+          "name": "blue trailing chevron flap 3 right",
+          "panel": "front-wing-element-03-right-top",
+          "color": "blue",
+          "polygon": [
+            [
+              0.45,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.55
+            ],
+            [
+              0.25,
+              0.45
+            ]
+          ]
+        },
+        {
+          "name": "cyan accent tip flap 3 right",
+          "panel": "front-wing-element-03-right-top",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.18,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.35
+            ],
+            [
+              0.12,
+              0.25
+            ]
+          ]
+        },
+        {
+          "name": "blue trailing chevron flap 4 left",
+          "panel": "front-wing-element-04-left-top",
+          "color": "blue",
+          "polygon": [
+            [
+              0.55,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.55
+            ],
+            [
+              0.75,
+              0.45
+            ]
+          ]
+        },
+        {
+          "name": "cyan accent tip flap 4 left",
+          "panel": "front-wing-element-04-left-top",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.82,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.35
+            ],
+            [
+              0.88,
+              0.25
+            ]
+          ]
+        },
+        {
+          "name": "blue trailing chevron flap 4 right",
+          "panel": "front-wing-element-04-right-top",
+          "color": "blue",
+          "polygon": [
+            [
+              0.45,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.55
+            ],
+            [
+              0.25,
+              0.45
+            ]
+          ]
+        },
+        {
+          "name": "cyan accent tip flap 4 right",
+          "panel": "front-wing-element-04-right-top",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.18,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.35
+            ],
+            [
+              0.12,
+              0.25
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "bny-white.png on front-wing-endplate-left-outer",
+          "image": "bny-white.png",
+          "panel": "front-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.28
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "bny-white.png on front-wing-endplate-right-outer",
+          "image": "bny-white.png",
+          "panel": "front-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.28
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "anthropic-white.png on front-wing-element-03-left-top",
+          "image": "anthropic-white.png",
+          "panel": "front-wing-element-03-left-top",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "anthropic-white.png on front-wing-element-03-right-top",
+          "image": "anthropic-white.png",
+          "panel": "front-wing-element-03-right-top",
+          "position": [
+            0.25,
+            0.5
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "blue rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "blue"
+        },
+        {
+          "name": "blue rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "blue"
+        },
+        {
+          "name": "carbon lower strake left",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.72
+            ],
+            [
+              1.0,
+              0.72
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "carbon lower strake right",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.0,
+              0.72
+            ],
+            [
+              1.0,
+              0.72
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "blue rear-wing-drs-shared-top-bottom",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "color": "blue"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "komatsu-white.png on rear-wing-main-top",
+          "image": "komatsu-white.png",
+          "panel": "rear-wing-main-top",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.72,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "barclays-white.png on rear-wing-endplate-left-outer",
+          "image": "barclays-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.4
+          ],
+          "width": 0.48,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "barclays-white.png on rear-wing-endplate-right-outer",
+          "image": "barclays-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.4
+          ],
+          "width": 0.48,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "nuveen-white.png on rear-wing-endplate-left-inner",
+          "image": "nuveen-white.png",
+          "panel": "rear-wing-endplate-left-inner",
+          "position": [
+            0.5,
+            0.32
+          ],
+          "width": 0.42,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "nuveen-white.png on rear-wing-endplate-right-inner",
+          "image": "nuveen-white.png",
+          "panel": "rear-wing-endplate-right-inner",
+          "position": [
+            0.5,
+            0.32
+          ],
+          "width": 0.42,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "blue outer shell mirrors-left-00",
+          "panel": "mirrors-left-00",
+          "color": "blue"
+        },
+        {
+          "name": "blue outer shell mirrors-right-05",
+          "panel": "mirrors-right-05",
+          "color": "blue"
+        }
+      ],
+      "stickers": []
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "cyan edge stripe floor left",
+          "panel": "floor-left-03",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.0,
+              0.88
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              0.96
+            ],
+            [
+              0.0,
+              0.96
+            ]
+          ]
+        },
+        {
+          "name": "cyan edge stripe floor right",
+          "panel": "floor-right-04",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.0,
+              0.88
+            ],
+            [
+              1.0,
+              0.88
+            ],
+            [
+              1.0,
+              0.96
+            ],
+            [
+              0.0,
+              0.96
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "kraken-white.png on floor-left-03",
+          "image": "kraken-white.png",
+          "panel": "floor-left-03",
+          "position": [
+            0.18,
+            0.65
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "kraken-white.png on floor-right-04",
+          "image": "kraken-white.png",
+          "panel": "floor-right-04",
+          "position": [
+            0.82,
+            0.65
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "cyan top highlight winglets-left-00",
+          "panel": "winglets-left-00",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.15
+            ],
+            [
+              0.0,
+              0.15
+            ]
+          ]
+        },
+        {
+          "name": "cyan top highlight winglets-right-01",
+          "panel": "winglets-right-01",
+          "color": "cyan",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.15
+            ],
+            [
+              0.0,
+              0.15
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "outer cyan ring",
+          "space": "uv_px",
+          "color": "cyan",
+          "polygon": [
+            [
+              3898.0,
+              2048.0
+            ],
+            [
+              3889.09,
+              2229.33
+            ],
+            [
+              3862.45,
+              2408.92
+            ],
+            [
+              3818.34,
+              2585.03
+            ],
+            [
+              3757.18,
+              2755.96
+            ],
+            [
+              3679.55,
+              2920.08
+            ],
+            [
+              3586.22,
+              3075.8
+            ],
+            [
+              3478.07,
+              3221.63
+            ],
+            [
+              3356.15,
+              3356.15
+            ],
+            [
+              3221.63,
+              3478.07
+            ],
+            [
+              3075.8,
+              3586.22
+            ],
+            [
+              2920.08,
+              3679.55
+            ],
+            [
+              2755.96,
+              3757.18
+            ],
+            [
+              2585.03,
+              3818.34
+            ],
+            [
+              2408.92,
+              3862.45
+            ],
+            [
+              2229.33,
+              3889.09
+            ],
+            [
+              2048.0,
+              3898.0
+            ],
+            [
+              1866.67,
+              3889.09
+            ],
+            [
+              1687.08,
+              3862.45
+            ],
+            [
+              1510.97,
+              3818.34
+            ],
+            [
+              1340.04,
+              3757.18
+            ],
+            [
+              1175.92,
+              3679.55
+            ],
+            [
+              1020.2,
+              3586.22
+            ],
+            [
+              874.37,
+              3478.07
+            ],
+            [
+              739.85,
+              3356.15
+            ],
+            [
+              617.93,
+              3221.63
+            ],
+            [
+              509.78,
+              3075.8
+            ],
+            [
+              416.45,
+              2920.08
+            ],
+            [
+              338.82,
+              2755.96
+            ],
+            [
+              277.66,
+              2585.03
+            ],
+            [
+              233.55,
+              2408.92
+            ],
+            [
+              206.91,
+              2229.33
+            ],
+            [
+              198.0,
+              2048.0
+            ],
+            [
+              206.91,
+              1866.67
+            ],
+            [
+              233.55,
+              1687.08
+            ],
+            [
+              277.66,
+              1510.97
+            ],
+            [
+              338.82,
+              1340.04
+            ],
+            [
+              416.45,
+              1175.92
+            ],
+            [
+              509.78,
+              1020.2
+            ],
+            [
+              617.93,
+              874.37
+            ],
+            [
+              739.85,
+              739.85
+            ],
+            [
+              874.37,
+              617.93
+            ],
+            [
+              1020.2,
+              509.78
+            ],
+            [
+              1175.92,
+              416.45
+            ],
+            [
+              1340.04,
+              338.82
+            ],
+            [
+              1510.97,
+              277.66
+            ],
+            [
+              1687.08,
+              233.55
+            ],
+            [
+              1866.67,
+              206.91
+            ],
+            [
+              2048.0,
+              198.0
+            ],
+            [
+              2229.33,
+              206.91
+            ],
+            [
+              2408.92,
+              233.55
+            ],
+            [
+              2585.03,
+              277.66
+            ],
+            [
+              2755.96,
+              338.82
+            ],
+            [
+              2920.08,
+              416.45
+            ],
+            [
+              3075.8,
+              509.78
+            ],
+            [
+              3221.63,
+              617.93
+            ],
+            [
+              3356.15,
+              739.85
+            ],
+            [
+              3478.07,
+              874.37
+            ],
+            [
+              3586.22,
+              1020.2
+            ],
+            [
+              3679.55,
+              1175.92
+            ],
+            [
+              3757.18,
+              1340.04
+            ],
+            [
+              3818.34,
+              1510.97
+            ],
+            [
+              3862.45,
+              1687.08
+            ],
+            [
+              3889.09,
+              1866.67
+            ]
+          ]
+        },
+        {
+          "name": "outer carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              3798.0,
+              2048.0
+            ],
+            [
+              3789.57,
+              2219.53
+            ],
+            [
+              3764.37,
+              2389.41
+            ],
+            [
+              3722.65,
+              2556.0
+            ],
+            [
+              3664.79,
+              2717.7
+            ],
+            [
+              3591.36,
+              2872.94
+            ],
+            [
+              3503.07,
+              3020.25
+            ],
+            [
+              3400.77,
+              3158.19
+            ],
+            [
+              3285.44,
+              3285.44
+            ],
+            [
+              3158.19,
+              3400.77
+            ],
+            [
+              3020.25,
+              3503.07
+            ],
+            [
+              2872.94,
+              3591.36
+            ],
+            [
+              2717.7,
+              3664.79
+            ],
+            [
+              2556.0,
+              3722.65
+            ],
+            [
+              2389.41,
+              3764.37
+            ],
+            [
+              2219.53,
+              3789.57
+            ],
+            [
+              2048.0,
+              3798.0
+            ],
+            [
+              1876.47,
+              3789.57
+            ],
+            [
+              1706.59,
+              3764.37
+            ],
+            [
+              1540.0,
+              3722.65
+            ],
+            [
+              1378.3,
+              3664.79
+            ],
+            [
+              1223.06,
+              3591.36
+            ],
+            [
+              1075.75,
+              3503.07
+            ],
+            [
+              937.81,
+              3400.77
+            ],
+            [
+              810.56,
+              3285.44
+            ],
+            [
+              695.23,
+              3158.19
+            ],
+            [
+              592.93,
+              3020.25
+            ],
+            [
+              504.64,
+              2872.94
+            ],
+            [
+              431.21,
+              2717.7
+            ],
+            [
+              373.35,
+              2556.0
+            ],
+            [
+              331.63,
+              2389.41
+            ],
+            [
+              306.43,
+              2219.53
+            ],
+            [
+              298.0,
+              2048.0
+            ],
+            [
+              306.43,
+              1876.47
+            ],
+            [
+              331.63,
+              1706.59
+            ],
+            [
+              373.35,
+              1540.0
+            ],
+            [
+              431.21,
+              1378.3
+            ],
+            [
+              504.64,
+              1223.06
+            ],
+            [
+              592.93,
+              1075.75
+            ],
+            [
+              695.23,
+              937.81
+            ],
+            [
+              810.56,
+              810.56
+            ],
+            [
+              937.81,
+              695.23
+            ],
+            [
+              1075.75,
+              592.93
+            ],
+            [
+              1223.06,
+              504.64
+            ],
+            [
+              1378.3,
+              431.21
+            ],
+            [
+              1540.0,
+              373.35
+            ],
+            [
+              1706.59,
+              331.63
+            ],
+            [
+              1876.47,
+              306.43
+            ],
+            [
+              2048.0,
+              298.0
+            ],
+            [
+              2219.53,
+              306.43
+            ],
+            [
+              2389.41,
+              331.63
+            ],
+            [
+              2556.0,
+              373.35
+            ],
+            [
+              2717.7,
+              431.21
+            ],
+            [
+              2872.94,
+              504.64
+            ],
+            [
+              3020.25,
+              592.93
+            ],
+            [
+              3158.19,
+              695.23
+            ],
+            [
+              3285.44,
+              810.56
+            ],
+            [
+              3400.77,
+              937.81
+            ],
+            [
+              3503.07,
+              1075.75
+            ],
+            [
+              3591.36,
+              1223.06
+            ],
+            [
+              3664.79,
+              1378.3
+            ],
+            [
+              3722.65,
+              1540.0
+            ],
+            [
+              3764.37,
+              1706.59
+            ],
+            [
+              3789.57,
+              1876.47
+            ]
+          ]
+        },
+        {
+          "name": "mid blue ring",
+          "space": "uv_px",
+          "color": "blue",
+          "polygon": [
+            [
+              3528.0,
+              2048.0
+            ],
+            [
+              3520.87,
+              2193.07
+            ],
+            [
+              3499.56,
+              2336.73
+            ],
+            [
+              3464.27,
+              2477.62
+            ],
+            [
+              3415.34,
+              2614.37
+            ],
+            [
+              3353.24,
+              2745.67
+            ],
+            [
+              3278.58,
+              2870.24
+            ],
+            [
+              3192.06,
+              2986.9
+            ],
+            [
+              3094.52,
+              3094.52
+            ],
+            [
+              2986.9,
+              3192.06
+            ],
+            [
+              2870.24,
+              3278.58
+            ],
+            [
+              2745.67,
+              3353.24
+            ],
+            [
+              2614.37,
+              3415.34
+            ],
+            [
+              2477.62,
+              3464.27
+            ],
+            [
+              2336.73,
+              3499.56
+            ],
+            [
+              2193.07,
+              3520.87
+            ],
+            [
+              2048.0,
+              3528.0
+            ],
+            [
+              1902.93,
+              3520.87
+            ],
+            [
+              1759.27,
+              3499.56
+            ],
+            [
+              1618.38,
+              3464.27
+            ],
+            [
+              1481.63,
+              3415.34
+            ],
+            [
+              1350.33,
+              3353.24
+            ],
+            [
+              1225.76,
+              3278.58
+            ],
+            [
+              1109.1,
+              3192.06
+            ],
+            [
+              1001.48,
+              3094.52
+            ],
+            [
+              903.94,
+              2986.9
+            ],
+            [
+              817.42,
+              2870.24
+            ],
+            [
+              742.76,
+              2745.67
+            ],
+            [
+              680.66,
+              2614.37
+            ],
+            [
+              631.73,
+              2477.62
+            ],
+            [
+              596.44,
+              2336.73
+            ],
+            [
+              575.13,
+              2193.07
+            ],
+            [
+              568.0,
+              2048.0
+            ],
+            [
+              575.13,
+              1902.93
+            ],
+            [
+              596.44,
+              1759.27
+            ],
+            [
+              631.73,
+              1618.38
+            ],
+            [
+              680.66,
+              1481.63
+            ],
+            [
+              742.76,
+              1350.33
+            ],
+            [
+              817.42,
+              1225.76
+            ],
+            [
+              903.94,
+              1109.1
+            ],
+            [
+              1001.48,
+              1001.48
+            ],
+            [
+              1109.1,
+              903.94
+            ],
+            [
+              1225.76,
+              817.42
+            ],
+            [
+              1350.33,
+              742.76
+            ],
+            [
+              1481.63,
+              680.66
+            ],
+            [
+              1618.38,
+              631.73
+            ],
+            [
+              1759.27,
+              596.44
+            ],
+            [
+              1902.93,
+              575.13
+            ],
+            [
+              2048.0,
+              568.0
+            ],
+            [
+              2193.07,
+              575.13
+            ],
+            [
+              2336.73,
+              596.44
+            ],
+            [
+              2477.62,
+              631.73
+            ],
+            [
+              2614.37,
+              680.66
+            ],
+            [
+              2745.67,
+              742.76
+            ],
+            [
+              2870.24,
+              817.42
+            ],
+            [
+              2986.9,
+              903.94
+            ],
+            [
+              3094.52,
+              1001.48
+            ],
+            [
+              3192.06,
+              1109.1
+            ],
+            [
+              3278.58,
+              1225.76
+            ],
+            [
+              3353.24,
+              1350.33
+            ],
+            [
+              3415.34,
+              1481.63
+            ],
+            [
+              3464.27,
+              1618.38
+            ],
+            [
+              3499.56,
+              1759.27
+            ],
+            [
+              3520.87,
+              1902.93
+            ]
+          ]
+        },
+        {
+          "name": "mid carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              3428.0,
+              2048.0
+            ],
+            [
+              3421.35,
+              2183.26
+            ],
+            [
+              3401.48,
+              2317.22
+            ],
+            [
+              3368.58,
+              2448.59
+            ],
+            [
+              3322.95,
+              2576.1
+            ],
+            [
+              3265.05,
+              2698.53
+            ],
+            [
+              3195.43,
+              2814.69
+            ],
+            [
+              3114.75,
+              2923.46
+            ],
+            [
+              3023.81,
+              3023.81
+            ],
+            [
+              2923.46,
+              3114.75
+            ],
+            [
+              2814.69,
+              3195.43
+            ],
+            [
+              2698.53,
+              3265.05
+            ],
+            [
+              2576.1,
+              3322.95
+            ],
+            [
+              2448.59,
+              3368.58
+            ],
+            [
+              2317.22,
+              3401.48
+            ],
+            [
+              2183.26,
+              3421.35
+            ],
+            [
+              2048.0,
+              3428.0
+            ],
+            [
+              1912.74,
+              3421.35
+            ],
+            [
+              1778.78,
+              3401.48
+            ],
+            [
+              1647.41,
+              3368.58
+            ],
+            [
+              1519.9,
+              3322.95
+            ],
+            [
+              1397.47,
+              3265.05
+            ],
+            [
+              1281.31,
+              3195.43
+            ],
+            [
+              1172.54,
+              3114.75
+            ],
+            [
+              1072.19,
+              3023.81
+            ],
+            [
+              981.25,
+              2923.46
+            ],
+            [
+              900.57,
+              2814.69
+            ],
+            [
+              830.95,
+              2698.53
+            ],
+            [
+              773.05,
+              2576.1
+            ],
+            [
+              727.42,
+              2448.59
+            ],
+            [
+              694.52,
+              2317.22
+            ],
+            [
+              674.65,
+              2183.26
+            ],
+            [
+              668.0,
+              2048.0
+            ],
+            [
+              674.65,
+              1912.74
+            ],
+            [
+              694.52,
+              1778.78
+            ],
+            [
+              727.42,
+              1647.41
+            ],
+            [
+              773.05,
+              1519.9
+            ],
+            [
+              830.95,
+              1397.47
+            ],
+            [
+              900.57,
+              1281.31
+            ],
+            [
+              981.25,
+              1172.54
+            ],
+            [
+              1072.19,
+              1072.19
+            ],
+            [
+              1172.54,
+              981.25
+            ],
+            [
+              1281.31,
+              900.57
+            ],
+            [
+              1397.47,
+              830.95
+            ],
+            [
+              1519.9,
+              773.05
+            ],
+            [
+              1647.41,
+              727.42
+            ],
+            [
+              1778.78,
+              694.52
+            ],
+            [
+              1912.74,
+              674.65
+            ],
+            [
+              2048.0,
+              668.0
+            ],
+            [
+              2183.26,
+              674.65
+            ],
+            [
+              2317.22,
+              694.52
+            ],
+            [
+              2448.59,
+              727.42
+            ],
+            [
+              2576.1,
+              773.05
+            ],
+            [
+              2698.53,
+              830.95
+            ],
+            [
+              2814.69,
+              900.57
+            ],
+            [
+              2923.46,
+              981.25
+            ],
+            [
+              3023.81,
+              1072.19
+            ],
+            [
+              3114.75,
+              1172.54
+            ],
+            [
+              3195.43,
+              1281.31
+            ],
+            [
+              3265.05,
+              1397.47
+            ],
+            [
+              3322.95,
+              1519.9
+            ],
+            [
+              3368.58,
+              1647.41
+            ],
+            [
+              3401.48,
+              1778.78
+            ],
+            [
+              3421.35,
+              1912.74
+            ]
+          ]
+        },
+        {
+          "name": "inner cyan ring",
+          "space": "uv_px",
+          "color": "cyan",
+          "polygon": [
+            [
+              3028.0,
+              2048.0
+            ],
+            [
+              3023.28,
+              2144.06
+            ],
+            [
+              3009.17,
+              2239.19
+            ],
+            [
+              2985.8,
+              2332.48
+            ],
+            [
+              2953.4,
+              2423.03
+            ],
+            [
+              2912.28,
+              2509.97
+            ],
+            [
+              2862.84,
+              2592.46
+            ],
+            [
+              2805.55,
+              2669.71
+            ],
+            [
+              2740.96,
+              2740.96
+            ],
+            [
+              2669.71,
+              2805.55
+            ],
+            [
+              2592.46,
+              2862.84
+            ],
+            [
+              2509.97,
+              2912.28
+            ],
+            [
+              2423.03,
+              2953.4
+            ],
+            [
+              2332.48,
+              2985.8
+            ],
+            [
+              2239.19,
+              3009.17
+            ],
+            [
+              2144.06,
+              3023.28
+            ],
+            [
+              2048.0,
+              3028.0
+            ],
+            [
+              1951.94,
+              3023.28
+            ],
+            [
+              1856.81,
+              3009.17
+            ],
+            [
+              1763.52,
+              2985.8
+            ],
+            [
+              1672.97,
+              2953.4
+            ],
+            [
+              1586.03,
+              2912.28
+            ],
+            [
+              1503.54,
+              2862.84
+            ],
+            [
+              1426.29,
+              2805.55
+            ],
+            [
+              1355.04,
+              2740.96
+            ],
+            [
+              1290.45,
+              2669.71
+            ],
+            [
+              1233.16,
+              2592.46
+            ],
+            [
+              1183.72,
+              2509.97
+            ],
+            [
+              1142.6,
+              2423.03
+            ],
+            [
+              1110.2,
+              2332.48
+            ],
+            [
+              1086.83,
+              2239.19
+            ],
+            [
+              1072.72,
+              2144.06
+            ],
+            [
+              1068.0,
+              2048.0
+            ],
+            [
+              1072.72,
+              1951.94
+            ],
+            [
+              1086.83,
+              1856.81
+            ],
+            [
+              1110.2,
+              1763.52
+            ],
+            [
+              1142.6,
+              1672.97
+            ],
+            [
+              1183.72,
+              1586.03
+            ],
+            [
+              1233.16,
+              1503.54
+            ],
+            [
+              1290.45,
+              1426.29
+            ],
+            [
+              1355.04,
+              1355.04
+            ],
+            [
+              1426.29,
+              1290.45
+            ],
+            [
+              1503.54,
+              1233.16
+            ],
+            [
+              1586.03,
+              1183.72
+            ],
+            [
+              1672.97,
+              1142.6
+            ],
+            [
+              1763.52,
+              1110.2
+            ],
+            [
+              1856.81,
+              1086.83
+            ],
+            [
+              1951.94,
+              1072.72
+            ],
+            [
+              2048.0,
+              1068.0
+            ],
+            [
+              2144.06,
+              1072.72
+            ],
+            [
+              2239.19,
+              1086.83
+            ],
+            [
+              2332.48,
+              1110.2
+            ],
+            [
+              2423.03,
+              1142.6
+            ],
+            [
+              2509.97,
+              1183.72
+            ],
+            [
+              2592.46,
+              1233.16
+            ],
+            [
+              2669.71,
+              1290.45
+            ],
+            [
+              2740.96,
+              1355.04
+            ],
+            [
+              2805.55,
+              1426.29
+            ],
+            [
+              2862.84,
+              1503.54
+            ],
+            [
+              2912.28,
+              1586.03
+            ],
+            [
+              2953.4,
+              1672.97
+            ],
+            [
+              2985.8,
+              1763.52
+            ],
+            [
+              3009.17,
+              1856.81
+            ],
+            [
+              3023.28,
+              1951.94
+            ]
+          ]
+        },
+        {
+          "name": "inner carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              2948.0,
+              2048.0
+            ],
+            [
+              2943.67,
+              2136.22
+            ],
+            [
+              2930.71,
+              2223.58
+            ],
+            [
+              2909.25,
+              2309.26
+            ],
+            [
+              2879.49,
+              2392.42
+            ],
+            [
+              2841.73,
+              2472.26
+            ],
+            [
+              2796.32,
+              2548.01
+            ],
+            [
+              2743.71,
+              2618.95
+            ],
+            [
+              2684.4,
+              2684.4
+            ],
+            [
+              2618.95,
+              2743.71
+            ],
+            [
+              2548.01,
+              2796.32
+            ],
+            [
+              2472.26,
+              2841.73
+            ],
+            [
+              2392.42,
+              2879.49
+            ],
+            [
+              2309.26,
+              2909.25
+            ],
+            [
+              2223.58,
+              2930.71
+            ],
+            [
+              2136.22,
+              2943.67
+            ],
+            [
+              2048.0,
+              2948.0
+            ],
+            [
+              1959.78,
+              2943.67
+            ],
+            [
+              1872.42,
+              2930.71
+            ],
+            [
+              1786.74,
+              2909.25
+            ],
+            [
+              1703.58,
+              2879.49
+            ],
+            [
+              1623.74,
+              2841.73
+            ],
+            [
+              1547.99,
+              2796.32
+            ],
+            [
+              1477.05,
+              2743.71
+            ],
+            [
+              1411.6,
+              2684.4
+            ],
+            [
+              1352.29,
+              2618.95
+            ],
+            [
+              1299.68,
+              2548.01
+            ],
+            [
+              1254.27,
+              2472.26
+            ],
+            [
+              1216.51,
+              2392.42
+            ],
+            [
+              1186.75,
+              2309.26
+            ],
+            [
+              1165.29,
+              2223.58
+            ],
+            [
+              1152.33,
+              2136.22
+            ],
+            [
+              1148.0,
+              2048.0
+            ],
+            [
+              1152.33,
+              1959.78
+            ],
+            [
+              1165.29,
+              1872.42
+            ],
+            [
+              1186.75,
+              1786.74
+            ],
+            [
+              1216.51,
+              1703.58
+            ],
+            [
+              1254.27,
+              1623.74
+            ],
+            [
+              1299.68,
+              1547.99
+            ],
+            [
+              1352.29,
+              1477.05
+            ],
+            [
+              1411.6,
+              1411.6
+            ],
+            [
+              1477.05,
+              1352.29
+            ],
+            [
+              1547.99,
+              1299.68
+            ],
+            [
+              1623.74,
+              1254.27
+            ],
+            [
+              1703.58,
+              1216.51
+            ],
+            [
+              1786.74,
+              1186.75
+            ],
+            [
+              1872.42,
+              1165.29
+            ],
+            [
+              1959.78,
+              1152.33
+            ],
+            [
+              2048.0,
+              1148.0
+            ],
+            [
+              2136.22,
+              1152.33
+            ],
+            [
+              2223.58,
+              1165.29
+            ],
+            [
+              2309.26,
+              1186.75
+            ],
+            [
+              2392.42,
+              1216.51
+            ],
+            [
+              2472.26,
+              1254.27
+            ],
+            [
+              2548.01,
+              1299.68
+            ],
+            [
+              2618.95,
+              1352.29
+            ],
+            [
+              2684.4,
+              1411.6
+            ],
+            [
+              2743.71,
+              1477.05
+            ],
+            [
+              2796.32,
+              1547.99
+            ],
+            [
+              2841.73,
+              1623.74
+            ],
+            [
+              2879.49,
+              1703.58
+            ],
+            [
+              2909.25,
+              1786.74
+            ],
+            [
+              2930.71,
+              1872.42
+            ],
+            [
+              2943.67,
+              1959.78
+            ]
+          ]
+        },
+        {
+          "name": "hub white ring",
+          "space": "uv_px",
+          "color": "white",
+          "polygon": [
+            [
+              2568.0,
+              2048.0
+            ],
+            [
+              2565.5,
+              2098.97
+            ],
+            [
+              2558.01,
+              2149.45
+            ],
+            [
+              2545.61,
+              2198.95
+            ],
+            [
+              2528.42,
+              2247.0
+            ],
+            [
+              2506.6,
+              2293.13
+            ],
+            [
+              2480.36,
+              2336.9
+            ],
+            [
+              2449.97,
+              2377.88
+            ],
+            [
+              2415.7,
+              2415.7
+            ],
+            [
+              2377.88,
+              2449.97
+            ],
+            [
+              2336.9,
+              2480.36
+            ],
+            [
+              2293.13,
+              2506.6
+            ],
+            [
+              2247.0,
+              2528.42
+            ],
+            [
+              2198.95,
+              2545.61
+            ],
+            [
+              2149.45,
+              2558.01
+            ],
+            [
+              2098.97,
+              2565.5
+            ],
+            [
+              2048.0,
+              2568.0
+            ],
+            [
+              1997.03,
+              2565.5
+            ],
+            [
+              1946.55,
+              2558.01
+            ],
+            [
+              1897.05,
+              2545.61
+            ],
+            [
+              1849.0,
+              2528.42
+            ],
+            [
+              1802.87,
+              2506.6
+            ],
+            [
+              1759.1,
+              2480.36
+            ],
+            [
+              1718.12,
+              2449.97
+            ],
+            [
+              1680.3,
+              2415.7
+            ],
+            [
+              1646.03,
+              2377.88
+            ],
+            [
+              1615.64,
+              2336.9
+            ],
+            [
+              1589.4,
+              2293.13
+            ],
+            [
+              1567.58,
+              2247.0
+            ],
+            [
+              1550.39,
+              2198.95
+            ],
+            [
+              1537.99,
+              2149.45
+            ],
+            [
+              1530.5,
+              2098.97
+            ],
+            [
+              1528.0,
+              2048.0
+            ],
+            [
+              1530.5,
+              1997.03
+            ],
+            [
+              1537.99,
+              1946.55
+            ],
+            [
+              1550.39,
+              1897.05
+            ],
+            [
+              1567.58,
+              1849.0
+            ],
+            [
+              1589.4,
+              1802.87
+            ],
+            [
+              1615.64,
+              1759.1
+            ],
+            [
+              1646.03,
+              1718.12
+            ],
+            [
+              1680.3,
+              1680.3
+            ],
+            [
+              1718.12,
+              1646.03
+            ],
+            [
+              1759.1,
+              1615.64
+            ],
+            [
+              1802.87,
+              1589.4
+            ],
+            [
+              1849.0,
+              1567.58
+            ],
+            [
+              1897.05,
+              1550.39
+            ],
+            [
+              1946.55,
+              1537.99
+            ],
+            [
+              1997.03,
+              1530.5
+            ],
+            [
+              2048.0,
+              1528.0
+            ],
+            [
+              2098.97,
+              1530.5
+            ],
+            [
+              2149.45,
+              1537.99
+            ],
+            [
+              2198.95,
+              1550.39
+            ],
+            [
+              2247.0,
+              1567.58
+            ],
+            [
+              2293.13,
+              1589.4
+            ],
+            [
+              2336.9,
+              1615.64
+            ],
+            [
+              2377.88,
+              1646.03
+            ],
+            [
+              2415.7,
+              1680.3
+            ],
+            [
+              2449.97,
+              1718.12
+            ],
+            [
+              2480.36,
+              1759.1
+            ],
+            [
+              2506.6,
+              1802.87
+            ],
+            [
+              2528.42,
+              1849.0
+            ],
+            [
+              2545.61,
+              1897.05
+            ],
+            [
+              2558.01,
+              1946.55
+            ],
+            [
+              2565.5,
+              1997.03
+            ]
+          ]
+        },
+        {
+          "name": "hub carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              2508.0,
+              2048.0
+            ],
+            [
+              2505.78,
+              2093.09
+            ],
+            [
+              2499.16,
+              2137.74
+            ],
+            [
+              2488.19,
+              2181.53
+            ],
+            [
+              2472.98,
+              2224.03
+            ],
+            [
+              2453.68,
+              2264.84
+            ],
+            [
+              2430.48,
+              2303.56
+            ],
+            [
+              2403.58,
+              2339.82
+            ],
+            [
+              2373.27,
+              2373.27
+            ],
+            [
+              2339.82,
+              2403.58
+            ],
+            [
+              2303.56,
+              2430.48
+            ],
+            [
+              2264.84,
+              2453.68
+            ],
+            [
+              2224.03,
+              2472.98
+            ],
+            [
+              2181.53,
+              2488.19
+            ],
+            [
+              2137.74,
+              2499.16
+            ],
+            [
+              2093.09,
+              2505.78
+            ],
+            [
+              2048.0,
+              2508.0
+            ],
+            [
+              2002.91,
+              2505.78
+            ],
+            [
+              1958.26,
+              2499.16
+            ],
+            [
+              1914.47,
+              2488.19
+            ],
+            [
+              1871.97,
+              2472.98
+            ],
+            [
+              1831.16,
+              2453.68
+            ],
+            [
+              1792.44,
+              2430.48
+            ],
+            [
+              1756.18,
+              2403.58
+            ],
+            [
+              1722.73,
+              2373.27
+            ],
+            [
+              1692.42,
+              2339.82
+            ],
+            [
+              1665.52,
+              2303.56
+            ],
+            [
+              1642.32,
+              2264.84
+            ],
+            [
+              1623.02,
+              2224.03
+            ],
+            [
+              1607.81,
+              2181.53
+            ],
+            [
+              1596.84,
+              2137.74
+            ],
+            [
+              1590.22,
+              2093.09
+            ],
+            [
+              1588.0,
+              2048.0
+            ],
+            [
+              1590.22,
+              2002.91
+            ],
+            [
+              1596.84,
+              1958.26
+            ],
+            [
+              1607.81,
+              1914.47
+            ],
+            [
+              1623.02,
+              1871.97
+            ],
+            [
+              1642.32,
+              1831.16
+            ],
+            [
+              1665.52,
+              1792.44
+            ],
+            [
+              1692.42,
+              1756.18
+            ],
+            [
+              1722.73,
+              1722.73
+            ],
+            [
+              1756.18,
+              1692.42
+            ],
+            [
+              1792.44,
+              1665.52
+            ],
+            [
+              1831.16,
+              1642.32
+            ],
+            [
+              1871.97,
+              1623.02
+            ],
+            [
+              1914.47,
+              1607.81
+            ],
+            [
+              1958.26,
+              1596.84
+            ],
+            [
+              2002.91,
+              1590.22
+            ],
+            [
+              2048.0,
+              1588.0
+            ],
+            [
+              2093.09,
+              1590.22
+            ],
+            [
+              2137.74,
+              1596.84
+            ],
+            [
+              2181.53,
+              1607.81
+            ],
+            [
+              2224.03,
+              1623.02
+            ],
+            [
+              2264.84,
+              1642.32
+            ],
+            [
+              2303.56,
+              1665.52
+            ],
+            [
+              2339.82,
+              1692.42
+            ],
+            [
+              2373.27,
+              1722.73
+            ],
+            [
+              2403.58,
+              1756.18
+            ],
+            [
+              2430.48,
+              1792.44
+            ],
+            [
+              2453.68,
+              1831.16
+            ],
+            [
+              2472.98,
+              1871.97
+            ],
+            [
+              2488.19,
+              1914.47
+            ],
+            [
+              2499.16,
+              1958.26
+            ],
+            [
+              2505.78,
+              2002.91
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "outer cyan ring",
+          "space": "uv_px",
+          "color": "cyan",
+          "polygon": [
+            [
+              3898.0,
+              2048.0
+            ],
+            [
+              3889.09,
+              2229.33
+            ],
+            [
+              3862.45,
+              2408.92
+            ],
+            [
+              3818.34,
+              2585.03
+            ],
+            [
+              3757.18,
+              2755.96
+            ],
+            [
+              3679.55,
+              2920.08
+            ],
+            [
+              3586.22,
+              3075.8
+            ],
+            [
+              3478.07,
+              3221.63
+            ],
+            [
+              3356.15,
+              3356.15
+            ],
+            [
+              3221.63,
+              3478.07
+            ],
+            [
+              3075.8,
+              3586.22
+            ],
+            [
+              2920.08,
+              3679.55
+            ],
+            [
+              2755.96,
+              3757.18
+            ],
+            [
+              2585.03,
+              3818.34
+            ],
+            [
+              2408.92,
+              3862.45
+            ],
+            [
+              2229.33,
+              3889.09
+            ],
+            [
+              2048.0,
+              3898.0
+            ],
+            [
+              1866.67,
+              3889.09
+            ],
+            [
+              1687.08,
+              3862.45
+            ],
+            [
+              1510.97,
+              3818.34
+            ],
+            [
+              1340.04,
+              3757.18
+            ],
+            [
+              1175.92,
+              3679.55
+            ],
+            [
+              1020.2,
+              3586.22
+            ],
+            [
+              874.37,
+              3478.07
+            ],
+            [
+              739.85,
+              3356.15
+            ],
+            [
+              617.93,
+              3221.63
+            ],
+            [
+              509.78,
+              3075.8
+            ],
+            [
+              416.45,
+              2920.08
+            ],
+            [
+              338.82,
+              2755.96
+            ],
+            [
+              277.66,
+              2585.03
+            ],
+            [
+              233.55,
+              2408.92
+            ],
+            [
+              206.91,
+              2229.33
+            ],
+            [
+              198.0,
+              2048.0
+            ],
+            [
+              206.91,
+              1866.67
+            ],
+            [
+              233.55,
+              1687.08
+            ],
+            [
+              277.66,
+              1510.97
+            ],
+            [
+              338.82,
+              1340.04
+            ],
+            [
+              416.45,
+              1175.92
+            ],
+            [
+              509.78,
+              1020.2
+            ],
+            [
+              617.93,
+              874.37
+            ],
+            [
+              739.85,
+              739.85
+            ],
+            [
+              874.37,
+              617.93
+            ],
+            [
+              1020.2,
+              509.78
+            ],
+            [
+              1175.92,
+              416.45
+            ],
+            [
+              1340.04,
+              338.82
+            ],
+            [
+              1510.97,
+              277.66
+            ],
+            [
+              1687.08,
+              233.55
+            ],
+            [
+              1866.67,
+              206.91
+            ],
+            [
+              2048.0,
+              198.0
+            ],
+            [
+              2229.33,
+              206.91
+            ],
+            [
+              2408.92,
+              233.55
+            ],
+            [
+              2585.03,
+              277.66
+            ],
+            [
+              2755.96,
+              338.82
+            ],
+            [
+              2920.08,
+              416.45
+            ],
+            [
+              3075.8,
+              509.78
+            ],
+            [
+              3221.63,
+              617.93
+            ],
+            [
+              3356.15,
+              739.85
+            ],
+            [
+              3478.07,
+              874.37
+            ],
+            [
+              3586.22,
+              1020.2
+            ],
+            [
+              3679.55,
+              1175.92
+            ],
+            [
+              3757.18,
+              1340.04
+            ],
+            [
+              3818.34,
+              1510.97
+            ],
+            [
+              3862.45,
+              1687.08
+            ],
+            [
+              3889.09,
+              1866.67
+            ]
+          ]
+        },
+        {
+          "name": "outer carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              3798.0,
+              2048.0
+            ],
+            [
+              3789.57,
+              2219.53
+            ],
+            [
+              3764.37,
+              2389.41
+            ],
+            [
+              3722.65,
+              2556.0
+            ],
+            [
+              3664.79,
+              2717.7
+            ],
+            [
+              3591.36,
+              2872.94
+            ],
+            [
+              3503.07,
+              3020.25
+            ],
+            [
+              3400.77,
+              3158.19
+            ],
+            [
+              3285.44,
+              3285.44
+            ],
+            [
+              3158.19,
+              3400.77
+            ],
+            [
+              3020.25,
+              3503.07
+            ],
+            [
+              2872.94,
+              3591.36
+            ],
+            [
+              2717.7,
+              3664.79
+            ],
+            [
+              2556.0,
+              3722.65
+            ],
+            [
+              2389.41,
+              3764.37
+            ],
+            [
+              2219.53,
+              3789.57
+            ],
+            [
+              2048.0,
+              3798.0
+            ],
+            [
+              1876.47,
+              3789.57
+            ],
+            [
+              1706.59,
+              3764.37
+            ],
+            [
+              1540.0,
+              3722.65
+            ],
+            [
+              1378.3,
+              3664.79
+            ],
+            [
+              1223.06,
+              3591.36
+            ],
+            [
+              1075.75,
+              3503.07
+            ],
+            [
+              937.81,
+              3400.77
+            ],
+            [
+              810.56,
+              3285.44
+            ],
+            [
+              695.23,
+              3158.19
+            ],
+            [
+              592.93,
+              3020.25
+            ],
+            [
+              504.64,
+              2872.94
+            ],
+            [
+              431.21,
+              2717.7
+            ],
+            [
+              373.35,
+              2556.0
+            ],
+            [
+              331.63,
+              2389.41
+            ],
+            [
+              306.43,
+              2219.53
+            ],
+            [
+              298.0,
+              2048.0
+            ],
+            [
+              306.43,
+              1876.47
+            ],
+            [
+              331.63,
+              1706.59
+            ],
+            [
+              373.35,
+              1540.0
+            ],
+            [
+              431.21,
+              1378.3
+            ],
+            [
+              504.64,
+              1223.06
+            ],
+            [
+              592.93,
+              1075.75
+            ],
+            [
+              695.23,
+              937.81
+            ],
+            [
+              810.56,
+              810.56
+            ],
+            [
+              937.81,
+              695.23
+            ],
+            [
+              1075.75,
+              592.93
+            ],
+            [
+              1223.06,
+              504.64
+            ],
+            [
+              1378.3,
+              431.21
+            ],
+            [
+              1540.0,
+              373.35
+            ],
+            [
+              1706.59,
+              331.63
+            ],
+            [
+              1876.47,
+              306.43
+            ],
+            [
+              2048.0,
+              298.0
+            ],
+            [
+              2219.53,
+              306.43
+            ],
+            [
+              2389.41,
+              331.63
+            ],
+            [
+              2556.0,
+              373.35
+            ],
+            [
+              2717.7,
+              431.21
+            ],
+            [
+              2872.94,
+              504.64
+            ],
+            [
+              3020.25,
+              592.93
+            ],
+            [
+              3158.19,
+              695.23
+            ],
+            [
+              3285.44,
+              810.56
+            ],
+            [
+              3400.77,
+              937.81
+            ],
+            [
+              3503.07,
+              1075.75
+            ],
+            [
+              3591.36,
+              1223.06
+            ],
+            [
+              3664.79,
+              1378.3
+            ],
+            [
+              3722.65,
+              1540.0
+            ],
+            [
+              3764.37,
+              1706.59
+            ],
+            [
+              3789.57,
+              1876.47
+            ]
+          ]
+        },
+        {
+          "name": "mid blue ring",
+          "space": "uv_px",
+          "color": "blue",
+          "polygon": [
+            [
+              3528.0,
+              2048.0
+            ],
+            [
+              3520.87,
+              2193.07
+            ],
+            [
+              3499.56,
+              2336.73
+            ],
+            [
+              3464.27,
+              2477.62
+            ],
+            [
+              3415.34,
+              2614.37
+            ],
+            [
+              3353.24,
+              2745.67
+            ],
+            [
+              3278.58,
+              2870.24
+            ],
+            [
+              3192.06,
+              2986.9
+            ],
+            [
+              3094.52,
+              3094.52
+            ],
+            [
+              2986.9,
+              3192.06
+            ],
+            [
+              2870.24,
+              3278.58
+            ],
+            [
+              2745.67,
+              3353.24
+            ],
+            [
+              2614.37,
+              3415.34
+            ],
+            [
+              2477.62,
+              3464.27
+            ],
+            [
+              2336.73,
+              3499.56
+            ],
+            [
+              2193.07,
+              3520.87
+            ],
+            [
+              2048.0,
+              3528.0
+            ],
+            [
+              1902.93,
+              3520.87
+            ],
+            [
+              1759.27,
+              3499.56
+            ],
+            [
+              1618.38,
+              3464.27
+            ],
+            [
+              1481.63,
+              3415.34
+            ],
+            [
+              1350.33,
+              3353.24
+            ],
+            [
+              1225.76,
+              3278.58
+            ],
+            [
+              1109.1,
+              3192.06
+            ],
+            [
+              1001.48,
+              3094.52
+            ],
+            [
+              903.94,
+              2986.9
+            ],
+            [
+              817.42,
+              2870.24
+            ],
+            [
+              742.76,
+              2745.67
+            ],
+            [
+              680.66,
+              2614.37
+            ],
+            [
+              631.73,
+              2477.62
+            ],
+            [
+              596.44,
+              2336.73
+            ],
+            [
+              575.13,
+              2193.07
+            ],
+            [
+              568.0,
+              2048.0
+            ],
+            [
+              575.13,
+              1902.93
+            ],
+            [
+              596.44,
+              1759.27
+            ],
+            [
+              631.73,
+              1618.38
+            ],
+            [
+              680.66,
+              1481.63
+            ],
+            [
+              742.76,
+              1350.33
+            ],
+            [
+              817.42,
+              1225.76
+            ],
+            [
+              903.94,
+              1109.1
+            ],
+            [
+              1001.48,
+              1001.48
+            ],
+            [
+              1109.1,
+              903.94
+            ],
+            [
+              1225.76,
+              817.42
+            ],
+            [
+              1350.33,
+              742.76
+            ],
+            [
+              1481.63,
+              680.66
+            ],
+            [
+              1618.38,
+              631.73
+            ],
+            [
+              1759.27,
+              596.44
+            ],
+            [
+              1902.93,
+              575.13
+            ],
+            [
+              2048.0,
+              568.0
+            ],
+            [
+              2193.07,
+              575.13
+            ],
+            [
+              2336.73,
+              596.44
+            ],
+            [
+              2477.62,
+              631.73
+            ],
+            [
+              2614.37,
+              680.66
+            ],
+            [
+              2745.67,
+              742.76
+            ],
+            [
+              2870.24,
+              817.42
+            ],
+            [
+              2986.9,
+              903.94
+            ],
+            [
+              3094.52,
+              1001.48
+            ],
+            [
+              3192.06,
+              1109.1
+            ],
+            [
+              3278.58,
+              1225.76
+            ],
+            [
+              3353.24,
+              1350.33
+            ],
+            [
+              3415.34,
+              1481.63
+            ],
+            [
+              3464.27,
+              1618.38
+            ],
+            [
+              3499.56,
+              1759.27
+            ],
+            [
+              3520.87,
+              1902.93
+            ]
+          ]
+        },
+        {
+          "name": "mid carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              3428.0,
+              2048.0
+            ],
+            [
+              3421.35,
+              2183.26
+            ],
+            [
+              3401.48,
+              2317.22
+            ],
+            [
+              3368.58,
+              2448.59
+            ],
+            [
+              3322.95,
+              2576.1
+            ],
+            [
+              3265.05,
+              2698.53
+            ],
+            [
+              3195.43,
+              2814.69
+            ],
+            [
+              3114.75,
+              2923.46
+            ],
+            [
+              3023.81,
+              3023.81
+            ],
+            [
+              2923.46,
+              3114.75
+            ],
+            [
+              2814.69,
+              3195.43
+            ],
+            [
+              2698.53,
+              3265.05
+            ],
+            [
+              2576.1,
+              3322.95
+            ],
+            [
+              2448.59,
+              3368.58
+            ],
+            [
+              2317.22,
+              3401.48
+            ],
+            [
+              2183.26,
+              3421.35
+            ],
+            [
+              2048.0,
+              3428.0
+            ],
+            [
+              1912.74,
+              3421.35
+            ],
+            [
+              1778.78,
+              3401.48
+            ],
+            [
+              1647.41,
+              3368.58
+            ],
+            [
+              1519.9,
+              3322.95
+            ],
+            [
+              1397.47,
+              3265.05
+            ],
+            [
+              1281.31,
+              3195.43
+            ],
+            [
+              1172.54,
+              3114.75
+            ],
+            [
+              1072.19,
+              3023.81
+            ],
+            [
+              981.25,
+              2923.46
+            ],
+            [
+              900.57,
+              2814.69
+            ],
+            [
+              830.95,
+              2698.53
+            ],
+            [
+              773.05,
+              2576.1
+            ],
+            [
+              727.42,
+              2448.59
+            ],
+            [
+              694.52,
+              2317.22
+            ],
+            [
+              674.65,
+              2183.26
+            ],
+            [
+              668.0,
+              2048.0
+            ],
+            [
+              674.65,
+              1912.74
+            ],
+            [
+              694.52,
+              1778.78
+            ],
+            [
+              727.42,
+              1647.41
+            ],
+            [
+              773.05,
+              1519.9
+            ],
+            [
+              830.95,
+              1397.47
+            ],
+            [
+              900.57,
+              1281.31
+            ],
+            [
+              981.25,
+              1172.54
+            ],
+            [
+              1072.19,
+              1072.19
+            ],
+            [
+              1172.54,
+              981.25
+            ],
+            [
+              1281.31,
+              900.57
+            ],
+            [
+              1397.47,
+              830.95
+            ],
+            [
+              1519.9,
+              773.05
+            ],
+            [
+              1647.41,
+              727.42
+            ],
+            [
+              1778.78,
+              694.52
+            ],
+            [
+              1912.74,
+              674.65
+            ],
+            [
+              2048.0,
+              668.0
+            ],
+            [
+              2183.26,
+              674.65
+            ],
+            [
+              2317.22,
+              694.52
+            ],
+            [
+              2448.59,
+              727.42
+            ],
+            [
+              2576.1,
+              773.05
+            ],
+            [
+              2698.53,
+              830.95
+            ],
+            [
+              2814.69,
+              900.57
+            ],
+            [
+              2923.46,
+              981.25
+            ],
+            [
+              3023.81,
+              1072.19
+            ],
+            [
+              3114.75,
+              1172.54
+            ],
+            [
+              3195.43,
+              1281.31
+            ],
+            [
+              3265.05,
+              1397.47
+            ],
+            [
+              3322.95,
+              1519.9
+            ],
+            [
+              3368.58,
+              1647.41
+            ],
+            [
+              3401.48,
+              1778.78
+            ],
+            [
+              3421.35,
+              1912.74
+            ]
+          ]
+        },
+        {
+          "name": "inner cyan ring",
+          "space": "uv_px",
+          "color": "cyan",
+          "polygon": [
+            [
+              3028.0,
+              2048.0
+            ],
+            [
+              3023.28,
+              2144.06
+            ],
+            [
+              3009.17,
+              2239.19
+            ],
+            [
+              2985.8,
+              2332.48
+            ],
+            [
+              2953.4,
+              2423.03
+            ],
+            [
+              2912.28,
+              2509.97
+            ],
+            [
+              2862.84,
+              2592.46
+            ],
+            [
+              2805.55,
+              2669.71
+            ],
+            [
+              2740.96,
+              2740.96
+            ],
+            [
+              2669.71,
+              2805.55
+            ],
+            [
+              2592.46,
+              2862.84
+            ],
+            [
+              2509.97,
+              2912.28
+            ],
+            [
+              2423.03,
+              2953.4
+            ],
+            [
+              2332.48,
+              2985.8
+            ],
+            [
+              2239.19,
+              3009.17
+            ],
+            [
+              2144.06,
+              3023.28
+            ],
+            [
+              2048.0,
+              3028.0
+            ],
+            [
+              1951.94,
+              3023.28
+            ],
+            [
+              1856.81,
+              3009.17
+            ],
+            [
+              1763.52,
+              2985.8
+            ],
+            [
+              1672.97,
+              2953.4
+            ],
+            [
+              1586.03,
+              2912.28
+            ],
+            [
+              1503.54,
+              2862.84
+            ],
+            [
+              1426.29,
+              2805.55
+            ],
+            [
+              1355.04,
+              2740.96
+            ],
+            [
+              1290.45,
+              2669.71
+            ],
+            [
+              1233.16,
+              2592.46
+            ],
+            [
+              1183.72,
+              2509.97
+            ],
+            [
+              1142.6,
+              2423.03
+            ],
+            [
+              1110.2,
+              2332.48
+            ],
+            [
+              1086.83,
+              2239.19
+            ],
+            [
+              1072.72,
+              2144.06
+            ],
+            [
+              1068.0,
+              2048.0
+            ],
+            [
+              1072.72,
+              1951.94
+            ],
+            [
+              1086.83,
+              1856.81
+            ],
+            [
+              1110.2,
+              1763.52
+            ],
+            [
+              1142.6,
+              1672.97
+            ],
+            [
+              1183.72,
+              1586.03
+            ],
+            [
+              1233.16,
+              1503.54
+            ],
+            [
+              1290.45,
+              1426.29
+            ],
+            [
+              1355.04,
+              1355.04
+            ],
+            [
+              1426.29,
+              1290.45
+            ],
+            [
+              1503.54,
+              1233.16
+            ],
+            [
+              1586.03,
+              1183.72
+            ],
+            [
+              1672.97,
+              1142.6
+            ],
+            [
+              1763.52,
+              1110.2
+            ],
+            [
+              1856.81,
+              1086.83
+            ],
+            [
+              1951.94,
+              1072.72
+            ],
+            [
+              2048.0,
+              1068.0
+            ],
+            [
+              2144.06,
+              1072.72
+            ],
+            [
+              2239.19,
+              1086.83
+            ],
+            [
+              2332.48,
+              1110.2
+            ],
+            [
+              2423.03,
+              1142.6
+            ],
+            [
+              2509.97,
+              1183.72
+            ],
+            [
+              2592.46,
+              1233.16
+            ],
+            [
+              2669.71,
+              1290.45
+            ],
+            [
+              2740.96,
+              1355.04
+            ],
+            [
+              2805.55,
+              1426.29
+            ],
+            [
+              2862.84,
+              1503.54
+            ],
+            [
+              2912.28,
+              1586.03
+            ],
+            [
+              2953.4,
+              1672.97
+            ],
+            [
+              2985.8,
+              1763.52
+            ],
+            [
+              3009.17,
+              1856.81
+            ],
+            [
+              3023.28,
+              1951.94
+            ]
+          ]
+        },
+        {
+          "name": "inner carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              2948.0,
+              2048.0
+            ],
+            [
+              2943.67,
+              2136.22
+            ],
+            [
+              2930.71,
+              2223.58
+            ],
+            [
+              2909.25,
+              2309.26
+            ],
+            [
+              2879.49,
+              2392.42
+            ],
+            [
+              2841.73,
+              2472.26
+            ],
+            [
+              2796.32,
+              2548.01
+            ],
+            [
+              2743.71,
+              2618.95
+            ],
+            [
+              2684.4,
+              2684.4
+            ],
+            [
+              2618.95,
+              2743.71
+            ],
+            [
+              2548.01,
+              2796.32
+            ],
+            [
+              2472.26,
+              2841.73
+            ],
+            [
+              2392.42,
+              2879.49
+            ],
+            [
+              2309.26,
+              2909.25
+            ],
+            [
+              2223.58,
+              2930.71
+            ],
+            [
+              2136.22,
+              2943.67
+            ],
+            [
+              2048.0,
+              2948.0
+            ],
+            [
+              1959.78,
+              2943.67
+            ],
+            [
+              1872.42,
+              2930.71
+            ],
+            [
+              1786.74,
+              2909.25
+            ],
+            [
+              1703.58,
+              2879.49
+            ],
+            [
+              1623.74,
+              2841.73
+            ],
+            [
+              1547.99,
+              2796.32
+            ],
+            [
+              1477.05,
+              2743.71
+            ],
+            [
+              1411.6,
+              2684.4
+            ],
+            [
+              1352.29,
+              2618.95
+            ],
+            [
+              1299.68,
+              2548.01
+            ],
+            [
+              1254.27,
+              2472.26
+            ],
+            [
+              1216.51,
+              2392.42
+            ],
+            [
+              1186.75,
+              2309.26
+            ],
+            [
+              1165.29,
+              2223.58
+            ],
+            [
+              1152.33,
+              2136.22
+            ],
+            [
+              1148.0,
+              2048.0
+            ],
+            [
+              1152.33,
+              1959.78
+            ],
+            [
+              1165.29,
+              1872.42
+            ],
+            [
+              1186.75,
+              1786.74
+            ],
+            [
+              1216.51,
+              1703.58
+            ],
+            [
+              1254.27,
+              1623.74
+            ],
+            [
+              1299.68,
+              1547.99
+            ],
+            [
+              1352.29,
+              1477.05
+            ],
+            [
+              1411.6,
+              1411.6
+            ],
+            [
+              1477.05,
+              1352.29
+            ],
+            [
+              1547.99,
+              1299.68
+            ],
+            [
+              1623.74,
+              1254.27
+            ],
+            [
+              1703.58,
+              1216.51
+            ],
+            [
+              1786.74,
+              1186.75
+            ],
+            [
+              1872.42,
+              1165.29
+            ],
+            [
+              1959.78,
+              1152.33
+            ],
+            [
+              2048.0,
+              1148.0
+            ],
+            [
+              2136.22,
+              1152.33
+            ],
+            [
+              2223.58,
+              1165.29
+            ],
+            [
+              2309.26,
+              1186.75
+            ],
+            [
+              2392.42,
+              1216.51
+            ],
+            [
+              2472.26,
+              1254.27
+            ],
+            [
+              2548.01,
+              1299.68
+            ],
+            [
+              2618.95,
+              1352.29
+            ],
+            [
+              2684.4,
+              1411.6
+            ],
+            [
+              2743.71,
+              1477.05
+            ],
+            [
+              2796.32,
+              1547.99
+            ],
+            [
+              2841.73,
+              1623.74
+            ],
+            [
+              2879.49,
+              1703.58
+            ],
+            [
+              2909.25,
+              1786.74
+            ],
+            [
+              2930.71,
+              1872.42
+            ],
+            [
+              2943.67,
+              1959.78
+            ]
+          ]
+        },
+        {
+          "name": "hub white ring",
+          "space": "uv_px",
+          "color": "white",
+          "polygon": [
+            [
+              2568.0,
+              2048.0
+            ],
+            [
+              2565.5,
+              2098.97
+            ],
+            [
+              2558.01,
+              2149.45
+            ],
+            [
+              2545.61,
+              2198.95
+            ],
+            [
+              2528.42,
+              2247.0
+            ],
+            [
+              2506.6,
+              2293.13
+            ],
+            [
+              2480.36,
+              2336.9
+            ],
+            [
+              2449.97,
+              2377.88
+            ],
+            [
+              2415.7,
+              2415.7
+            ],
+            [
+              2377.88,
+              2449.97
+            ],
+            [
+              2336.9,
+              2480.36
+            ],
+            [
+              2293.13,
+              2506.6
+            ],
+            [
+              2247.0,
+              2528.42
+            ],
+            [
+              2198.95,
+              2545.61
+            ],
+            [
+              2149.45,
+              2558.01
+            ],
+            [
+              2098.97,
+              2565.5
+            ],
+            [
+              2048.0,
+              2568.0
+            ],
+            [
+              1997.03,
+              2565.5
+            ],
+            [
+              1946.55,
+              2558.01
+            ],
+            [
+              1897.05,
+              2545.61
+            ],
+            [
+              1849.0,
+              2528.42
+            ],
+            [
+              1802.87,
+              2506.6
+            ],
+            [
+              1759.1,
+              2480.36
+            ],
+            [
+              1718.12,
+              2449.97
+            ],
+            [
+              1680.3,
+              2415.7
+            ],
+            [
+              1646.03,
+              2377.88
+            ],
+            [
+              1615.64,
+              2336.9
+            ],
+            [
+              1589.4,
+              2293.13
+            ],
+            [
+              1567.58,
+              2247.0
+            ],
+            [
+              1550.39,
+              2198.95
+            ],
+            [
+              1537.99,
+              2149.45
+            ],
+            [
+              1530.5,
+              2098.97
+            ],
+            [
+              1528.0,
+              2048.0
+            ],
+            [
+              1530.5,
+              1997.03
+            ],
+            [
+              1537.99,
+              1946.55
+            ],
+            [
+              1550.39,
+              1897.05
+            ],
+            [
+              1567.58,
+              1849.0
+            ],
+            [
+              1589.4,
+              1802.87
+            ],
+            [
+              1615.64,
+              1759.1
+            ],
+            [
+              1646.03,
+              1718.12
+            ],
+            [
+              1680.3,
+              1680.3
+            ],
+            [
+              1718.12,
+              1646.03
+            ],
+            [
+              1759.1,
+              1615.64
+            ],
+            [
+              1802.87,
+              1589.4
+            ],
+            [
+              1849.0,
+              1567.58
+            ],
+            [
+              1897.05,
+              1550.39
+            ],
+            [
+              1946.55,
+              1537.99
+            ],
+            [
+              1997.03,
+              1530.5
+            ],
+            [
+              2048.0,
+              1528.0
+            ],
+            [
+              2098.97,
+              1530.5
+            ],
+            [
+              2149.45,
+              1537.99
+            ],
+            [
+              2198.95,
+              1550.39
+            ],
+            [
+              2247.0,
+              1567.58
+            ],
+            [
+              2293.13,
+              1589.4
+            ],
+            [
+              2336.9,
+              1615.64
+            ],
+            [
+              2377.88,
+              1646.03
+            ],
+            [
+              2415.7,
+              1680.3
+            ],
+            [
+              2449.97,
+              1718.12
+            ],
+            [
+              2480.36,
+              1759.1
+            ],
+            [
+              2506.6,
+              1802.87
+            ],
+            [
+              2528.42,
+              1849.0
+            ],
+            [
+              2545.61,
+              1897.05
+            ],
+            [
+              2558.01,
+              1946.55
+            ],
+            [
+              2565.5,
+              1997.03
+            ]
+          ]
+        },
+        {
+          "name": "hub carbon cutout",
+          "space": "uv_px",
+          "color": "carbon",
+          "polygon": [
+            [
+              2508.0,
+              2048.0
+            ],
+            [
+              2505.78,
+              2093.09
+            ],
+            [
+              2499.16,
+              2137.74
+            ],
+            [
+              2488.19,
+              2181.53
+            ],
+            [
+              2472.98,
+              2224.03
+            ],
+            [
+              2453.68,
+              2264.84
+            ],
+            [
+              2430.48,
+              2303.56
+            ],
+            [
+              2403.58,
+              2339.82
+            ],
+            [
+              2373.27,
+              2373.27
+            ],
+            [
+              2339.82,
+              2403.58
+            ],
+            [
+              2303.56,
+              2430.48
+            ],
+            [
+              2264.84,
+              2453.68
+            ],
+            [
+              2224.03,
+              2472.98
+            ],
+            [
+              2181.53,
+              2488.19
+            ],
+            [
+              2137.74,
+              2499.16
+            ],
+            [
+              2093.09,
+              2505.78
+            ],
+            [
+              2048.0,
+              2508.0
+            ],
+            [
+              2002.91,
+              2505.78
+            ],
+            [
+              1958.26,
+              2499.16
+            ],
+            [
+              1914.47,
+              2488.19
+            ],
+            [
+              1871.97,
+              2472.98
+            ],
+            [
+              1831.16,
+              2453.68
+            ],
+            [
+              1792.44,
+              2430.48
+            ],
+            [
+              1756.18,
+              2403.58
+            ],
+            [
+              1722.73,
+              2373.27
+            ],
+            [
+              1692.42,
+              2339.82
+            ],
+            [
+              1665.52,
+              2303.56
+            ],
+            [
+              1642.32,
+              2264.84
+            ],
+            [
+              1623.02,
+              2224.03
+            ],
+            [
+              1607.81,
+              2181.53
+            ],
+            [
+              1596.84,
+              2137.74
+            ],
+            [
+              1590.22,
+              2093.09
+            ],
+            [
+              1588.0,
+              2048.0
+            ],
+            [
+              1590.22,
+              2002.91
+            ],
+            [
+              1596.84,
+              1958.26
+            ],
+            [
+              1607.81,
+              1914.47
+            ],
+            [
+              1623.02,
+              1871.97
+            ],
+            [
+              1642.32,
+              1831.16
+            ],
+            [
+              1665.52,
+              1792.44
+            ],
+            [
+              1692.42,
+              1756.18
+            ],
+            [
+              1722.73,
+              1722.73
+            ],
+            [
+              1756.18,
+              1692.42
+            ],
+            [
+              1792.44,
+              1665.52
+            ],
+            [
+              1831.16,
+              1642.32
+            ],
+            [
+              1871.97,
+              1623.02
+            ],
+            [
+              1914.47,
+              1607.81
+            ],
+            [
+              1958.26,
+              1596.84
+            ],
+            [
+              2002.91,
+              1590.22
+            ],
+            [
+              2048.0,
+              1588.0
+            ],
+            [
+              2093.09,
+              1590.22
+            ],
+            [
+              2137.74,
+              1596.84
+            ],
+            [
+              2181.53,
+              1607.81
+            ],
+            [
+              2224.03,
+              1623.02
+            ],
+            [
+              2264.84,
+              1642.32
+            ],
+            [
+              2303.56,
+              1665.52
+            ],
+            [
+              2339.82,
+              1692.42
+            ],
+            [
+              2373.27,
+              1722.73
+            ],
+            [
+              2403.58,
+              1756.18
+            ],
+            [
+              2430.48,
+              1792.44
+            ],
+            [
+              2453.68,
+              1831.16
+            ],
+            [
+              2472.98,
+              1871.97
+            ],
+            [
+              2488.19,
+              1914.47
+            ],
+            [
+              2499.16,
+              1958.26
+            ],
+            [
+              2505.78,
+              2002.91
+            ]
+          ]
+        }
+      ],
+      "stickers": []
+    }
+  }
+}

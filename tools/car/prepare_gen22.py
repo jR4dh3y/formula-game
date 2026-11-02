@@ -18,6 +18,7 @@ import driver_steer  # noqa: E402
 import source_materials  # noqa: E402
 import wheel_bake  # noqa: E402
 import tyre_bake  # noqa: E402
+import livery_seams  # noqa: E402
 
 NODES = ('body', 'wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr',
          'upright_fl', 'upright_fr', 'steering_wheel', 'drs_flap', 'driver', 'helmet',
@@ -45,7 +46,9 @@ def decimate(obj, target, protect_materials=()):
     """Collapse in physical space, retaining source UVs and baked pose attributes."""
     count = triangles(obj)
     if count <= target:
+        livery_seams.constrain(obj)
         return
+    livery_seams.split(obj)
     select([obj])
     protected={index for face in obj.data.polygons
                if protect_materials and obj.data.materials[face.material_index].name in protect_materials
@@ -63,6 +66,7 @@ def decimate(obj, target, protect_materials=()):
         mod.invert_vertex_group=True
         mod.vertex_group_factor=1000
     bpy.ops.object.modifier_apply(modifier=mod.name)
+    livery_seams.constrain(obj)
     retained=obj.vertex_groups.get('Retained control artwork')
     if retained: obj.vertex_groups.remove(retained)
 
@@ -124,10 +128,15 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('--work', type=Path, default=Path('raw/gen22/pbr'))
     parser.add_argument('--textures', type=Path, default=Path('raw/gen22/source-textures'))
+    parser.add_argument('--template-year', choices=['2025', '2026'], default='2025')
     args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
     args.output.mkdir(parents=True, exist_ok=True)
     args.work.mkdir(parents=True, exist_ok=True)
     scene = bpy.context.scene
+    bpy.context.view_layer.update()
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'livery'))
+    import author_template_uv
+    author_template_uv.apply(args.template_year)
     bpy.context.view_layer.update()
     centres = {key: bpy.data.objects[n].matrix_world.translation.copy() for key,n in WHEEL_SOURCE.items()}
     front = (centres['fl']+centres['fr'])/2
@@ -163,11 +172,16 @@ def main():
         # Preserve the authored UVs. Only instrumentation uses generated UVs below.
         active = mesh.uv_layers.active
         coordinates = [tuple(uv.uv) for uv in active.data] if active else None
+        template = mesh.uv_layers.get('livery')
+        template_coordinates = [tuple(uv.uv) for uv in template.data] if template else None
         for layer in list(mesh.uv_layers): mesh.uv_layers.remove(layer)
         uv = mesh.uv_layers.new(name='OriginalUV')
         if coordinates is not None:
             for loop, co in zip(uv.data, coordinates): loop.uv = co
         uv.active_render = True
+        if template_coordinates is not None:
+            template = mesh.uv_layers.new(name='livery')
+            for loop, co in zip(template.data, template_coordinates): loop.uv = co
         mesh.uv_layers.active = uv
         mesh.transform(correction @ source.matrix_world)
         obj['source_indices'] = [p.material_index for p in mesh.polygons]
@@ -233,6 +247,8 @@ def main():
             for face in obj.data.polygons:
                 if face.center.z>=top-.006 and abs(face.center.x-mid)<.05:
                     face.material_index=len(obj.data.materials)-1
+        if any(mat.name.startswith('source_paint_') for mat in obj.data.materials):
+            assert obj.data.uv_layers.get('livery'), ('paint part has no template UVs', name)
         materials.add_detail_uv(obj)
         if node not in ('steering_wheel', 'drs_button'):
             decimate(obj, target_for(name, node))
@@ -312,7 +328,7 @@ def main():
     low = [min(p[i] for p in points) for i in range(3)]
     high = [max(p[i] for p in points) for i in range(3)]
     extents = dict(min=gltf((low[0],high[1],low[2])), max=gltf((high[0],low[1],high[2])))
-    metadata = dict(wheels={},extents=extents,faces={n:triangles(o) for n,o in nodes.items()},
+    metadata = dict(livery_template=int(args.template_year), wheels={},extents=extents,faces={n:triangles(o) for n,o in nodes.items()},
                     steering_wheel=dict(pivot=gltf(steering),axis=[0,0,1]),
                     drs=dict(pivot=gltf(drs),axis=[1,0,0],open_angle=-.25),
                     cockpit_eye=gltf(correction @ Vector((.0636,2.075,.765))))

@@ -1,0 +1,315 @@
+[
+  {
+    "source": "hp.svg",
+    "output": "hp-blue.png",
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/hp.svg",
+    "notes": "Simple Icons vector under CC0. Brand trademark rights remain with the owner. Derived photo colour variant.",
+    "hp_roundel": true
+  },
+  {
+    "source": "shell-4-extra.svg",
+    "output": "shell-colour.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/shell-4.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "remove_white": true,
+    "outline": true
+  },
+  {
+    "source": "unicredit-1-extra.svg",
+    "output": "unicredit-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/unicredit-1.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "ibm-brand.svg",
+    "output": "ibm-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/ibm.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "rayban-brand.svg",
+    "output": "rayban-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/ray-ban.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": true
+  },
+  {
+    "source": "richardmille-official.svg",
+    "output": "richardmille-white.png",
+    "url": "https://www.richardmille.com/_nuxt/img/logo.41ca974.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "genesys-white-official.svg",
+    "output": "genesys-white.png",
+    "url": "https://www.genesys.com/wp-content/themes/genesys-kraken/logo/genesys-com-full-white.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "whoop-1-extra.svg",
+    "output": "whoop-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/whoop-1.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "bing-x-extra.svg",
+    "output": "bingx-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/bing-x.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "bitdefender-2-extra.svg",
+    "output": "bitdefender-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/bitdefender-2.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "puma.svg",
+    "output": "puma-white.png",
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/puma.svg",
+    "notes": "Simple Icons vector under CC0. Brand trademark rights remain with the owner. Derived photo colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "zyn-official.svg",
+    "output": "zyn-white.png",
+    "url": "https://media.iqos.com/is/content/DCXWAMqa/dcxwamus-ZYN-Logo-white",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white",
+    "remove_white": false
+  },
+  {
+    "source": "unicredit-1-extra.svg",
+    "output": "unicredit-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/unicredit-1.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "ibm-brand.svg",
+    "output": "ibm-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/ibm.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "rayban-brand.svg",
+    "output": "rayban-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/ray-ban.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": true
+  },
+  {
+    "source": "richardmille-official.svg",
+    "output": "richardmille-black.png",
+    "url": "https://www.richardmille.com/_nuxt/img/logo.41ca974.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "genesys-white-official.svg",
+    "output": "genesys-black.png",
+    "url": "https://www.genesys.com/wp-content/themes/genesys-kraken/logo/genesys-com-full-white.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "whoop-1-extra.svg",
+    "output": "whoop-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/whoop-1.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "bing-x-extra.svg",
+    "output": "bingx-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/bing-x.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "bitdefender-2-extra.svg",
+    "output": "bitdefender-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/bitdefender-2.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "puma.svg",
+    "output": "puma-black.png",
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/puma.svg",
+    "notes": "Simple Icons vector under CC0. Brand trademark rights remain with the owner. Derived photo colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "zyn-official.svg",
+    "output": "zyn-black.png",
+    "url": "https://media.iqos.com/is/content/DCXWAMqa/dcxwamus-ZYN-Logo-white",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black",
+    "remove_white": false
+  },
+  {
+    "source": "shield-brand.svg",
+    "output": "shield.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/ferrari-ges.svg",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "remove_white": true
+  },
+  {
+    "source": "ambipar.png",
+    "output": "ambipar-white.png",
+    "url": "https://ambipar.com/site2020/wp-content/uploads/2026/08/Logo_Ambipar_Branco_Transparente.png",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "ambipar.png",
+    "output": "ambipar-black.png",
+    "url": "https://ambipar.com/site2020/wp-content/uploads/2026/08/Logo_Ambipar_Branco_Transparente.png",
+    "notes": "Brand trademark artwork. See source for redistribution rights; photo-based colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "ceva-commons.svg",
+    "output": "ceva-white.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Logo_of_CEVA_Logistics_%282023%29.svg",
+    "notes": "CEVA Logistics official mark via Commons. Trademark artwork.",
+    "color": "white"
+  },
+  {
+    "source": "ceva-commons.svg",
+    "output": "ceva-black.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Logo_of_CEVA_Logistics_%282023%29.svg",
+    "notes": "CEVA Logistics official mark via Commons. Trademark artwork.",
+    "color": "black"
+  },
+  {
+    "source": "pirelli-commons.svg",
+    "output": "pirelli-white.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Pirelli wordmark via Wikimedia Commons. Trademark artwork.",
+    "color": "white",
+    "red_ink": true
+  },
+  {
+    "source": "peroni-highres.png",
+    "output": "peroni-white.png",
+    "url": "https://images.seeklogo.com/logo-png/61/1/peroni-logo-png_seeklogo-614602.png",
+    "notes": "Peroni Nastro Azzurro 0.0 lockup. Public brand PNG via Seeklogo. Trademark rights retained; original resolution 600px.",
+    "color": "white",
+    "remove_all_white": true
+  },
+  {
+    "source": "peroni-highres.png",
+    "output": "peroni-black.png",
+    "url": "https://images.seeklogo.com/logo-png/61/1/peroni-logo-png_seeklogo-614602.png",
+    "notes": "Peroni Nastro Azzurro 0.0 lockup. Public brand PNG via Seeklogo. Trademark rights retained; original resolution 600px.",
+    "color": "black",
+    "remove_all_white": true
+  },
+  {
+    "source": "zcg-seek.png",
+    "output": "zcg-white.png",
+    "url": "https://images.seeklogo.com/logo-png/53/2/zcg-logo-png_seeklogo-536841.png",
+    "notes": "Public brand PNG via Seeklogo, trademark rights retained.",
+    "color": "white",
+    "crop": [
+      0,
+      0,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "zcg-seek.png",
+    "output": "zcg-black.png",
+    "url": "https://images.seeklogo.com/logo-png/53/2/zcg-logo-png_seeklogo-536841.png",
+    "notes": "Public brand PNG via Seeklogo, trademark rights retained.",
+    "color": "black",
+    "crop": [
+      0,
+      0,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "dxc-seek.png",
+    "output": "dxc-white.png",
+    "url": "https://images.seeklogo.com/logo-png/40/2/dxc-technology-logo-png_seeklogo-405696.png",
+    "notes": "Public brand PNG via Seeklogo, trademark rights retained.",
+    "color": "white",
+    "crop": [
+      0,
+      0,
+      1,
+      0.67
+    ]
+  },
+  {
+    "source": "dxc-seek.png",
+    "output": "dxc-black.png",
+    "url": "https://images.seeklogo.com/logo-png/40/2/dxc-technology-logo-png_seeklogo-405696.png",
+    "notes": "Public brand PNG via Seeklogo, trademark rights retained.",
+    "color": "black",
+    "crop": [
+      0,
+      0,
+      1,
+      0.67
+    ]
+  },
+  {
+    "source": "number-photo.jpg",
+    "output": "number16.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-24-01-23-10-33-24-5-SF-26_Row2_2.jpg",
+    "notes": "Ferrari copyrighted launch photo via RaceFans; 16 silhouette isolated from official artwork, two connected glyphs retained; no invented font",
+    "photo_crop": [
+      1360,
+      510,
+      1415,
+      600
+    ],
+    "rotate": -90
+  },
+  {
+    "source": "vpower-real2-highres.png",
+    "output": "vpower-word-white.png",
+    "url": "https://images.seeklogo.com/logo-png/17/1/shell-v-power-logo-png_seeklogo-170966.png",
+    "notes": "Genuine V-Power red letter silhouettes isolated from 600px brand artwork, converted to white. Campaign circle, small Shell label and outline excluded. Shell emblem is a separate sourced decal.",
+    "source_crop": [
+      170,
+      288,
+      536,
+      352
+    ],
+    "red_ink": true,
+    "color": "white"
+  }
+]

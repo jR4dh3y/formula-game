@@ -252,6 +252,31 @@ fn asset_fingerprints(options: &Options) -> Result<BTreeMap<String, String>, Str
             let compound = options.setup.compound.label().to_ascii_lowercase();
             names.push(format!("cars/gen22/tyres{lod}/{compound}.png"));
         }
+        for identity in crate::teams::Teams::load(&options.assets)?
+            .field(options)?
+            .iter()
+            .flatten()
+        {
+            let base = format!("cars/gen22/liveries/{}", identity.team);
+            for lod in ["", "/lod1", "/lod2"] {
+                for part in [
+                    "main_body",
+                    "front_wing",
+                    "rear_wing",
+                    "mirrors",
+                    "floor",
+                    "cockpit_foam",
+                    "winglets",
+                    "front_covers",
+                    "rear_covers",
+                ] {
+                    let path = format!("{base}{lod}/{part}.png");
+                    if options.assets.join(&path).is_file() {
+                        names.push(path);
+                    }
+                }
+            }
+        }
     }
     names.sort();
     names.dedup();

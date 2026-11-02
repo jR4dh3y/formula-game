@@ -1,6 +1,7 @@
-"""Neutral stock body paint and portable PBR replacements for Cycles materials.
+"""Original-UV source artwork and portable PBR replacements for Cycles materials.
 
-OriginalUV retains AO and instrument artwork; DetailUV carries carbon detail.
+UV0 retains source artwork and AO. UV1 is the direct template on paint and
+metre-scaled detail on unpainted composite. Paint detail normals bake onto UV0.
 """
 import math
 from pathlib import Path
@@ -190,7 +191,7 @@ class Library:
 
     @staticmethod
     def add_detail_uv(obj):
-        layer=obj.data.uv_layers.new(name='DetailUV')
+        layer=obj.data.uv_layers.new(name='DetailUV' if obj.data.uv_layers.get('livery') else 'livery')
         for face in obj.data.polygons:
             axis=max(range(3),key=lambda i: abs(face.normal[i]))
             axes=[i for i in range(3) if i!=axis]
@@ -222,6 +223,7 @@ def export_models(nodes, args, metadata, decimate, select, triangles):
     sys.path.insert(0,str(Path(__file__).resolve().parent))
     import driver_steer
     finish_materials(nodes)
+    bake_paint_detail(nodes, args.work)
     decimate(nodes['helmet'], 45000)
     for filename in ('car.glb','car_lod1.glb','car_lod2.glb'):
         if filename == 'car_lod1.glb':
@@ -271,6 +273,65 @@ def export_models(nodes, args, metadata, decimate, select, triangles):
         for obj in morphed: driver_steer.clear_shape_keys(obj)
         print('EXPORTED',filename,sum(triangles(o) for o in nodes.values()),flush=True)
     shutil.copyfile(Path(__file__).with_name('teams.json'),args.output/'teams.json')
+
+
+def bake_paint_detail(nodes, directory):
+    """Free UV1 for the template without dropping the painted carbon normals.
+
+    Bevy supports two UV channels. Bake the existing metre-scaled DetailUV
+    normals in the OriginalUV tangent frame, then discard that temporary map.
+    Unpainted primitives keep their metre-scaled coordinates in UV1.
+    """
+    import wheel_bake
+    wheel_bake.setup()
+    scene = bpy.context.scene
+    scene.cycles.samples = 4
+    scene.render.bake.use_selected_to_active = False
+    for obj in nodes.values():
+        painted = [m for m in obj.data.materials if m and m.name.startswith('source_paint_')]
+        if not painted:
+            continue
+        targets = []
+        scratch = bpy.data.images.new('detail_bake_scratch', 16, 16)
+        scratch_nodes = []
+        for mat in obj.data.materials:
+            if mat in painted:
+                image = bpy.data.images.new('detail_' + mat.name, 2048, 2048, alpha=False)
+                image.generated_color = (.5, .5, 1, 1)
+                image.colorspace_settings.name = 'Non-Color'
+                tex = mat.node_tree.nodes.new('ShaderNodeTexImage')
+                tex.image = image
+                targets.append((mat, image))
+            else:
+                tex = mat.node_tree.nodes.new('ShaderNodeTexImage')
+                tex.image = scratch
+                scratch_nodes.append((mat, tex))
+            mat.node_tree.nodes.active = tex
+        obj.data.uv_layers.active = obj.data.uv_layers['OriginalUV']
+        obj.data.uv_layers['OriginalUV'].active_render = True
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.hide_set(False)
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        print('BAKE PAINT DETAIL', obj.name, len(targets), flush=True)
+        bpy.ops.object.bake(type='NORMAL')
+        for mat, image in targets:
+            image.filepath_raw = str((directory / (image.name + '.png')).resolve())
+            image.file_format = 'PNG'
+            image.save()
+            image.pack()
+            attach_normal(mat, image)
+        for mat, tex in scratch_nodes:
+            mat.node_tree.nodes.remove(tex)
+        bpy.data.images.remove(scratch)
+    for obj in nodes.values():
+        detail = obj.data.uv_layers.get('DetailUV')
+        if detail:
+            obj.data.uv_layers.remove(detail)
+    for mat in {m for obj in nodes.values() for m in obj.data.materials if m}:
+        for node in mat.node_tree.nodes:
+            if node.type in {'UVMAP', 'NORMAL_MAP'} and node.uv_map == 'DetailUV':
+                node.uv_map = 'livery'
 
 
 def resize_images(nodes, size):

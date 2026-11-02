@@ -1,0 +1,218 @@
+[
+  {
+    "source": "oracle.svg",
+    "output": "oracle-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x39/97ecacafec/oracle.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "rokt.svg",
+    "output": "rokt-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x84/ce73e28078/rokt.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "mobil-1.svg",
+    "output": "mobil-1-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x64/e39a08454e/mobil-1.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "visa.svg",
+    "output": "visa-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x97/3dd7c6ae1c/visa.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "ford-racing.svg",
+    "output": "ford-racing-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x145/ee66c44e8d/ford-racing.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "carlyle.svg",
+    "output": "carlyle-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x37/583f815f1d/carlyle.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "at-t.svg",
+    "output": "at-t-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x98/8ceaa0b49d/at-t.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "gate.svg",
+    "output": "gate-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x78/1895967ae0/gate.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "hard-rock.svg",
+    "output": "hard-rock-white.png",
+    "url": "https://a.storyblok.com/f/250901/256x150/b22a6fbbd0/hard-rock.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "avatrade.svg",
+    "output": "avatrade-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x114/5f1cb84209/avatrade.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "1password.svg",
+    "output": "1password-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x57/fe8402b912/1password.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "siemens.svg",
+    "output": "siemens-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x46/94c8dc9afe/siemens.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "hexagon.svg",
+    "output": "hexagon-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x84/a3f754990d/hexagon.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "pirelli.svg",
+    "output": "pirelli-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x64/2b47c59162/pirelli.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "neat.svg",
+    "output": "neat-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x86/fadf4746d1/neat.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "clear.svg",
+    "output": "clear-white.png",
+    "url": "https://a.storyblok.com/f/250901/300x91/24562ad591/clear.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "maui-jim.svg",
+    "output": "maui-jim-white.png",
+    "url": "https://a.storyblok.com/f/250901/260x150/b64d5ae21a/maui-jim.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0,
+      0,
+      1,
+      0.72
+    ],
+    "color": "white"
+  },
+  {
+    "source": "tag-heuer.svg",
+    "output": "tag-heuer-white.png",
+    "url": "https://a.storyblok.com/f/250901/173x150/7d5cb278ae/tag-heuer.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "photo-livery-01.jpg",
+    "output": "bull-red.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-21-01-16-06-16-11-12.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "source_crop": [
+      500,
+      45,
+      1450,
+      420
+    ],
+    "largest_components": 3,
+    "flip_x": false,
+    "outline": true,
+    "color": "#E31B23",
+    "rgb_ink": [
+      [
+        80,
+        0,
+        0
+      ],
+      [
+        255,
+        110,
+        110
+      ]
+    ]
+  },
+  {
+    "source": "photo-livery-01.jpg",
+    "output": "bull-red-flipped.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-21-01-16-06-16-11-12.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "source_crop": [
+      500,
+      45,
+      1450,
+      420
+    ],
+    "largest_components": 3,
+    "flip_x": true,
+    "outline": true,
+    "color": "#E31B23",
+    "rgb_ink": [
+      [
+        80,
+        0,
+        0
+      ],
+      [
+        255,
+        110,
+        110
+      ]
+    ]
+  },
+  {
+    "source": "team-official.svg",
+    "output": "redbull-red.png",
+    "url": "https://www.redbullracing.com/_next/static/media/ORBR_logo_2026.4059dac5.svg",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "source_crop": [
+      0,
+      640,
+      2200,
+      1320
+    ]
+  },
+  {
+    "source": "photo-livery-01.jpg",
+    "output": "number3.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-21-01-16-06-16-11-12.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "source_crop": [
+      105,
+      195,
+      350,
+      410
+    ],
+    "red_ink": true,
+    "largest_components": 1,
+    "outline": true,
+    "color": "#D71920"
+  }
+]

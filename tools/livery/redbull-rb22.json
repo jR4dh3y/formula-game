@@ -1,0 +1,2032 @@
+{
+  "schema": 1,
+  "team": "redbull",
+  "reference": "Actual 2026 RB22 launch photos; ~/.cache/native-2026/redbull/refs/SOURCES.tsv",
+  "frame": {
+    "origin": [
+      0.045,
+      0,
+      0
+    ],
+    "yaw": -0.007
+  },
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "palette": {
+    "blue": "#133A86",
+    "navy": "#10172F",
+    "yellow": "#F8BC00",
+    "red": "#E31B23",
+    "white": "#F3F3F3",
+    "carbon": "#101113"
+  },
+  "parts": {
+    "main_body": {
+      "base": "blue",
+      "regions": [
+        {
+          "color": "carbon",
+          "where": {
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    -1,
+                    0.11
+                  ],
+                  [
+                    0.6,
+                    0.18
+                  ],
+                  [
+                    1.4,
+                    0.21
+                  ],
+                  [
+                    3.6,
+                    0.24
+                  ],
+                  [
+                    4.3,
+                    0.2
+                  ]
+                ],
+                "above": false,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "navy",
+          "where": {
+            "bounds": {
+              "y": [
+                2.45,
+                4.3
+              ]
+            },
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    2.45,
+                    0.94
+                  ],
+                  [
+                    3.15,
+                    0.75
+                  ],
+                  [
+                    3.6,
+                    0.68
+                  ],
+                  [
+                    4.3,
+                    0.65
+                  ]
+                ],
+                "above": true,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "yellow",
+          "where": {
+            "bounds": {
+              "y": [
+                -0.72,
+                0.08
+              ],
+              "z": [
+                0.12,
+                0.55
+              ]
+            }
+          }
+        },
+        {
+          "color": "yellow",
+          "where": {
+            "bounds": {
+              "y": [
+                2.27,
+                2.9
+              ]
+            },
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    2.27,
+                    0.91
+                  ],
+                  [
+                    2.45,
+                    0.77
+                  ],
+                  [
+                    2.7,
+                    0.81
+                  ],
+                  [
+                    2.9,
+                    1.1
+                  ]
+                ],
+                "above": true,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "carbon",
+          "where": {
+            "panels": [
+              3,
+              4,
+              5,
+              9
+            ]
+          }
+        }
+      ]
+    },
+    "front_wing": {
+      "base": "carbon",
+      "regions": []
+    },
+    "rear_wing": {
+      "base": "carbon",
+      "regions": []
+    },
+    "mirrors": {
+      "base": "blue",
+      "regions": []
+    },
+    "floor": {
+      "base": "carbon",
+      "regions": []
+    },
+    "cockpit_foam": {
+      "base": "carbon",
+      "regions": []
+    },
+    "front_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "rear_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "winglets": {
+      "base": "carbon",
+      "regions": []
+    }
+  },
+  "decals": [
+    {
+      "part": "main_body",
+      "image": "oracle-white.png",
+      "center": [
+        0.4,
+        2.64,
+        0.465
+      ],
+      "width": 1.28,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.3,
+            0.64
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "oracle-white.png",
+      "center": [
+        -0.4,
+        2.64,
+        0.465
+      ],
+      "width": 1.28,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.3,
+            0.64
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "redbull-red.png",
+      "center": [
+        0.4,
+        2.95,
+        0.75
+      ],
+      "width": 0.83,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.65,
+            0.91
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "redbull-red.png",
+      "center": [
+        -0.4,
+        2.95,
+        0.75
+      ],
+      "width": 0.83,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.65,
+            0.91
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "bull-red-flipped.png",
+      "center": [
+        0.4,
+        2.98,
+        0.97
+      ],
+      "width": 1.25,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.02,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.8,
+            1.2
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "bull-red.png",
+      "center": [
+        -0.4,
+        2.98,
+        0.97
+      ],
+      "width": 1.25,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.02,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.8,
+            1.2
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "ford-racing-white.png",
+      "center": [
+        0.4,
+        3.53,
+        0.67
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.55,
+            0.78
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "ford-racing-white.png",
+      "center": [
+        -0.4,
+        3.53,
+        0.67
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.55,
+            0.78
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number3.png",
+      "center": [
+        0.4,
+        3.68,
+        0.83
+      ],
+      "width": 0.2,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.7,
+            1.05
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number3.png",
+      "center": [
+        -0.4,
+        3.68,
+        0.83
+      ],
+      "width": 0.2,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.25,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.7,
+            1.05
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "carlyle-white.png",
+      "center": [
+        0.4,
+        0.98,
+        0.48
+      ],
+      "width": 0.55,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.25999999999999995,
+            0.7
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "carlyle-white.png",
+      "center": [
+        -0.4,
+        0.98,
+        0.48
+      ],
+      "width": 0.55,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.25999999999999995,
+            0.7
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "1password-white.png",
+      "center": [
+        0.4,
+        1.15,
+        0.39
+      ],
+      "width": 0.39,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.23399999999999999,
+            0.546
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "1password-white.png",
+      "center": [
+        -0.4,
+        1.15,
+        0.39
+      ],
+      "width": 0.39,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.23399999999999999,
+            0.546
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "hard-rock-white.png",
+      "center": [
+        0.4,
+        1.57,
+        0.38
+      ],
+      "width": 0.2,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.3,
+            0.46
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "hard-rock-white.png",
+      "center": [
+        -0.4,
+        1.57,
+        0.38
+      ],
+      "width": 0.2,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.3,
+            0.46
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "rokt-white.png",
+      "center": [
+        0.4,
+        2.13,
+        0.68
+      ],
+      "width": 0.3,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.56,
+            0.8
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "rokt-white.png",
+      "center": [
+        -0.4,
+        2.13,
+        0.68
+      ],
+      "width": 0.3,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.56,
+            0.8
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "hexagon-white.png",
+      "center": [
+        0.4,
+        3.05,
+        0.25
+      ],
+      "width": 0.24,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.154,
+            0.346
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "hexagon-white.png",
+      "center": [
+        -0.4,
+        3.05,
+        0.25
+      ],
+      "width": 0.24,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.154,
+            0.346
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "siemens-white.png",
+      "center": [
+        0.4,
+        3.32,
+        0.25
+      ],
+      "width": 0.23,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.15799999999999997,
+            0.342
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "siemens-white.png",
+      "center": [
+        -0.4,
+        3.32,
+        0.25
+      ],
+      "width": 0.23,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.15799999999999997,
+            0.342
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "clear-white.png",
+      "center": [
+        0.4,
+        2.75,
+        0.25
+      ],
+      "width": 0.23,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            2
+          ],
+          "z": [
+            0.15799999999999997,
+            0.342
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "clear-white.png",
+      "center": [
+        -0.4,
+        2.75,
+        0.25
+      ],
+      "width": 0.23,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "bounds": {
+          "x": [
+            -2,
+            0
+          ],
+          "z": [
+            0.15799999999999997,
+            0.342
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number3.png",
+      "center": [
+        0,
+        0.86,
+        0.5
+      ],
+      "width": 0.27,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "visa-white.png",
+      "center": [
+        0,
+        0.57,
+        0.5
+      ],
+      "width": 0.25,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "gate-white.png",
+      "center": [
+        0,
+        0.42,
+        0.5
+      ],
+      "width": 0.24,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "at-t-white.png",
+      "center": [
+        0,
+        0.28,
+        0.5
+      ],
+      "width": 0.24,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "avatrade-white.png",
+      "center": [
+        0,
+        0.12,
+        0.5
+      ],
+      "width": 0.23,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "maui-jim-white.png",
+      "center": [
+        0,
+        -0.03,
+        0.5
+      ],
+      "width": 0.23,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "carlyle-white.png",
+      "center": [
+        0,
+        -0.16,
+        0.5
+      ],
+      "width": 0.24,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "neat-white.png",
+      "center": [
+        0,
+        -0.27,
+        0.5
+      ],
+      "width": 0.22,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "pirelli-white.png",
+      "center": [
+        0,
+        -0.38,
+        0.5
+      ],
+      "width": 0.2,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mobil-1-white.png",
+      "center": [
+        0,
+        -0.49,
+        0.5
+      ],
+      "width": 0.21,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.05,
+      "where": {
+        "bounds": {
+          "y": [
+            -0.72,
+            1.35
+          ],
+          "z": [
+            0.1,
+            0.77
+          ]
+        }
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "mobil-1-white.png",
+      "center": [
+        0.98,
+        -0.17,
+        0.23
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          1,
+          2,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "mobil-1-white.png",
+      "center": [
+        -0.98,
+        -0.17,
+        0.23
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          1,
+          2,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "mobil-1-white.png",
+      "center": [
+        0.6,
+        4.5,
+        0.8
+      ],
+      "width": 0.3,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          0
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "mobil-1-white.png",
+      "center": [
+        -0.6,
+        4.5,
+        0.8
+      ],
+      "width": 0.3,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.5,
+      "where": {
+        "panels": [
+          6
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "visa-white.png",
+      "center": [
+        0.6,
+        -0.27,
+        0.25
+      ],
+      "width": 0.47,
+      "right": [
+        0.9570244044,
+        0.2900073953,
+        0
+      ],
+      "up": [
+        -0.2900073953,
+        0.9570244044,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "visa-white.png",
+      "center": [
+        -0.6,
+        -0.27,
+        0.25
+      ],
+      "width": 0.47,
+      "right": [
+        0.9570244044,
+        -0.2900073953,
+        0
+      ],
+      "up": [
+        0.2900073953,
+        0.9570244044,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "redbull-red.png",
+      "center": [
+        0.6,
+        -0.44,
+        0.25
+      ],
+      "width": 0.68,
+      "right": [
+        0.9570244044,
+        0.2900073953,
+        0
+      ],
+      "up": [
+        -0.2900073953,
+        0.9570244044,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "redbull-red.png",
+      "center": [
+        -0.6,
+        -0.44,
+        0.25
+      ],
+      "width": 0.68,
+      "right": [
+        0.9570244044,
+        -0.2900073953,
+        0
+      ],
+      "up": [
+        0.2900073953,
+        0.9570244044,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.15,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "gate-white.png",
+      "center": [
+        0,
+        4.42,
+        0.9
+      ],
+      "width": 0.9,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        -1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "gate-white.png",
+      "center": [
+        0,
+        4.69,
+        0.925
+      ],
+      "width": 0.9,
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        0,
+        1,
+        0
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            4.57,
+            4.8
+          ],
+          "z": [
+            0.87,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "visa-white.png",
+      "center": [
+        0.27,
+        1.98,
+        0.872
+      ],
+      "width": 0.22,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        -1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.19
+          ],
+          "z": [
+            0.81,
+            0.94
+          ]
+        }
+      },
+      "path": [
+        [
+          0.19,
+          1.8,
+          0.884
+        ],
+        [
+          0.268,
+          1.9,
+          0.879
+        ],
+        [
+          0.301,
+          2.0,
+          0.867
+        ],
+        [
+          0.322,
+          2.1,
+          0.853
+        ],
+        [
+          0.327,
+          2.16,
+          0.843
+        ]
+      ]
+    },
+    {
+      "part": "main_body",
+      "image": "visa-white.png",
+      "center": [
+        -0.27,
+        1.98,
+        0.872
+      ],
+      "width": 0.22,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.19
+          ],
+          "z": [
+            0.81,
+            0.94
+          ]
+        }
+      },
+      "path": [
+        [
+          -0.327,
+          2.16,
+          0.843
+        ],
+        [
+          -0.322,
+          2.1,
+          0.853
+        ],
+        [
+          -0.301,
+          2.0,
+          0.867
+        ],
+        [
+          -0.268,
+          1.9,
+          0.879
+        ],
+        [
+          -0.19,
+          1.8,
+          0.884
+        ]
+      ]
+    }
+  ]
+}

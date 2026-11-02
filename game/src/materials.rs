@@ -4,10 +4,11 @@ use bevy::{gltf::GltfMaterialName, mesh::UvChannel, prelude::*};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Component)]
-pub(crate) struct CarSurface {
-    pub lod: Option<&'static str>,
-    pub compound: racecraft_sim::Compound,
-}
+pub(crate) struct CarSurface(
+    pub Option<String>,
+    pub Option<&'static str>,
+    pub racecraft_sim::Compound,
+);
 
 #[derive(Component)]
 pub(crate) struct SurfaceReady;
@@ -30,9 +31,10 @@ pub fn prepare(
     surfaces: PendingSurfaces,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut prepared: Local<HashSet<AssetId<StandardMaterial>>>,
-    mut compounds: Local<CompoundMaterials>,
+    mut liveries: Local<TeamMaterials>,
     server: Res<AssetServer>,
     options: Res<crate::options::Options>,
+    session: Res<crate::Session>,
 ) {
     for (entity, name, surface, handle) in &surfaces {
         {
@@ -44,13 +46,57 @@ pub fn prepare(
             }
         }
         if options.car == "gen22" && name.0 == "tyre" {
-            let compound = surface.compound.label().to_ascii_lowercase();
-            let path = tyre_texture(surface.lod, surface.compound);
-            let instance =
-                compounds.instance(&compound, &handle.0, server.load(path), &mut materials);
+            let compound = surface.2.label().to_ascii_lowercase();
+            let path = tyre_texture(surface.1, surface.2);
+            let instance = liveries.instance(
+                &compound,
+                &handle.0,
+                server.load(path),
+                UvChannel::Uv0,
+                &mut materials,
+            );
             commands.entity(entity).insert(MeshMaterial3d(instance));
         }
+        if let Some((team, part)) = surface.0.as_deref().zip(paint_part(&name.0)) {
+            let base = format!("cars/gen22/liveries/{team}");
+            let direct = format!("{base}/template.png");
+            let direct = (session.rig.livery_template == Some(2025)
+                && options.assets.join(&direct).is_file())
+            .then_some(direct);
+            let file = direct
+                .as_ref()
+                .map_or_else(|| format!("{part}.png"), |_| "template.png".into());
+            let path = surface
+                .1
+                .map(|lod| format!("{base}/{lod}/{file}"))
+                .filter(|path| options.assets.join(path).is_file())
+                .unwrap_or_else(|| format!("{base}/{file}"));
+            if options.assets.join(&path).is_file() {
+                // PNG ImageLoader defaults to sRGB, matching the embedded base colour.
+                let texture = server.load(path);
+                let channel = if direct.is_some() {
+                    UvChannel::Uv1
+                } else {
+                    UvChannel::Uv0
+                };
+                let instance = liveries.instance(team, &handle.0, texture, channel, &mut materials);
+                if direct.is_none() {
+                    livery_finish(team, part, &mut materials.get_mut(&instance).unwrap());
+                }
+                commands.entity(entity).insert(MeshMaterial3d(instance));
+            }
+        }
         commands.entity(entity).insert(SurfaceReady);
+    }
+}
+
+/// RB22's sharper reflections affect only its cloned body material at every LOD.
+fn livery_finish(team: &str, part: &str, material: &mut StandardMaterial) {
+    if team == "redbull" && matches!(part, "main_body" | "mirrors") {
+        material.perceptual_roughness = 0.16;
+        // Uniform clearcoat washes out the blue and exposed carbon together.
+        material.clearcoat = 0.;
+        material.clearcoat_perceptual_roughness = 0.1;
     }
 }
 
@@ -60,25 +106,43 @@ fn tyre_texture(lod: Option<&str>, compound: racecraft_sim::Compound) -> String 
     format!("cars/gen22/tyres/{directory}{compound}.png")
 }
 
+/// Original-UV paint names shared by player and opponent exports.
+pub(crate) fn paint_part(material: &str) -> Option<&str> {
+    let part = material.strip_prefix("source_paint_")?;
+    // Blender adds numeric suffixes to duplicate LOD material slots.
+    let part = part
+        .rsplit_once('.')
+        .filter(|(_, suffix)| !suffix.is_empty() && suffix.bytes().all(|c| c.is_ascii_digit()))
+        .map_or(part, |(part, _)| part);
+    match part.strip_suffix("_lod").unwrap_or(part) {
+        "main_body_stickers" => Some("main_body"),
+        part @ ("front_wing" | "rear_wing" | "mirrors" | "floor" | "cockpit_foam" | "winglets"
+        | "front_covers" | "rear_covers") => Some(part),
+        _ => None,
+    }
+}
+
 #[derive(Default)]
-pub(crate) struct CompoundMaterials(
+pub(crate) struct TeamMaterials(
     HashMap<(String, AssetId<StandardMaterial>), Handle<StandardMaterial>>,
 );
 
-impl CompoundMaterials {
+impl TeamMaterials {
     fn instance(
         &mut self,
-        compound: &str,
+        team: &str,
         source: &Handle<StandardMaterial>,
         texture: Handle<Image>,
+        channel: UvChannel,
         materials: &mut Assets<StandardMaterial>,
     ) -> Handle<StandardMaterial> {
         self.0
-            .entry((compound.to_owned(), source.id()))
+            .entry((team.to_owned(), source.id()))
             .or_insert_with(|| {
                 let mut material = materials.get(source).unwrap().clone();
                 material.base_color_texture = Some(texture);
-                material.base_color_channel = UvChannel::Uv0;
+                material.base_color = Color::WHITE;
+                material.base_color_channel = channel;
                 materials.add(material)
             })
             .clone()
@@ -87,7 +151,8 @@ impl CompoundMaterials {
 
 fn calibrate(name: &str, material: &mut StandardMaterial) {
     if name.starts_with("source_paint_") {
-        // Neutral stock paint also handles older assets with embedded artwork.
+        // Composite artwork includes exposed carbon. A uniform clearcoat lobe
+        // brightens its black regions independently of the base-colour texture.
         material.base_color_texture = None;
         material.base_color = Color::linear_rgb(0.32, 0.34, 0.36);
         material.reflectance = 0.4;
@@ -237,9 +302,9 @@ mod tests {
                 }
                 assert_eq!(
                     server.get_path(texture.id()).unwrap().path(),
-                    std::path::Path::new(&tyre_texture(surface.lod, surface.compound))
+                    std::path::Path::new(&tyre_texture(surface.1, surface.2))
                 );
-                checked.insert((surface.lod, surface.compound.label()));
+                checked.insert((surface.1, surface.2.label()));
             }
             assert_eq!(
                 checked.len(),
@@ -289,6 +354,149 @@ mod tests {
         if *frame == 360 {
             assert_eq!(*captured, 6);
             exit.write(AppExit::Success);
+        }
+    }
+
+    #[test]
+    fn original_uv_parts_and_team_instances_preserve_the_source() {
+        for part in [
+            "front_wing",
+            "rear_wing",
+            "mirrors",
+            "floor",
+            "cockpit_foam",
+            "winglets",
+            "front_covers",
+            "rear_covers",
+        ] {
+            assert_eq!(paint_part(&format!("source_paint_{part}")), Some(part));
+        }
+        assert_eq!(
+            paint_part("source_paint_main_body_stickers"),
+            Some("main_body")
+        );
+        assert_eq!(
+            paint_part("source_paint_main_body_stickers_lod"),
+            Some("main_body")
+        );
+        assert_eq!(
+            paint_part("source_paint_front_wing_lod"),
+            Some("front_wing")
+        );
+        assert_eq!(
+            paint_part("source_paint_rear_wing_lod.001"),
+            Some("rear_wing")
+        );
+        assert_eq!(paint_part("wheel_legends"), None);
+        assert_eq!(paint_part("source_paint_unknown"), None);
+        let mut materials = Assets::<StandardMaterial>::default();
+        let source = materials.add(StandardMaterial {
+            metallic: 0.17,
+            perceptual_roughness: 0.42,
+            ..default()
+        });
+        let mut images = Assets::<Image>::default();
+        let orange = images.add(Image::default());
+        let red = images.add(Image::default());
+        let mut cache = TeamMaterials::default();
+        let mclaren = cache.instance(
+            "mclaren",
+            &source,
+            orange.clone(),
+            UvChannel::Uv1,
+            &mut materials,
+        );
+        assert_eq!(
+            cache.instance(
+                "mclaren",
+                &source,
+                orange.clone(),
+                UvChannel::Uv1,
+                &mut materials
+            ),
+            mclaren
+        );
+        let ferrari = cache.instance(
+            "ferrari",
+            &source,
+            red.clone(),
+            UvChannel::Uv1,
+            &mut materials,
+        );
+        assert_ne!(mclaren, ferrari);
+        assert_ne!(mclaren, source);
+        assert_eq!(materials.get(&source).unwrap().base_color_texture, None);
+        for (handle, texture) in [(mclaren, orange), (ferrari, red)] {
+            let material = materials.get(&handle).unwrap();
+            assert_eq!(material.base_color_texture, Some(texture));
+            assert_eq!(material.base_color_channel, UvChannel::Uv1);
+            assert_eq!(material.occlusion_channel, UvChannel::Uv0);
+            assert_eq!(material.metallic, 0.17);
+            assert_eq!(material.perceptual_roughness, 0.42);
+        }
+        // LODs have their own AO/normal maps and must retain separate instances.
+        let lod = materials.add(StandardMaterial::default());
+        assert_ne!(
+            cache.instance(
+                "mclaren",
+                &lod,
+                images.add(Image::default()),
+                UvChannel::Uv1,
+                &mut materials
+            ),
+            cache.instance(
+                "mclaren",
+                &source,
+                images.add(Image::default()),
+                UvChannel::Uv1,
+                &mut materials
+            )
+        );
+    }
+
+    #[test]
+    fn rb22_coat_changes_only_its_body_instances() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut images = Assets::<Image>::default();
+        let normal = images.add(Image::default());
+        let ao = images.add(Image::default());
+        let original = StandardMaterial {
+            normal_map_texture: Some(normal.clone()),
+            normal_map_channel: UvChannel::Uv1,
+            occlusion_texture: Some(ao.clone()),
+            perceptual_roughness: 0.3,
+            ..default()
+        };
+        let mut cache = TeamMaterials::default();
+        for part in ["main_body", "mirrors", "floor", "cockpit_foam"] {
+            let source = materials.add(original.clone());
+            for team in ["redbull", "ferrari"] {
+                let instance = cache.instance(
+                    team,
+                    &source,
+                    images.add(Image::default()),
+                    UvChannel::Uv0,
+                    &mut materials,
+                );
+                livery_finish(team, part, &mut materials.get_mut(&instance).unwrap());
+                let material = materials.get(&instance).unwrap();
+                let coated = team == "redbull" && matches!(part, "main_body" | "mirrors");
+                assert_eq!(material.clearcoat, 0.);
+                assert_eq!(
+                    material.perceptual_roughness,
+                    if coated { 0.16 } else { 0.3 }
+                );
+                assert_eq!(material.normal_map_texture, Some(normal.clone()));
+                assert_eq!(material.normal_map_channel, original.normal_map_channel);
+                assert_eq!(material.occlusion_texture, Some(ao.clone()));
+                assert_eq!(material.base_color_channel, UvChannel::Uv0);
+            }
+            let unchanged = materials.get(&source).unwrap();
+            assert_eq!(unchanged.clearcoat, original.clearcoat);
+            assert_eq!(
+                unchanged.perceptual_roughness,
+                original.perceptual_roughness
+            );
         }
     }
 

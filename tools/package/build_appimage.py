@@ -146,11 +146,10 @@ def main():
             for filename in files:
                 shutil.copy2(assets / category / item / filename, destination / filename)
 
-    # Keep stock car assets and tyres; exclude locally installed custom artwork.
+    # Include the full modern livery/helmet tree and every legacy asset.
     for car in ["gen22", "rb6"]:
         shutil.copytree(assets / "cars" / car,
-                        APP / "usr/share/f1-racecraft/assets/cars" / car,
-                        ignore=shutil.ignore_patterns("liveries"))
+                        APP / "usr/share/f1-racecraft/assets/cars" / car)
 
     # Only generic x86-64 official packages are used. The build host's CachyOS
     # AVX2/v3-optimized libraries must not impose that CPU requirement on players.

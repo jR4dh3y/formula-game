@@ -86,7 +86,7 @@ assets/
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
 
-Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses one shared stock car with neutral body paint. Custom team liveries are developed in a separate branch stacked on 2.0. Team and driver selections control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
+Normal launches open Race setup. Choose the circuit, car, laps, AI field, grid slot, tyres and wings, then select Start race. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 applies installed per-team UV0 textures to one shared car at runtime. Entrants without installed textures retain neutral stock body paint. Team and driver selections control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
@@ -191,6 +191,8 @@ remains visible; a sun-only LOD1 proxy casts its shadow,
 and opponents use LOD2 shadow proxies when available. Triangle indices are
 reordered once on load to reuse GPU vertex work without reducing geometry.
 Opponent meshes crossfade around 40 m; older asset packages without `car_lod2.glb` use LOD1 throughout.
+Compose and install per-team native UV0 artwork with
+[`tools/livery/install_liveries.py`](docs/livery-mapping.md#build-and-install).
 
 On GEN22, press F or gamepad East to press the DRS cap with the driver's left thumb, even when DRS is unavailable. The wheel LCD uses the HUD's DRS states: dim when unavailable, outlined green when ready, solid green while open. Braking closes the flap. Button and dial legends retain their source UVs independently of the live LCD.
 
@@ -207,7 +209,7 @@ one-second rules for your car: F opens the flap anywhere on track from the
 start, and braking still closes it. AI cars keep to the race rules. The
 setting is saved with your other aids.
 
-GEN22 retains original per-part UVs and baked ambient occlusion, with neutral body paint. The player model retains a detailed cockpit with distinct carbon, brass, anodized metal, coloured controls and stickers. Opponents use a lighter mesh with projected normal maps. See [the asset contract](docs/gen22-car.md) for source preparation, rebuilds and comparison renders.
+GEN22 retains original per-part UVs and baked ambient occlusion. Team body textures are loaded separately at runtime. The player model retains a detailed cockpit with distinct carbon, brass, anodized metal, coloured controls and stickers. Opponents use a lighter mesh with projected normal maps. See [the asset contract](docs/gen22-car.md) for source preparation, rebuilds and comparison renders. Install team artwork with the [livery installer](docs/livery-mapping.md#installation).
 
 
 The HUD includes the timing tower, lap times, countdown lights, race messages, shift lights, speed, pedals, tyre temperatures/wear, lock-up/sliding indicators, aero effects, minimap and results.

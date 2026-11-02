@@ -1,0 +1,1457 @@
+{
+  "schema": 1,
+  "team": "alpine",
+  "car": "a526",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "reference": "Official 2026 Alpine launch images and Bahrain A526 photographs, Gasly 10. Strict ledger: ~/.cache/livery-2d/alpine/ledger.md",
+  "palette": {
+    "blue": "#013893",
+    "pink": "#E86CA1",
+    "navy": "#0C1C38",
+    "white": "#F5F5F5",
+    "carbon": "#0D0E10"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "blue",
+      "base": [
+        {
+          "name": "carbon main-body-right-06",
+          "color": "carbon",
+          "panel": "main-body-right-06"
+        },
+        {
+          "name": "carbon main-body-left-07",
+          "color": "carbon",
+          "panel": "main-body-left-07"
+        },
+        {
+          "name": "carbon main-body-right-08",
+          "color": "carbon",
+          "panel": "main-body-right-08"
+        },
+        {
+          "name": "carbon main-body-right-09",
+          "color": "carbon",
+          "panel": "main-body-right-09"
+        },
+        {
+          "name": "carbon main-body-left-10",
+          "color": "carbon",
+          "panel": "main-body-left-10"
+        },
+        {
+          "name": "carbon main-body-left-11",
+          "color": "carbon",
+          "panel": "main-body-left-11"
+        },
+        {
+          "name": "carbon main-body-left-12",
+          "color": "carbon",
+          "panel": "main-body-left-12"
+        },
+        {
+          "name": "carbon main-body-left-13",
+          "color": "carbon",
+          "panel": "main-body-left-13"
+        },
+        {
+          "name": "carbon main-body-right-14",
+          "color": "carbon",
+          "panel": "main-body-right-14"
+        },
+        {
+          "name": "carbon main-body-left-15",
+          "color": "carbon",
+          "panel": "main-body-left-15"
+        },
+        {
+          "name": "carbon main-body-right-16",
+          "color": "carbon",
+          "panel": "main-body-right-16"
+        },
+        {
+          "name": "carbon main-body-right-17",
+          "color": "carbon",
+          "panel": "main-body-right-17"
+        },
+        {
+          "name": "carbon main-body-right-18",
+          "color": "carbon",
+          "panel": "main-body-right-18"
+        },
+        {
+          "name": "pink halo-left",
+          "color": "pink",
+          "panel": "halo-left"
+        },
+        {
+          "name": "pink halo-right",
+          "color": "pink",
+          "panel": "halo-right"
+        },
+        {
+          "name": "pink halo-front",
+          "color": "pink",
+          "panel": "halo-front"
+        },
+        {
+          "name": "pink nose-top",
+          "color": "pink",
+          "panel": "nose-top",
+          "polygon": [
+            [
+              0.1,
+              0
+            ],
+            [
+              0.9,
+              0
+            ],
+            [
+              0.82,
+              0.68
+            ],
+            [
+              0.7,
+              0.76
+            ],
+            [
+              0.3,
+              0.76
+            ],
+            [
+              0.18,
+              0.68
+            ]
+          ]
+        },
+        {
+          "name": "blue cockpit-rim",
+          "color": "blue",
+          "panel": "cockpit-rim"
+        },
+        {
+          "name": "pink cockpit-rim",
+          "color": "pink",
+          "panel": "cockpit-rim",
+          "polygon": [
+            [
+              0.35,
+              0.55
+            ],
+            [
+              0.65,
+              0.55
+            ],
+            [
+              0.65,
+              1
+            ],
+            [
+              0.35,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "Carbon lower edge left",
+          "color": "carbon",
+          "polygon": [
+            [
+              2472.3,
+              1698.82
+            ],
+            [
+              40.64,
+              1698.48
+            ],
+            [
+              40.6,
+              1871.05
+            ],
+            [
+              746.58,
+              1800.55
+            ],
+            [
+              1687.87,
+              1792.84
+            ],
+            [
+              2472.29,
+              1761.57
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "Carbon lower edge right",
+          "color": "carbon",
+          "polygon": [
+            [
+              2465.53,
+              3918.35
+            ],
+            [
+              33.88,
+              3918.5
+            ],
+            [
+              33.9,
+              3745.93
+            ],
+            [
+              739.86,
+              3816.48
+            ],
+            [
+              1681.14,
+              3824.27
+            ],
+            [
+              2465.54,
+              3855.6
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "Pink diagonal band left",
+          "color": "pink",
+          "polygon": [
+            [
+              1099.5,
+              2059.45
+            ],
+            [
+              864.08,
+              2435.94
+            ],
+            [
+              683.67,
+              2435.91
+            ],
+            [
+              919.09,
+              2059.43
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "Pink diagonal band right",
+          "color": "pink",
+          "polygon": [
+            [
+              1092.87,
+              3557.61
+            ],
+            [
+              857.6,
+              3181.1
+            ],
+            [
+              677.19,
+              3181.12
+            ],
+            [
+              912.46,
+              3557.62
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "Rear black dorsal fin left",
+          "color": "carbon",
+          "polygon": [
+            [
+              919.09,
+              2059.43
+            ],
+            [
+              683.67,
+              2435.91
+            ],
+            [
+              79.67,
+              2435.83
+            ],
+            [
+              79.77,
+              2059.31
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "Rear black dorsal fin right",
+          "color": "carbon",
+          "polygon": [
+            [
+              912.46,
+              3557.62
+            ],
+            [
+              677.19,
+              3181.12
+            ],
+            [
+              73.2,
+              3181.15
+            ],
+            [
+              73.15,
+              3557.67
+            ]
+          ],
+          "space": "uv_px"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "bwt-pink.png on sidepod-left",
+          "image": "bwt-pink.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.40974,
+            0.53872
+          ],
+          "width": 0.40,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side",
+          "rotation": -2.7
+        },
+        {
+          "name": "msc-white.png on sidepod-left",
+          "image": "msc-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.19746,
+            0.36349
+          ],
+          "width": 0.1414141414141414,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "delphi-white.png on sidepod-left",
+          "image": "delphi-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.40974,
+            0.85998
+          ],
+          "width": 0.07407407407407407,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "avature-white.png on sidepod-left",
+          "image": "avature-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.24127,
+            0.08604
+          ],
+          "width": 0.06734006734006734,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "modo-white.png on sidepod-left",
+          "image": "modo-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.31877,
+            0.08604
+          ],
+          "width": 0.07407407407407407,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "etoro-white.png on nose-side-left",
+          "image": "etoro-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.52599,
+            0.63322
+          ],
+          "width": 0.26,
+          "flip": "auto"
+        },
+        {
+          "name": "fia-white.png on nose-side-left",
+          "image": "fia-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.72,
+            0.63322
+          ],
+          "width": 0.1,
+          "flip": "auto"
+        },
+        {
+          "name": "trak_racer-white.png on nose-side-left",
+          "image": "trak_racer-white.png",
+          "panel": "nose-side-left",
+          "position": [
+            0.82,
+            0.26
+          ],
+          "width": 0.14,
+          "flip": "auto"
+        },
+        {
+          "name": "alpine-a.png on airbox-left",
+          "image": "alpine-a.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.12,
+            0.82
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "eni-white.png on engine-cover-left",
+          "image": "eni-white.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.25443,
+            0.66252
+          ],
+          "width": 0.2550335570469799,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "alpine-a.png on engine-cover-left",
+          "image": "alpine-a.png",
+          "panel": "engine-cover-left",
+          "position": [
+            0.59121,
+            0.66252
+          ],
+          "width": 0.17449664429530204,
+          "flip": "auto",
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "mandiant-white.png on sidepod-left",
+          "image": "mandiant-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.59506,
+            0.78697
+          ],
+          "width": 0.06734006734006734,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "arcticwolf-white.png on sidepod-left",
+          "image": "arcticwolf-white.png",
+          "panel": "sidepod-left",
+          "position": [
+            0.0391,
+            0.48031
+          ],
+          "width": 0.0505050505050505,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "bwt-pink.png on sidepod-right",
+          "image": "bwt-pink.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.59022,
+            0.23
+          ],
+          "width": 0.40,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side",
+          "rotation": -2.5
+        },
+        {
+          "name": "msc-white.png on sidepod-right",
+          "image": "msc-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.80249,
+            0.18
+          ],
+          "width": 0.1414141414141414,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side",
+          "rotation": -2.5
+        },
+        {
+          "name": "delphi-white.png on sidepod-right",
+          "image": "delphi-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.59022,
+            0.58
+          ],
+          "width": 0.07407407407407407,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": -2.5
+        },
+        {
+          "name": "avature-white.png on sidepod-right",
+          "image": "avature-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.75869,
+            0.08604
+          ],
+          "width": 0.06734006734006734,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "modo-white.png on sidepod-right",
+          "image": "modo-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.68119,
+            0.08604
+          ],
+          "width": 0.07407407407407407,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "etoro-white.png on nose-side-right",
+          "image": "etoro-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.47395,
+            0.63322
+          ],
+          "width": 0.26,
+          "flip": "auto"
+        },
+        {
+          "name": "fia-white.png on nose-side-right",
+          "image": "fia-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.28,
+            0.63322
+          ],
+          "width": 0.1,
+          "flip": "auto"
+        },
+        {
+          "name": "trak_racer-white.png on nose-side-right",
+          "image": "trak_racer-white.png",
+          "panel": "nose-side-right",
+          "position": [
+            0.18,
+            0.26
+          ],
+          "width": 0.14,
+          "flip": "auto"
+        },
+        {
+          "name": "alpine-a.png on airbox-right",
+          "image": "alpine-a.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.85,
+            0.78
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "eni-white.png on engine-cover-right",
+          "image": "eni-white.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.74583,
+            0.66252
+          ],
+          "width": 0.2550335570469799,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "alpine-a.png on engine-cover-right",
+          "image": "alpine-a.png",
+          "panel": "engine-cover-right",
+          "position": [
+            0.40894,
+            0.66252
+          ],
+          "width": 0.17449664429530204,
+          "flip": "auto",
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "mandiant-white.png on sidepod-right",
+          "image": "mandiant-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.40491,
+            0.78696
+          ],
+          "width": 0.06734006734006734,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "arcticwolf-white.png on sidepod-right",
+          "image": "arcticwolf-white.png",
+          "panel": "sidepod-right",
+          "position": [
+            0.96084,
+            0.48031
+          ],
+          "width": 0.0505050505050505,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "gasly10-white.png on fin left",
+          "image": "gasly10-white.png",
+          "panel": "top-cowl-left",
+          "warp_uv_px": [
+            [
+              [
+                801.54,
+                2381.39
+              ],
+              [
+                613.28,
+                2381.39
+              ]
+            ],
+            [
+              [
+                801.54,
+                2271.57
+              ],
+              [
+                613.28,
+                2271.57
+              ]
+            ]
+          ],
+          "clip": false,
+          "allow_shared": true
+        },
+        {
+          "name": "gasly10-white.png on fin right",
+          "image": "gasly10-white.png",
+          "panel": "top-cowl-right",
+          "warp_uv_px": [
+            [
+              [
+                794.74,
+                3235.85
+              ],
+              [
+                606.48,
+                3235.85
+              ]
+            ],
+            [
+              [
+                794.74,
+                3345.67
+              ],
+              [
+                606.48,
+                3345.67
+              ]
+            ]
+          ],
+          "clip": false,
+          "allow_shared": true
+        },
+        {
+          "name": "alpine-a.png on nose-top",
+          "image": "alpine-a.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.88
+          ],
+          "width": 0.52,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "eni-black.png on nose-top",
+          "image": "eni-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.7
+          ],
+          "width": 0.56,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "msc-black.png on nose-top",
+          "image": "msc-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.61
+          ],
+          "width": 0.58,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "atkinsrealis-white.png on nose-top",
+          "image": "atkinsrealis-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.52
+          ],
+          "width": 0.58,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "variant": "#0C1C38"
+        },
+        {
+          "name": "arcticwolf-black.png on nose-top",
+          "image": "arcticwolf-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.43
+          ],
+          "width": 0.56,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "bwt-wing.png on nose-top",
+          "image": "bwt-wing.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.34
+          ],
+          "width": 0.62,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "businessolver-white.png on nose-top",
+          "image": "businessolver-white.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.25
+          ],
+          "width": 0.54,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "variant": "#0C1C38"
+        },
+        {
+          "name": "gasly10-black.png on nose-top",
+          "image": "gasly10-black.png",
+          "panel": "nose-top",
+          "position": [
+            0.5,
+            0.15
+          ],
+          "width": 0.55,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0,
+          "variant": "#0C1C38"
+        },
+        {
+          "name": "businessolver-white.png on halo-left",
+          "image": "businessolver-white.png",
+          "panel": "halo-left",
+          "variant": "#0C1C38",
+          "warp_uv_px": [
+            [
+              [
+                2780.0,
+                608.0
+              ],
+              [
+                2900.0,
+                608.0
+              ],
+              [
+                3020.0,
+                610.0
+              ],
+              [
+                3140.0,
+                616.0
+              ],
+              [
+                3260.0,
+                624.0
+              ]
+            ],
+            [
+              [
+                2780.0,
+                665.0
+              ],
+              [
+                2900.0,
+                665.0
+              ],
+              [
+                3020.0,
+                665.0
+              ],
+              [
+                3140.0,
+                668.0
+              ],
+              [
+                3260.0,
+                674.0
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        },
+        {
+          "name": "businessolver-white.png on halo-right",
+          "image": "businessolver-white.png",
+          "panel": "halo-right",
+          "variant": "#0C1C38",
+          "warp_uv_px": [
+            [
+              [
+                380.0,
+                624.0
+              ],
+              [
+                500.0,
+                616.0
+              ],
+              [
+                620.0,
+                610.0
+              ],
+              [
+                740.0,
+                608.0
+              ],
+              [
+                860.0,
+                608.0
+              ]
+            ],
+            [
+              [
+                380.0,
+                674.0
+              ],
+              [
+                500.0,
+                668.0
+              ],
+              [
+                620.0,
+                665.0
+              ],
+              [
+                740.0,
+                665.0
+              ],
+              [
+                860.0,
+                665.0
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "pink front-wing-element-03-left-top",
+          "color": "pink",
+          "panel": "front-wing-element-03-left-top",
+          "polygon": [
+            [
+              0,
+              0.15
+            ],
+            [
+              1,
+              0.15
+            ],
+            [
+              1,
+              0.85
+            ],
+            [
+              0,
+              0.85
+            ]
+          ]
+        },
+        {
+          "name": "pink front-wing-element-03-right-top",
+          "color": "pink",
+          "panel": "front-wing-element-03-right-top",
+          "polygon": [
+            [
+              0,
+              0.15
+            ],
+            [
+              1,
+              0.15
+            ],
+            [
+              1,
+              0.85
+            ],
+            [
+              0,
+              0.85
+            ]
+          ]
+        },
+        {
+          "name": "pink front-wing-element-04-left-top",
+          "color": "pink",
+          "panel": "front-wing-element-04-left-top",
+          "polygon": [
+            [
+              0,
+              0.15
+            ],
+            [
+              1,
+              0.15
+            ],
+            [
+              1,
+              0.85
+            ],
+            [
+              0,
+              0.85
+            ]
+          ]
+        },
+        {
+          "name": "pink front-wing-element-04-right-top",
+          "color": "pink",
+          "panel": "front-wing-element-04-right-top",
+          "polygon": [
+            [
+              0,
+              0.15
+            ],
+            [
+              1,
+              0.15
+            ],
+            [
+              1,
+              0.85
+            ],
+            [
+              0,
+              0.85
+            ]
+          ]
+        },
+        {
+          "name": "pink front-wing-endplate-left-outer",
+          "color": "pink",
+          "panel": "front-wing-endplate-left-outer",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.55
+            ],
+            [
+              0,
+              0.55
+            ]
+          ]
+        },
+        {
+          "name": "pink front-wing-endplate-right-outer",
+          "color": "pink",
+          "panel": "front-wing-endplate-right-outer",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.55
+            ],
+            [
+              0,
+              0.55
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "eni-black.png on front-wing-endplate-left-outer",
+          "image": "eni-black.png",
+          "panel": "front-wing-endplate-left-outer",
+          "position": [
+            0.48,
+            0.28
+          ],
+          "width": 0.42,
+          "flip": "auto"
+        },
+        {
+          "name": "eni-black.png on front-wing-endplate-right-outer",
+          "image": "eni-black.png",
+          "panel": "front-wing-endplate-right-outer",
+          "position": [
+            0.48,
+            0.28
+          ],
+          "width": 0.42,
+          "flip": "auto"
+        },
+        {
+          "name": "bwt-wing.png on front-wing-element-03-left-top",
+          "image": "bwt-wing.png",
+          "panel": "front-wing-element-03-left-top",
+          "warp_uv_px": [
+            [
+              [
+                699.48,
+                1190.34
+              ],
+              [
+                660.47,
+                1115.23
+              ],
+              [
+                621.44,
+                1040.14
+              ],
+              [
+                582.43,
+                965.04
+              ],
+              [
+                543.4,
+                889.94
+              ]
+            ],
+            [
+              [
+                746.78,
+                1190.36
+              ],
+              [
+                707.77,
+                1115.26
+              ],
+              [
+                668.74,
+                1040.17
+              ],
+              [
+                629.73,
+                965.07
+              ],
+              [
+                590.71,
+                889.97
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        },
+        {
+          "name": "bwt-wing.png on front-wing-element-03-right-top",
+          "image": "bwt-wing.png",
+          "panel": "front-wing-element-03-right-top",
+          "warp_uv_px": [
+            [
+              [
+                532.01,
+                3175.17
+              ],
+              [
+                571.09,
+                3100.1
+              ],
+              [
+                610.18,
+                3025.03
+              ],
+              [
+                649.26,
+                2949.97
+              ],
+              [
+                688.34,
+                2874.9
+              ]
+            ],
+            [
+              [
+                579.31,
+                3175.19
+              ],
+              [
+                618.39,
+                3100.12
+              ],
+              [
+                657.48,
+                3025.06
+              ],
+              [
+                696.56,
+                2949.99
+              ],
+              [
+                735.64,
+                2874.93
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "pink rear-wing-endplate-left-outer",
+          "color": "pink",
+          "panel": "rear-wing-endplate-left-outer",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.4
+            ],
+            [
+              0,
+              0.4
+            ]
+          ]
+        },
+        {
+          "name": "pink rear-wing-endplate-right-outer",
+          "color": "pink",
+          "panel": "rear-wing-endplate-right-outer",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.4
+            ],
+            [
+              0,
+              0.4
+            ]
+          ]
+        },
+        {
+          "name": "pink rear-wing-main-top",
+          "color": "pink",
+          "panel": "rear-wing-main-top"
+        },
+        {
+          "name": "pink rear-wing-drs-shared-top-bottom",
+          "color": "pink",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "polygon": [
+            [
+              277.5,
+              3466.55
+            ],
+            [
+              278.76,
+              552.89
+            ],
+            [
+              152.07,
+              552.84
+            ],
+            [
+              150.82,
+              3466.49
+            ]
+          ],
+          "space": "uv_px"
+        },
+        {
+          "name": "carbon rear-wing-drs-shared-top-bottom",
+          "color": "carbon",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "polygon": [
+            [
+              3582.22,
+              590.74
+            ],
+            [
+              3581.41,
+              3415.25
+            ],
+            [
+              3438.37,
+              3415.36
+            ],
+            [
+              3439.19,
+              590.85
+            ]
+          ],
+          "space": "uv_px"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "eni-black.png on rear-wing-endplate-left-outer",
+          "image": "eni-black.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.5,
+            0.2
+          ],
+          "width": 0.45,
+          "flip": "auto"
+        },
+        {
+          "name": "accor-white.png on rear-wing-endplate-left-outer",
+          "image": "accor-white.png",
+          "panel": "rear-wing-endplate-left-outer",
+          "position": [
+            0.54,
+            0.65
+          ],
+          "width": 0.35,
+          "flip": "auto"
+        },
+        {
+          "name": "eni-black.png on rear-wing-endplate-right-outer",
+          "image": "eni-black.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.5,
+            0.2
+          ],
+          "width": 0.45,
+          "flip": "auto"
+        },
+        {
+          "name": "accor-white.png on rear-wing-endplate-right-outer",
+          "image": "accor-white.png",
+          "panel": "rear-wing-endplate-right-outer",
+          "position": [
+            0.54,
+            0.65
+          ],
+          "width": 0.35,
+          "flip": "auto"
+        },
+        {
+          "name": "bwt-wing.png on rear-wing-main-top",
+          "image": "bwt-wing.png",
+          "panel": "rear-wing-main-top",
+          "position": [
+            0.5,
+            0.52
+          ],
+          "width": 0.55,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 180
+        },
+        {
+          "name": "bwt-wing.png on DRS flap top",
+          "image": "bwt-wing.png",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "warp_uv_px": [
+            [
+              [
+                160.7,
+                2579.73
+              ],
+              [
+                161.19,
+                1439.6
+              ]
+            ],
+            [
+              [
+                268.38,
+                2579.78
+              ],
+              [
+                268.87,
+                1439.65
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        },
+        {
+          "name": "ALPINE white wordmark on rear DRS face",
+          "image": "alpine-wordmark-white.png",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "warp_uv_px": [
+            [
+              [
+                3447.17,
+                1393.05
+              ],
+              [
+                3446.82,
+                2613.14
+              ]
+            ],
+            [
+              [
+                3562.26,
+                1393.0
+              ],
+              [
+                3561.91,
+                2613.1
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "cato-white.png on mirrors-left-04",
+          "image": "cato-white.png",
+          "panel": "mirrors-left-04",
+          "position": [
+            0.786089,
+            0.457957
+          ],
+          "width": 0.38,
+          "rotation": 0.0,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "cato-white.png on mirrors-right-09",
+          "image": "cato-white.png",
+          "panel": "mirrors-right-09",
+          "position": [
+            0.215402,
+            0.454727
+          ],
+          "width": 0.38,
+          "rotation": 0.0,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    }
+  }
+}

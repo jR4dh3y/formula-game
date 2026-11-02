@@ -1,0 +1,244 @@
+[
+  {
+    "source": "aramco-official.svg",
+    "output": "aramco-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/2Vr7YrtlzaYgBRCQV0AKfE/0651369e0ec01c5d8b710c75e4836a6c/Aramco-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "maaden-official.svg",
+    "output": "maaden-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/1QIhcqwD249VsOMmJp2vwa/85aea92448921b16eda5c380e8768b8e/Maaden-Mono-Black_2.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "honda-official.svg",
+    "output": "honda-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/4I22VQemmpgTuuZAS35QXY/30692b2206ce17bbbfcfaeb4e624b761/Honda_2026-Mono-Black__1_.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5",
+    "crop": [
+      0,
+      0,
+      1,
+      0.75
+    ]
+  },
+  {
+    "source": "coreweave-official.svg",
+    "output": "coreweave-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/3HnntrEM9uIDjKMMNFmNd0/cb9bea93276d9848c482c76bebfeba64/Coreweave-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "cognizant-official.svg",
+    "output": "cognizant-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/6KdqGgji7lWN7ZjjwEHeJO/72a018b1f0e6482edfdad08eed8fa1cd/Cognizant_withicon_-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5",
+    "crop": [
+      0.19,
+      0,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "boss-official.svg",
+    "output": "boss-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/2VhTsMtt0J3ZwdEeZAWvUZ/5a5be491baa9c242752f31d56ce92ecd/Boss-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "coinbase-official.svg",
+    "output": "coinbase-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/5H1G2cXlFG8eOvSxca2SE/326cc442f4cea204772e7362d19456fb/Coinbase-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "servicenow-official.svg",
+    "output": "servicenow-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/v2QLlQde9GaCjqjBcMtJT/e9560d3b777297925f9a2848378ac4fb/ServiceNow-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "pepperstone-official.svg",
+    "output": "pepperstone-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/cnvFo1Jv3HZFGL9IJwxdN/0d73858f223cd240104b6136f725d648/Pepperstone-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "JCB-official.svg",
+    "output": "JCB-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/4XKupe6Ae6eOHJetXyS5I0/338e380ea883144d2e3fdab3eee1abff/JCB-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "netapp-official.svg",
+    "output": "netapp-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/9oNKyAVK4lwhHYn0K9MJR/904db3772ee349292385bf7a1d5d1f3f/Netapp-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "xerox-official.svg",
+    "output": "xerox-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/b1GRhgjKRVk1IKHeavdBq/b532a84571e8e8e14175e113090a7ad4/Xerox-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "pirelli-official.svg",
+    "output": "pirelli-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/7dBGUC3ywzv9LkRq1wnC4s/3567222325f7da1a2e5e8b9d72307a2b/Pirelli-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "aston-source.svg",
+    "output": "aston-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/aston-martin.svg",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "crop": [
+      0,
+      0,
+      1,
+      0.69
+    ]
+  },
+  {
+    "source": "number14-photo.jpg",
+    "output": "number14.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/02/racefansdotnet-24-02-12-11-56-31-6-2261202755.jpg",
+    "notes": "Genuine Alonso 14 photo glyph, perspective rectified from measured quadrilateral; no replacement font. Limited resolution and rough edges remain.",
+    "rgb_ink": [
+      [
+        140,
+        140,
+        0
+      ],
+      [
+        255,
+        255,
+        130
+      ]
+    ],
+    "color": "#D6EB32",
+    "source_quad": [
+      1147,
+      616,
+      1183,
+      644,
+      1238,
+      623,
+      1201,
+      595
+    ],
+    "rectified_size": [
+      220,
+      150
+    ]
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-white.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "white"
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-black.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "#111111"
+  },
+  {
+    "source": "honda-official.svg",
+    "output": "honda-word.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/4I22VQemmpgTuuZAS35QXY/30692b2206ce17bbbfcfaeb4e624b761/Honda_2026-Mono-Black__1_.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5",
+    "crop": [
+      0,
+      0.78,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "pepperstone-official.svg",
+    "output": "pepperstone-word.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/cnvFo1Jv3HZFGL9IJwxdN/0d73858f223cd240104b6136f725d648/Pepperstone-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "#F5F5F5",
+    "crop": [
+      0,
+      0.78,
+      1,
+      1
+    ]
+  },
+  {
+    "source": "valvoline-modern-source.png",
+    "output": "valvoline-v.png",
+    "url": "https://images.seeklogo.com/logo-png/14/1/valvoline-2005-logo-png_seeklogo-147302.png",
+    "notes": "Actual modern Valvoline emblem and lettering components, audited against 2026 launch.",
+    "remove_white": true,
+    "crop": [
+      0,
+      0,
+      1,
+      0.78
+    ]
+  },
+  {
+    "source": "valvoline-modern-source.png",
+    "output": "valvoline-word.png",
+    "url": "https://images.seeklogo.com/logo-png/14/1/valvoline-2005-logo-png_seeklogo-147302.png",
+    "notes": "Actual modern Valvoline emblem and lettering components, audited against 2026 launch.",
+    "remove_white": true,
+    "crop": [
+      0,
+      0.78,
+      1,
+      1
+    ],
+    "color": "white",
+    "remove_all_white": true
+  },
+  {
+    "source": "breitling-official.svg",
+    "output": "breitling-white.png",
+    "url": "https://assets.astonmartinf1.com/public/cms/6t1DyaPfbaDlWY5Pn9FVyB/4910a11201739b3b1120cee5bfe55daa/Breitling-Mono-Black.svg",
+    "notes": "Official Aston Martin partner artwork; trademark remains with owner.",
+    "remove_white": true,
+    "color": "white"
+  }
+]

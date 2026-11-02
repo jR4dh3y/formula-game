@@ -1,0 +1,1687 @@
+{
+  "team": "alpine",
+  "frame": {
+    "origin": [
+      0.045,
+      0,
+      0
+    ],
+    "yaw": -0.007
+  },
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "palette": {
+    "blue": "#076CB8",
+    "pink": "#F47EBB",
+    "navy": "#102B59",
+    "white": "#F3F3F3",
+    "carbon": "#101214"
+  },
+  "parts": {
+    "main_body": {
+      "base": "blue",
+      "regions": [
+        {
+          "color": "carbon",
+          "where": {
+            "curves": [
+              {
+                "axis": "z",
+                "along": "y",
+                "points": [
+                  [
+                    -0.8,
+                    0.1
+                  ],
+                  [
+                    0.5,
+                    0.17
+                  ],
+                  [
+                    1.3,
+                    0.27
+                  ],
+                  [
+                    1.9,
+                    0.36
+                  ],
+                  [
+                    2.7,
+                    0.32
+                  ],
+                  [
+                    3.5,
+                    0.26
+                  ],
+                  [
+                    4.3,
+                    0.22
+                  ]
+                ],
+                "above": false,
+                "absolute": false
+              }
+            ]
+          }
+        },
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              0
+            ],
+            "bounds": {
+              "y": [
+                -0.44,
+                1.18
+              ]
+            },
+            "curves": [
+              {
+                "axis": "x",
+                "along": "y",
+                "points": [
+                  [
+                    -0.44,
+                    0.09
+                  ],
+                  [
+                    0,
+                    0.11
+                  ],
+                  [
+                    0.5,
+                    0.135
+                  ],
+                  [
+                    1.18,
+                    0.24
+                  ]
+                ],
+                "above": false,
+                "absolute": true
+              }
+            ]
+          }
+        },
+        {
+          "color": "pink",
+          "where": {
+            "bounds": {
+              "y": [
+                3.25,
+                3.64
+              ],
+              "z": [
+                0.7,
+                1.1
+              ]
+            }
+          }
+        },
+        {
+          "color": "carbon",
+          "where": {
+            "bounds": {
+              "y": [
+                3.64,
+                4.4
+              ],
+              "z": [
+                0.28,
+                1.0
+              ]
+            }
+          }
+        },
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              3,
+              4,
+              5
+            ]
+          }
+        }
+      ]
+    },
+    "front_wing": {
+      "base": "carbon",
+      "regions": [
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              14,
+              15,
+              20,
+              21
+            ]
+          }
+        },
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              1,
+              2,
+              4,
+              5
+            ],
+            "bounds": {
+              "z": [
+                0.16,
+                0.7
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "rear_wing": {
+      "base": "carbon",
+      "regions": [
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              1
+            ]
+          }
+        },
+        {
+          "color": "pink",
+          "where": {
+            "panels": [
+              0,
+              6
+            ],
+            "bounds": {
+              "z": [
+                0.76,
+                1.1
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "mirrors": {
+      "base": "blue",
+      "regions": []
+    },
+    "floor": {
+      "base": "carbon",
+      "regions": []
+    },
+    "cockpit_foam": {
+      "base": "carbon",
+      "regions": []
+    },
+    "front_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "rear_covers": {
+      "base": "carbon",
+      "regions": []
+    },
+    "winglets": {
+      "base": "carbon",
+      "regions": []
+    }
+  },
+  "decals": [
+    {
+      "part": "main_body",
+      "image": "bwt-pink.png",
+      "center": [
+        0.5,
+        2.77,
+        0.46
+      ],
+      "width": 0.85,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.10999999999999999,
+            0.91
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "bwt-pink.png",
+      "center": [
+        -0.5,
+        2.77,
+        0.46
+      ],
+      "width": 0.85,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.10999999999999999,
+            0.91
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "eni-white.png",
+      "center": [
+        0.5,
+        2.87,
+        0.94
+      ],
+      "width": 0.5,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.53,
+            1.33
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "eni-white.png",
+      "center": [
+        -0.5,
+        2.87,
+        0.94
+      ],
+      "width": 0.5,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.53,
+            1.33
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "msc-white.png",
+      "center": [
+        0.5,
+        2.02,
+        0.56
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.16000000000000003,
+            0.9600000000000001
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "msc-white.png",
+      "center": [
+        -0.5,
+        2.02,
+        0.56
+      ],
+      "width": 0.44,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.16000000000000003,
+            0.9600000000000001
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "delphi-white.png",
+      "center": [
+        0.5,
+        2.9,
+        0.29
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            -0.11000000000000004,
+            0.69
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "delphi-white.png",
+      "center": [
+        -0.5,
+        2.9,
+        0.29
+      ],
+      "width": 0.35,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            -0.11000000000000004,
+            0.69
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "arcticwolf-white.png",
+      "center": [
+        0.5,
+        1.38,
+        0.57
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.16999999999999993,
+            0.97
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "arcticwolf-white.png",
+      "center": [
+        -0.5,
+        1.38,
+        0.57
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.16999999999999993,
+            0.97
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mandiant-white.png",
+      "center": [
+        0.5,
+        3.4,
+        0.34
+      ],
+      "width": 0.27,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            -0.06,
+            0.74
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "mandiant-white.png",
+      "center": [
+        -0.5,
+        3.4,
+        0.34
+      ],
+      "width": 0.27,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            -0.06,
+            0.74
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number10.png",
+      "center": [
+        0.5,
+        3.64,
+        0.58
+      ],
+      "width": 0.16,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.17999999999999994,
+            0.98
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "number10.png",
+      "center": [
+        -0.5,
+        3.64,
+        0.58
+      ],
+      "width": 0.16,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.17999999999999994,
+            0.98
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "arcticwolf-black.png",
+      "center": [
+        0,
+        1.03,
+        0.4
+      ],
+      "width": 0.22,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "bwt-black.png",
+      "center": [
+        0,
+        0.64,
+        0.4
+      ],
+      "width": 0.2,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "arcticwolf-black.png",
+      "center": [
+        0,
+        0.43,
+        0.4
+      ],
+      "width": 0.19,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "pirelli-black.png",
+      "center": [
+        0,
+        0.28,
+        0.4
+      ],
+      "width": 0.18,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "msc-black.png",
+      "center": [
+        0,
+        0.12,
+        0.4
+      ],
+      "width": 0.18,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "eni-black.png",
+      "center": [
+        0,
+        -0.06,
+        0.4
+      ],
+      "width": 0.17,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "bwt-wing.png",
+      "center": [
+        0.58,
+        -0.215,
+        0.2
+      ],
+      "width": 0.34,
+      "right": [
+        0.9570244044334736,
+        0.2900073952828708,
+        0
+      ],
+      "up": [
+        -0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "bwt-wing.png",
+      "center": [
+        -0.58,
+        -0.215,
+        0.2
+      ],
+      "width": 0.34,
+      "right": [
+        0.9570244044334736,
+        -0.2900073952828708,
+        0
+      ],
+      "up": [
+        0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "businessolver-white.png",
+      "center": [
+        0.58,
+        -0.445,
+        0.2
+      ],
+      "width": 0.42,
+      "right": [
+        0.9570244044334736,
+        0.2900073952828708,
+        0
+      ],
+      "up": [
+        -0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "businessolver-white.png",
+      "center": [
+        -0.58,
+        -0.445,
+        0.2
+      ],
+      "width": 0.42,
+      "right": [
+        0.9570244044334736,
+        -0.2900073952828708,
+        0
+      ],
+      "up": [
+        0.2900073952828708,
+        0.9570244044334736,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "eni-black.png",
+      "center": [
+        0.98,
+        -0.18,
+        0.26
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          1,
+          2,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "part": "front_wing",
+      "image": "eni-black.png",
+      "center": [
+        -0.98,
+        -0.18,
+        0.26
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          1,
+          2,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "eni-black.png",
+      "center": [
+        0.6,
+        4.5,
+        0.81
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          0
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "eni-black.png",
+      "center": [
+        -0.6,
+        4.5,
+        0.81
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          6
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "accor-white.png",
+      "center": [
+        0.6,
+        4.5,
+        0.6
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          0
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "accor-white.png",
+      "center": [
+        -0.6,
+        4.5,
+        0.6
+      ],
+      "width": 0.25,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        0
+      ],
+      "normal_min": 0.6,
+      "where": {
+        "panels": [
+          6
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "bwt-wing.png",
+      "center": [
+        0,
+        4.42,
+        0.92
+      ],
+      "width": 1.0,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        -1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "rear_wing",
+      "image": "bwt-wing.png",
+      "center": [
+        0,
+        4.69,
+        0.925
+      ],
+      "width": 0.9,
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        0,
+        1,
+        0
+      ],
+      "normal_min": -0.1,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "x": [
+            -0.5,
+            0.5
+          ],
+          "z": [
+            0.87,
+            1.03
+          ],
+          "y": [
+            4.57,
+            4.8
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "bwt-black.png",
+      "center": [
+        0.27,
+        1.98,
+        0.87
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        -1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.2
+          ],
+          "z": [
+            0.8,
+            0.95
+          ]
+        }
+      },
+      "path": [
+        [
+          0.19,
+          1.8,
+          0.884
+        ],
+        [
+          0.268,
+          1.9,
+          0.879
+        ],
+        [
+          0.301,
+          2,
+          0.867
+        ],
+        [
+          0.322,
+          2.1,
+          0.853
+        ],
+        [
+          0.327,
+          2.16,
+          0.843
+        ]
+      ]
+    },
+    {
+      "part": "main_body",
+      "image": "bwt-black.png",
+      "center": [
+        -0.27,
+        1.98,
+        0.87
+      ],
+      "width": 0.32,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        1,
+        0,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.1,
+      "where": {
+        "panels": [
+          3,
+          4,
+          5
+        ],
+        "bounds": {
+          "y": [
+            1.77,
+            2.2
+          ],
+          "z": [
+            0.8,
+            0.95
+          ]
+        }
+      },
+      "path": [
+        [
+          -0.327,
+          2.16,
+          0.843
+        ],
+        [
+          -0.322,
+          2.1,
+          0.853
+        ],
+        [
+          -0.301,
+          2,
+          0.867
+        ],
+        [
+          -0.268,
+          1.9,
+          0.879
+        ],
+        [
+          -0.19,
+          1.8,
+          0.884
+        ]
+      ]
+    },
+    {
+      "part": "main_body",
+      "image": "alpine-a.png",
+      "center": [
+        0,
+        -0.59,
+        0.4
+      ],
+      "width": 0.15,
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "facing": [
+        0,
+        0,
+        1
+      ],
+      "normal_min": 0.2,
+      "where": {
+        "panels": [
+          0
+        ],
+        "bounds": {
+          "y": [
+            -0.8,
+            1.6
+          ]
+        }
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "alpine-a.png",
+      "center": [
+        0.5,
+        3.44,
+        0.85
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            0,
+            1.2
+          ],
+          "z": [
+            0.44999999999999996,
+            1.25
+          ]
+        },
+        "panels": [
+          1
+        ]
+      }
+    },
+    {
+      "part": "main_body",
+      "image": "alpine-a.png",
+      "center": [
+        -0.5,
+        3.44,
+        0.85
+      ],
+      "width": 0.28,
+      "right": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "facing": [
+        -1,
+        0,
+        -0.65
+      ],
+      "normal_min": 0.58,
+      "where": {
+        "bounds": {
+          "x": [
+            -1.2,
+            0
+          ],
+          "z": [
+            0.44999999999999996,
+            1.25
+          ]
+        },
+        "panels": [
+          2
+        ]
+      }
+    }
+  ]
+}

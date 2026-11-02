@@ -93,6 +93,9 @@ def main():
         *(Path("cars/gen22") / name for name in ("car_lod1.glb", "car_lod2.glb", "teams.json")),
         *(Path("cars/gen22/tyres") / lod / (compound + ".png")
           for lod in ("", "lod1", "lod2") for compound in ("soft", "medium", "hard")),
+        *(path.relative_to(assets)
+          for path in sorted((assets / "cars/gen22/liveries").rglob("*"))
+          if path.is_file() and path.suffix in (".png", ".json")),
         *(Path("tracks/spa") / name for name in ("track.json", "collision.bin", "visual.glb")),
     ]
     for name in required:

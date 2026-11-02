@@ -1,0 +1,215 @@
+[
+  {
+    "source": "bwt-official.png",
+    "output": "bwt-white.png",
+    "url": "https://alpinef1-assets.dropt.app/BWT_da663b34c0.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "bwt-official.png",
+    "output": "bwt-black.png",
+    "url": "https://alpinef1-assets.dropt.app/BWT_da663b34c0.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#101326"
+  },
+  {
+    "source": "bwt-official.png",
+    "output": "bwt-pink.png",
+    "url": "https://alpinef1-assets.dropt.app/BWT_da663b34c0.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F58BC5",
+    "source_crop": [
+      805,
+      480,
+      1348,
+      670
+    ]
+  },
+  {
+    "source": "eni-official.png",
+    "output": "eni-white.png",
+    "url": "https://alpinef1-assets.dropt.app/ENI_52abbd9129.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "eni-official.png",
+    "output": "eni-black.png",
+    "url": "https://alpinef1-assets.dropt.app/ENI_52abbd9129.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#101326"
+  },
+  {
+    "source": "msc-official.png",
+    "output": "msc-white.png",
+    "url": "https://alpinef1-assets.dropt.app/MSC_7ad607c874.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "msc-official.png",
+    "output": "msc-black.png",
+    "url": "https://alpinef1-assets.dropt.app/MSC_7ad607c874.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#101326"
+  },
+  {
+    "source": "atkinsrealis-official.png",
+    "output": "atkinsrealis-white.png",
+    "url": "https://alpinef1-assets.dropt.app/Atkins_Realis_d04f729dfc.jpg",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "arcticwolf-official.png",
+    "output": "arcticwolf-white.png",
+    "url": "https://alpinef1-assets.dropt.app/Artic_Wolf_fa1ba57ffd.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "arcticwolf-official.png",
+    "output": "arcticwolf-black.png",
+    "url": "https://alpinef1-assets.dropt.app/Artic_Wolf_fa1ba57ffd.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#101326"
+  },
+  {
+    "source": "businessolver-official.png",
+    "output": "businessolver-white.png",
+    "url": "https://alpinef1-assets.dropt.app/Businessolver_d907a85556.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "castore-official.png",
+    "output": "castore-white.png",
+    "url": "https://alpinef1-assets.dropt.app/Castore_9466ec5d87.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "delphi-official.png",
+    "output": "delphi-white.png",
+    "url": "https://alpinef1-assets.dropt.app/Delphi_d10e4bed67.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#F5F5F5"
+  },
+  {
+    "source": "mandiant-source.png",
+    "output": "mandiant-white.png",
+    "url": "https://images.seeklogo.com/logo-png/43/1/mandiant-logo-png_seeklogo-433587.png",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "color": "white",
+    "remove_all_white": true
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-white.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "white"
+  },
+  {
+    "source": "pirelli-source.svg",
+    "output": "pirelli-black.png",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Pirelli_-_logo_full_%28Italy%2C_1997%29.svg",
+    "notes": "Real Pirelli red lettering isolated from brand tile.",
+    "red_ink": true,
+    "color": "#111111"
+  },
+  {
+    "source": "number10-photo.jpg",
+    "output": "number10.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-24-01-13-21-14-22-3-BWT-Alpine-Formula-One-Team-BWT-Alpine-Formula-One-Team-2026-Press-Pack-1.jpg",
+    "source_crop": [
+      1245,
+      640,
+      1407,
+      800
+    ],
+    "notes": "Exact photographic glyph silhouettes, limited source resolution; no replacement font.",
+    "white_ink": false,
+    "rgb_ink": [
+      [
+        105,
+        105,
+        105
+      ],
+      [
+        255,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "source": "bwt-official.png",
+    "output": "bwt-wing.png",
+    "url": "https://alpinef1-assets.dropt.app/BWT_da663b34c0.png",
+    "notes": "Official Alpine partner artwork; copyright respective brand.",
+    "remove_white": true,
+    "white_ink": true,
+    "color": "#14245D",
+    "outline": true,
+    "source_crop": [
+      805,
+      480,
+      1348,
+      670
+    ]
+  },
+  {
+    "source": "accor-source.png",
+    "output": "accor-white.png",
+    "url": "https://images.seeklogo.com/logo-png/37/1/accor-logo-png_seeklogo-377821.png",
+    "notes": "Brand artwork, trademark of respective owner; visual identity audit required.",
+    "remove_white": true,
+    "color": "white",
+    "remove_all_white": true
+  },
+  {
+    "source": "403886-candidate.png",
+    "output": "alpine-a.png",
+    "url": "https://images.seeklogo.com/logo-png/40/1/alpine-f1-team-logo-png_seeklogo-403886.png",
+    "remove_all_white": true,
+    "dark_ink": 120,
+    "color": "white",
+    "notes": "Actual Alpine F1 A symbol cropped from genuine brand lockup; text excluded.",
+    "source_crop": [
+      25,
+      75,
+      575,
+      360
+    ]
+  }
+]

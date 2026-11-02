@@ -1,0 +1,2660 @@
+{
+  "schema": 1,
+  "team": "mercedes",
+  "car": "w17",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "reference": "Mercedes official W17 reveal 2026-01-22 and Silverstone shakedown. Russell 63.",
+  "palette": {
+    "black": "#111315",
+    "carbon": "#101113",
+    "silver": "#D2D5D7",
+    "teal": "#00B5AC",
+    "white": "#F2F2F2"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "black",
+      "base": [
+        {
+          "name": "Silver nose shoulder left",
+          "color": "silver",
+          "panels": [
+            "nose-side-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2982.01,
+              1934.27
+            ],
+            [
+              2825.12,
+              1965.65
+            ],
+            [
+              2511.35,
+              2059.78
+            ],
+            [
+              2511.35,
+              2122.53
+            ],
+            [
+              2825.12,
+              2044.09
+            ],
+            [
+              2982.01,
+              1981.34
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Teal nose shoulder upper border left",
+          "color": "teal",
+          "panels": [
+            "nose-side-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2982.01,
+              1981.34
+            ],
+            [
+              2825.12,
+              2044.09
+            ],
+            [
+              2511.35,
+              2122.53
+            ],
+            [
+              2511.35,
+              2138.22
+            ],
+            [
+              2825.12,
+              2059.78
+            ],
+            [
+              2982.01,
+              1997.03
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "PETRONAS flow line left",
+          "color": "teal",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2456.44,
+              2153.91
+            ],
+            [
+              2354.47,
+              2122.53
+            ],
+            [
+              2197.58,
+              2036.25
+            ],
+            [
+              1962.26,
+              1989.18
+            ],
+            [
+              1687.71,
+              1965.65
+            ],
+            [
+              1373.94,
+              1957.8
+            ],
+            [
+              1060.17,
+              1965.65
+            ],
+            [
+              707.18,
+              1981.34
+            ],
+            [
+              707.18,
+              1949.96
+            ],
+            [
+              1060.17,
+              1934.27
+            ],
+            [
+              1373.94,
+              1926.43
+            ],
+            [
+              1687.71,
+              1934.27
+            ],
+            [
+              1962.26,
+              1949.96
+            ],
+            [
+              2197.58,
+              1981.34
+            ],
+            [
+              2354.47,
+              2059.78
+            ],
+            [
+              2456.44,
+              2044.09
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 1 left",
+          "color": "silver",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2393.69,
+              2153.91
+            ],
+            [
+              2252.49,
+              2146.07
+            ],
+            [
+              2142.67,
+              2051.94
+            ],
+            [
+              2236.81,
+              2059.78
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 2 left",
+          "color": "silver",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2189.74,
+              2146.07
+            ],
+            [
+              2048.54,
+              2138.22
+            ],
+            [
+              1938.72,
+              2020.56
+            ],
+            [
+              2032.85,
+              2028.4
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 3 left",
+          "color": "silver",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1985.79,
+              2130.38
+            ],
+            [
+              1844.59,
+              2122.53
+            ],
+            [
+              1734.77,
+              1997.03
+            ],
+            [
+              1828.9,
+              2004.87
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 4 left",
+          "color": "silver",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1781.84,
+              2114.69
+            ],
+            [
+              1640.64,
+              2106.84
+            ],
+            [
+              1530.82,
+              1981.34
+            ],
+            [
+              1624.95,
+              1989.18
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 5 left",
+          "color": "silver",
+          "panels": [
+            "sidepod-left",
+            "engine-cover-left"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1577.89,
+              2099.0
+            ],
+            [
+              1436.69,
+              2083.31
+            ],
+            [
+              1326.87,
+              1973.49
+            ],
+            [
+              1421.0,
+              1981.34
+            ]
+          ],
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "Silver nose shoulder right",
+          "color": "silver",
+          "panels": [
+            "nose-side-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2975.5,
+              3682.98
+            ],
+            [
+              2818.61,
+              3651.61
+            ],
+            [
+              2504.84,
+              3557.48
+            ],
+            [
+              2504.84,
+              3494.72
+            ],
+            [
+              2818.61,
+              3573.16
+            ],
+            [
+              2975.5,
+              3635.92
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Teal nose shoulder upper border right",
+          "color": "teal",
+          "panels": [
+            "nose-side-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2975.5,
+              3635.92
+            ],
+            [
+              2818.61,
+              3573.16
+            ],
+            [
+              2504.84,
+              3494.72
+            ],
+            [
+              2504.84,
+              3479.03
+            ],
+            [
+              2818.61,
+              3557.48
+            ],
+            [
+              2975.5,
+              3620.23
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "PETRONAS flow line right",
+          "color": "teal",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2449.93,
+              3463.34
+            ],
+            [
+              2347.96,
+              3494.72
+            ],
+            [
+              2191.07,
+              3581.01
+            ],
+            [
+              1955.74,
+              3628.07
+            ],
+            [
+              1681.2,
+              3651.61
+            ],
+            [
+              1367.43,
+              3659.45
+            ],
+            [
+              1053.66,
+              3651.61
+            ],
+            [
+              700.66,
+              3635.92
+            ],
+            [
+              700.66,
+              3667.29
+            ],
+            [
+              1053.66,
+              3682.98
+            ],
+            [
+              1367.43,
+              3690.83
+            ],
+            [
+              1681.2,
+              3682.98
+            ],
+            [
+              1955.74,
+              3667.29
+            ],
+            [
+              2191.07,
+              3635.92
+            ],
+            [
+              2347.96,
+              3557.48
+            ],
+            [
+              2449.93,
+              3573.16
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 1 right",
+          "color": "silver",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2387.18,
+              3463.34
+            ],
+            [
+              2245.98,
+              3471.19
+            ],
+            [
+              2136.16,
+              3565.32
+            ],
+            [
+              2230.29,
+              3557.48
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 2 right",
+          "color": "silver",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              2183.23,
+              3471.19
+            ],
+            [
+              2042.03,
+              3479.03
+            ],
+            [
+              1932.21,
+              3596.7
+            ],
+            [
+              2026.34,
+              3588.85
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 3 right",
+          "color": "silver",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1979.28,
+              3486.88
+            ],
+            [
+              1838.08,
+              3494.72
+            ],
+            [
+              1728.26,
+              3620.23
+            ],
+            [
+              1822.39,
+              3612.38
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 4 right",
+          "color": "silver",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1775.33,
+              3502.57
+            ],
+            [
+              1634.13,
+              3510.41
+            ],
+            [
+              1524.31,
+              3635.92
+            ],
+            [
+              1618.44,
+              3628.07
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Silver AMG rhombus band 5 right",
+          "color": "silver",
+          "panels": [
+            "sidepod-right",
+            "engine-cover-right"
+          ],
+          "space": "uv_px",
+          "polygon": [
+            [
+              1571.38,
+              3518.25
+            ],
+            [
+              1430.18,
+              3533.94
+            ],
+            [
+              1320.36,
+              3643.76
+            ],
+            [
+              1414.49,
+              3635.92
+            ]
+          ],
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "Black nose background",
+          "panel": "nose-top",
+          "color": "black",
+          "polygon": [
+            [
+              0.0,
+              -0.05
+            ],
+            [
+              1.0,
+              -0.05
+            ],
+            [
+              1.0,
+              1.05
+            ],
+            [
+              0.0,
+              1.05
+            ]
+          ]
+        },
+        {
+          "name": "Teal nose stripe border",
+          "panel": "nose-top",
+          "color": "teal",
+          "polygon": [
+            [
+              0.1,
+              -0.02
+            ],
+            [
+              0.9,
+              -0.02
+            ],
+            [
+              0.7,
+              1.02
+            ],
+            [
+              0.3,
+              1.02
+            ]
+          ]
+        },
+        {
+          "name": "Silver nose centre",
+          "panel": "nose-top",
+          "color": "silver",
+          "polygon": [
+            [
+              0.15,
+              -0.02
+            ],
+            [
+              0.85,
+              -0.02
+            ],
+            [
+              0.65,
+              1.02
+            ],
+            [
+              0.35,
+              1.02
+            ]
+          ]
+        },
+        {
+          "name": "Black cockpit surround",
+          "panel": "cockpit-rim",
+          "color": "black"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "amg-black nose-side-left",
+          "panel": "nose-side-left",
+          "image": "amg-black.png",
+          "position": [
+            0.81069,
+            0.23106
+          ],
+          "width": 0.16566,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "e-einhell-logo-white nose-side-left",
+          "panel": "nose-side-left",
+          "image": "e-einhell-logo-white.png",
+          "position": [
+            0.42246,
+            0.76734
+          ],
+          "width": 0.14495,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "petronas-white sidepod-left",
+          "panel": "sidepod-left",
+          "image": "petronas-white.png",
+          "position": [
+            0.37604,
+            0.68328
+          ],
+          "width": 0.29649,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "signify_logo_mono_w-white sidepod-left",
+          "panel": "sidepod-left",
+          "image": "signify_logo_mono_w-white.png",
+          "position": [
+            0.1739,
+            0.85825
+          ],
+          "width": 0.12129,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "teamviewer-white engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "teamviewer-white.png",
+          "position": [
+            0.13999,
+            0.7321
+          ],
+          "width": 0.35014,
+          "flip": "auto",
+          "allow_shared": true,
+          "clip": false,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "microsoft-car engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "microsoft-car.png",
+          "position": [
+            0.29485,
+            0.33355
+          ],
+          "width": 0.30974,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "solera_footer_logo-white engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "solera_footer_logo-white.png",
+          "position": [
+            0.44299,
+            0.52099
+          ],
+          "width": 0.25587,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "number63-teal engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "number63-teal.png",
+          "position": [
+            0.79313,
+            0.49741
+          ],
+          "width": 0.1212,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.519,
+            0.294
+          ],
+          "width": 0.047,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.549,
+            0.322
+          ],
+          "width": 0.051,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.579,
+            0.341
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.579,
+            0.38
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.605,
+            0.492
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.592,
+            0.558
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.594,
+            0.388
+          ],
+          "width": 0.056,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.601,
+            0.454
+          ],
+          "width": 0.057,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.601,
+            0.596
+          ],
+          "width": 0.057,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.609,
+            0.36
+          ],
+          "width": 0.058,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.609,
+            0.539
+          ],
+          "width": 0.058,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.616,
+            0.417
+          ],
+          "width": 0.059,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.624,
+            0.473
+          ],
+          "width": 0.06,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.631,
+            0.53
+          ],
+          "width": 0.061,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.631,
+            0.586
+          ],
+          "width": 0.061,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.638,
+            0.388
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.638,
+            0.445
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.646,
+            0.492
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.646,
+            0.558
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.69,
+            0.614
+          ],
+          "width": 0.063,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.67,
+            0.34
+          ],
+          "width": 0.064,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.668,
+            0.539
+          ],
+          "width": 0.065,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.683,
+            0.464
+          ],
+          "width": 0.067,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.683,
+            0.614
+          ],
+          "width": 0.067,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "amg-black nose-side-right",
+          "panel": "nose-side-right",
+          "image": "amg-black.png",
+          "position": [
+            0.18928,
+            0.23124
+          ],
+          "width": 0.16566,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "e-einhell-logo-white nose-side-right",
+          "panel": "nose-side-right",
+          "image": "e-einhell-logo-white.png",
+          "position": [
+            0.57753,
+            0.7674
+          ],
+          "width": 0.14495,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "petronas-white sidepod-right",
+          "panel": "sidepod-right",
+          "image": "petronas-white.png",
+          "position": [
+            0.62395,
+            0.68358
+          ],
+          "width": 0.29649,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "signify_logo_mono_w-white sidepod-right",
+          "panel": "sidepod-right",
+          "image": "signify_logo_mono_w-white.png",
+          "position": [
+            0.8261,
+            0.85848
+          ],
+          "width": 0.12129,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "teamviewer-white engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "teamviewer-white.png",
+          "position": [
+            0.86046,
+            0.73257
+          ],
+          "width": 0.35035,
+          "flip": "auto",
+          "allow_shared": true,
+          "clip": false,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "microsoft-car engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "microsoft-car.png",
+          "position": [
+            0.7055,
+            0.33406
+          ],
+          "width": 0.30992,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "solera_footer_logo-white engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "solera_footer_logo-white.png",
+          "position": [
+            0.55728,
+            0.52155
+          ],
+          "width": 0.25602,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "number63-teal engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "number63-teal.png",
+          "position": [
+            0.20694,
+            0.49806
+          ],
+          "width": 0.12127,
+          "flip": "auto",
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.481,
+            0.294
+          ],
+          "width": 0.047,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.451,
+            0.322
+          ],
+          "width": 0.051,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.421,
+            0.341
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.421,
+            0.38
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.395,
+            0.492
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.408,
+            0.558
+          ],
+          "width": 0.054,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.406,
+            0.388
+          ],
+          "width": 0.056,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.399,
+            0.454
+          ],
+          "width": 0.057,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.399,
+            0.596
+          ],
+          "width": 0.057,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.391,
+            0.36
+          ],
+          "width": 0.058,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.391,
+            0.539
+          ],
+          "width": 0.058,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.384,
+            0.417
+          ],
+          "width": 0.059,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.376,
+            0.473
+          ],
+          "width": 0.06,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.369,
+            0.53
+          ],
+          "width": 0.061,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.369,
+            0.586
+          ],
+          "width": 0.061,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.362,
+            0.388
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.362,
+            0.445
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.354,
+            0.492
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.354,
+            0.558
+          ],
+          "width": 0.062,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.31,
+            0.614
+          ],
+          "width": 0.063,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.33,
+            0.34
+          ],
+          "width": 0.064,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.332,
+            0.539
+          ],
+          "width": 0.065,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.317,
+            0.464
+          ],
+          "width": 0.067,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-field-star engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "mercedes-field-star.png",
+          "position": [
+            0.317,
+            0.614
+          ],
+          "width": 0.067,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "mercedes-star-black nose-top",
+          "panel": "nose-top",
+          "image": "mercedes-star-black.png",
+          "position": [
+            0.5,
+            0.93
+          ],
+          "width": 0.22,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "sap-tile nose-top",
+          "panel": "nose-top",
+          "image": "sap-tile.png",
+          "position": [
+            0.5,
+            0.84
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "akkodis-white-logo-black nose-top",
+          "panel": "nose-top",
+          "image": "akkodis-white-logo-black.png",
+          "position": [
+            0.5,
+            0.76
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "pirelli-wht-logo-black nose-top",
+          "panel": "nose-top",
+          "image": "pirelli-wht-logo-black.png",
+          "position": [
+            0.5,
+            0.69
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "ineos-black nose-top",
+          "panel": "nose-top",
+          "image": "ineos-black.png",
+          "position": [
+            0.5,
+            0.6
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "crowdstrike-stacked-black nose-top",
+          "panel": "nose-top",
+          "image": "crowdstrike-stacked-black.png",
+          "position": [
+            0.5,
+            0.48
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "petronas-teal nose-top",
+          "panel": "nose-top",
+          "image": "petronas-teal.png",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "width": 0.24,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "number63-black nose-top",
+          "panel": "nose-top",
+          "image": "number63-black.png",
+          "position": [
+            0.5,
+            0.22
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "petronas-syntium-white nose-top",
+          "panel": "nose-top",
+          "image": "petronas-syntium-white.png",
+          "position": [
+            0.5,
+            0.12
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "mercedes-star-black nose-top",
+          "panel": "nose-top",
+          "image": "mercedes-star-black.png",
+          "position": [
+            0.5,
+            0.05
+          ],
+          "width": 0.12,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "marriott-bonvoy-footer halo-left",
+          "panel": "halo-left",
+          "image": "marriott-bonvoy-footer.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2570.0,
+                701.0
+              ],
+              [
+                2630.0,
+                687.0
+              ],
+              [
+                2690.0,
+                671.0
+              ]
+            ],
+            [
+              [
+                2570.0,
+                715.0
+              ],
+              [
+                2630.0,
+                701.0
+              ],
+              [
+                2690.0,
+                685.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "crowdstrike-white halo-left",
+          "panel": "halo-left",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2750.0,
+                652.0
+              ],
+              [
+                2810.0,
+                633.0
+              ],
+              [
+                2870.0,
+                623.0
+              ],
+              [
+                2930.0,
+                616.0
+              ]
+            ],
+            [
+              [
+                2750.0,
+                664.0
+              ],
+              [
+                2810.0,
+                645.0
+              ],
+              [
+                2870.0,
+                635.0
+              ],
+              [
+                2930.0,
+                628.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "amd-wht-logo halo-left",
+          "panel": "halo-left",
+          "image": "amd-wht-logo.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2990.0,
+                613.0
+              ],
+              [
+                3060.0,
+                614.0
+              ],
+              [
+                3130.0,
+                619.0
+              ],
+              [
+                3200.0,
+                627.0
+              ]
+            ],
+            [
+              [
+                2990.0,
+                625.0
+              ],
+              [
+                3060.0,
+                626.0
+              ],
+              [
+                3130.0,
+                631.0
+              ],
+              [
+                3200.0,
+                639.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "amd-wht-logo halo-right",
+          "panel": "halo-right",
+          "image": "amd-wht-logo.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                440.0,
+                627.0
+              ],
+              [
+                510.0,
+                619.0
+              ],
+              [
+                580.0,
+                614.0
+              ],
+              [
+                650.0,
+                613.0
+              ]
+            ],
+            [
+              [
+                440.0,
+                639.0
+              ],
+              [
+                510.0,
+                631.0
+              ],
+              [
+                580.0,
+                626.0
+              ],
+              [
+                650.0,
+                625.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "crowdstrike-white halo-right",
+          "panel": "halo-right",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                710.0,
+                616.0
+              ],
+              [
+                770.0,
+                623.0
+              ],
+              [
+                830.0,
+                633.0
+              ],
+              [
+                890.0,
+                652.0
+              ]
+            ],
+            [
+              [
+                710.0,
+                628.0
+              ],
+              [
+                770.0,
+                635.0
+              ],
+              [
+                830.0,
+                645.0
+              ],
+              [
+                890.0,
+                664.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "marriott-bonvoy-footer halo-right",
+          "panel": "halo-right",
+          "image": "marriott-bonvoy-footer.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                950.0,
+                671.0
+              ],
+              [
+                1010.0,
+                687.0
+              ],
+              [
+                1070.0,
+                701.0
+              ]
+            ],
+            [
+              [
+                950.0,
+                685.0
+              ],
+              [
+                1010.0,
+                701.0
+              ],
+              [
+                1070.0,
+                715.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "crowdstrike-white halo-front",
+          "panel": "halo-front",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                1905.32,
+                924.81
+              ],
+              [
+                1957.91,
+                859.16
+              ],
+              [
+                2036.54,
+                780.59
+              ],
+              [
+                2101.84,
+                715.35
+              ]
+            ],
+            [
+              [
+                1918.56,
+                935.42
+              ],
+              [
+                1970.45,
+                870.58
+              ],
+              [
+                2048.53,
+                792.59
+              ],
+              [
+                2113.83,
+                727.35
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "marriott-bonvoy-footer halo-front",
+          "panel": "halo-front",
+          "image": "marriott-bonvoy-footer.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2048.21,
+                779.21
+              ],
+              [
+                2087.39,
+                740.06
+              ],
+              [
+                2126.56,
+                700.92
+              ]
+            ],
+            [
+              [
+                2062.97,
+                793.98
+              ],
+              [
+                2102.14,
+                754.84
+              ],
+              [
+                2141.32,
+                715.69
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "amd-wht-logo halo-front",
+          "panel": "halo-front",
+          "image": "amd-wht-logo.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2148.98,
+                663.61
+              ],
+              [
+                2200.97,
+                559.78
+              ],
+              [
+                2239.64,
+                456.84
+              ],
+              [
+                2261.49,
+                354.28
+              ],
+              [
+                2265.35,
+                264.01
+              ]
+            ],
+            [
+              [
+                2171.15,
+                674.71
+              ],
+              [
+                2223.69,
+                569.73
+              ],
+              [
+                2263.43,
+                463.84
+              ],
+              [
+                2286.07,
+                357.57
+              ],
+              [
+                2290.12,
+                265.09
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "crowdstrike-white halo-front",
+          "panel": "halo-front",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                1565.61,
+                715.09
+              ],
+              [
+                1630.84,
+                780.39
+              ],
+              [
+                1709.4,
+                859.04
+              ],
+              [
+                1761.93,
+                924.74
+              ]
+            ],
+            [
+              [
+                1553.6,
+                727.08
+              ],
+              [
+                1618.84,
+                792.38
+              ],
+              [
+                1696.84,
+                870.45
+              ],
+              [
+                1748.67,
+                935.34
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "marriott-bonvoy-footer halo-front",
+          "panel": "halo-front",
+          "image": "marriott-bonvoy-footer.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                1540.89,
+                700.64
+              ],
+              [
+                1580.03,
+                739.82
+              ],
+              [
+                1619.17,
+                779.0
+              ]
+            ],
+            [
+              [
+                1526.12,
+                715.4
+              ],
+              [
+                1565.26,
+                754.58
+              ],
+              [
+                1604.4,
+                793.76
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "amd-wht-logo halo-front",
+          "panel": "halo-front",
+          "image": "amd-wht-logo.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "width": 0.5,
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                1402.52,
+                263.6
+              ],
+              [
+                1406.3,
+                353.87
+              ],
+              [
+                1428.04,
+                456.46
+              ],
+              [
+                1466.62,
+                559.43
+              ],
+              [
+                1518.51,
+                663.31
+              ]
+            ],
+            [
+              [
+                1377.75,
+                264.65
+              ],
+              [
+                1381.72,
+                357.14
+              ],
+              [
+                1404.25,
+                463.43
+              ],
+              [
+                1443.9,
+                569.36
+              ],
+              [
+                1496.33,
+                674.39
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "ineos-white cockpit-rim",
+          "panel": "cockpit-rim",
+          "image": "ineos-white.png",
+          "position": [
+            0.5,
+            0.15
+          ],
+          "width": 0.2,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "Teal endplate trailing accent left",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "teal",
+          "polygon": [
+            [
+              0.86,
+              0
+            ],
+            [
+              1.05,
+              0
+            ],
+            [
+              1.05,
+              1
+            ],
+            [
+              0.86,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "Teal flap accent left",
+          "panel": "front-wing-element-03-left-top",
+          "color": "teal",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.25,
+              0.0
+            ],
+            [
+              0.25,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        {
+          "name": "Teal endplate trailing accent right",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "teal",
+          "polygon": [
+            [
+              0.86,
+              0
+            ],
+            [
+              1.05,
+              0
+            ],
+            [
+              1.05,
+              1
+            ],
+            [
+              0.86,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "Teal flap accent right",
+          "panel": "front-wing-element-03-right-top",
+          "color": "teal",
+          "polygon": [
+            [
+              0.75,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.75,
+              1.0
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "iwc-white front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "iwc-white.png",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.42,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "microsoft-car front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "microsoft-car.png",
+          "position": [
+            0.5,
+            0.7
+          ],
+          "width": 0.52,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "iwc-white front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "iwc-white.png",
+          "position": [
+            0.5,
+            0.3
+          ],
+          "width": 0.42,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "microsoft-car front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "microsoft-car.png",
+          "position": [
+            0.5,
+            0.7
+          ],
+          "width": 0.52,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "petronas-syntium-white front-wing-element-03-left-top",
+          "panel": "front-wing-element-03-left-top",
+          "image": "petronas-syntium-white.png",
+          "position": [
+            0.58,
+            0.48
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "petronas-syntium-white front-wing-element-03-right-top",
+          "panel": "front-wing-element-03-right-top",
+          "image": "petronas-syntium-white.png",
+          "position": [
+            0.42,
+            0.48
+          ],
+          "width": 0.28,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "teamviewer-white front-wing-element-04-left-top",
+          "panel": "front-wing-element-04-left-top",
+          "image": "teamviewer-white.png",
+          "position": [
+            0.53,
+            0.39
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "teamviewer-white front-wing-element-04-right-top",
+          "panel": "front-wing-element-04-right-top",
+          "image": "teamviewer-white.png",
+          "position": [
+            0.46,
+            0.35
+          ],
+          "width": 0.26,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "Teal rear upper edge left",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "teal",
+          "polygon": [
+            [
+              0,
+              0.0
+            ],
+            [
+              1,
+              0.0
+            ],
+            [
+              1,
+              0.05
+            ],
+            [
+              0,
+              0.05
+            ]
+          ]
+        },
+        {
+          "name": "Teal DRS tip left top",
+          "panel": "rear-wing-drs-tip-left-top",
+          "color": "teal"
+        },
+        {
+          "name": "Teal DRS tip left bottom",
+          "panel": "rear-wing-drs-tip-left-bottom",
+          "color": "teal"
+        },
+        {
+          "name": "Teal rear upper edge right",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "teal",
+          "polygon": [
+            [
+              0,
+              0.0
+            ],
+            [
+              1,
+              0.0
+            ],
+            [
+              1,
+              0.05
+            ],
+            [
+              0,
+              0.05
+            ]
+          ]
+        },
+        {
+          "name": "Teal DRS tip right top",
+          "panel": "rear-wing-drs-tip-right-top",
+          "color": "teal"
+        },
+        {
+          "name": "Teal DRS tip right bottom",
+          "panel": "rear-wing-drs-tip-right-bottom",
+          "color": "teal"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "petronas-white rear-wing-main-top",
+          "panel": "rear-wing-main-top",
+          "image": "petronas-white.png",
+          "position": [
+            0.5,
+            0.48
+          ],
+          "width": 0.76,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "CrowdStrike rear-facing DRS",
+          "image": "crowdstrike-white.png",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "warp_uv_px": [
+            [
+              [
+                3447.17,
+                1393.05
+              ],
+              [
+                3446.82,
+                2613.14
+              ]
+            ],
+            [
+              [
+                3562.26,
+                1392.96
+              ],
+              [
+                3561.91,
+                2613.05
+              ]
+            ]
+          ],
+          "clip": true,
+          "allow_shared": true
+        },
+        {
+          "name": "petronas-teal rear-wing-endplate-left-inner",
+          "panel": "rear-wing-endplate-left-inner",
+          "image": "petronas-teal.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "width": 0.45,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "snapdragon_footer_logo-white rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "snapdragon_footer_logo-white.png",
+          "position": [
+            0.48,
+            0.26
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "crowdstrike-white rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.48,
+            0.48
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "petronas-white rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "petronas-white.png",
+          "position": [
+            0.48,
+            0.7
+          ],
+          "width": 0.55,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "petronas-teal rear-wing-endplate-right-inner",
+          "panel": "rear-wing-endplate-right-inner",
+          "image": "petronas-teal.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "width": 0.45,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "snapdragon_footer_logo-white rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "snapdragon_footer_logo-white.png",
+          "position": [
+            0.48,
+            0.26
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "crowdstrike-white rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "crowdstrike-white.png",
+          "position": [
+            0.48,
+            0.48
+          ],
+          "width": 0.65,
+          "flip": "auto",
+          "allow_shared": true
+        },
+        {
+          "name": "petronas-white rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "petronas-white.png",
+          "position": [
+            0.48,
+            0.7
+          ],
+          "width": 0.55,
+          "flip": "auto",
+          "allow_shared": true
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "teal",
+      "base": [],
+      "stickers": [
+        {
+          "name": "petronas-white mirrors-left-04",
+          "panel": "mirrors-left-04",
+          "image": "petronas-white.png",
+          "position": [
+            0.78,
+            0.45
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        },
+        {
+          "name": "petronas-white mirrors-right-09",
+          "panel": "mirrors-right-09",
+          "image": "petronas-white.png",
+          "position": [
+            0.22,
+            0.45
+          ],
+          "width": 0.38,
+          "flip": "auto",
+          "allow_shared": true,
+          "rotation": 0
+        }
+      ]
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    }
+  }
+}

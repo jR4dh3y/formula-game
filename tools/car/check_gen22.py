@@ -49,6 +49,17 @@ def vectors(document, binary, index):
     return result
 
 
+def check_template_uv(document, binary, index):
+    accessor = document['accessors'][index]
+    assert accessor['type'] == 'VEC2' and accessor['componentType'] == 5126
+    view = document['bufferViews'][accessor['bufferView']]
+    offset = view.get('byteOffset', 0) + accessor.get('byteOffset', 0)
+    stride = view.get('byteStride', 8)
+    for vertex in range(accessor['count']):
+        uv = struct.unpack_from('<2f', binary, offset + vertex * stride)
+        assert all(-1e-6 <= value <= 1 + 1e-6 for value in uv), ('paint UV1 outside template', uv)
+
+
 def inspect(path, meta):
     doc,binary = read_glb(path)
     nodes = {n['name']:n for n in doc['nodes']}
@@ -114,9 +125,14 @@ def inspect(path, meta):
     assert tyre['baseColorTexture'].get('texCoord', 0) == 0
     assert tyre.get('baseColorFactor', [1,1,1,1]) == [1,1,1,1]
     painted = [m for m in doc['materials'] if m['name'].startswith('source_paint_')]
-    assert len(painted) >= 8, ('missing stock body materials', len(painted))
+    assert len(painted) >= 8, ('missing per-part artwork', len(painted))
     assert sum('occlusionTexture' in m for m in painted) >= 6
-    assert all('baseColorTexture' not in m['pbrMetallicRoughness'] for m in painted), 'stock body must not embed livery artwork'
+    assert all('baseColorTexture' not in m['pbrMetallicRoughness'] for m in painted), 'team artwork is bound at runtime'
+    if meta.get('livery_template'):
+        for material in painted:
+            for texture in ('occlusionTexture', 'normalTexture'):
+                if texture in material:
+                    assert material[texture].get('texCoord', 0) == 0, (material['name'], texture, 'must retain OriginalUV')
     if lod:
         baked = [m for m in painted if '_lod' in m['name']]
         assert baked and all('normalTexture' in m for m in baked), 'missing LOD projection normals'
@@ -132,6 +148,10 @@ def inspect(path, meta):
         counts[name] = sum(doc['accessors'][p['indices']]['count']//3 for p in primitives)
         assert all(p.get('mode',4)==4 for p in primitives)
         for primitive in primitives:
+            if meta.get('livery_template') and materials[primitive['material']].startswith('source_paint_'):
+                assert {'TEXCOORD_0', 'TEXCOORD_1'} <= primitive['attributes'].keys(), (name, 'missing original/template UVs')
+                if meta['livery_template'] == 2025:
+                    check_template_uv(doc, binary, primitive['attributes']['TEXCOORD_1'])
             if materials[primitive['material']].split('.')[0] == 'tyre':
                 assert 'TEXCOORD_0' in primitive['attributes'], (name, 'tyre UV0 missing')
             position=doc['accessors'][primitive['attributes']['POSITION']]

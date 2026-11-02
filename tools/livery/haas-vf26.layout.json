@@ -1,0 +1,2001 @@
+{
+  "schema": 1,
+  "team": "haas",
+  "source_sha256": "232827ee55d9d0140be52e511618db8b62e91e575055cb7099054b2d56128c20",
+  "palette": {
+    "white": "#F3F3F3",
+    "red": "#E7192B",
+    "carbon": "#101214"
+  },
+  "padding": 24,
+  "parts": {
+    "main_body": {
+      "color": "white",
+      "base": [
+        {
+          "name": "sidepod-left carbon",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              0.1,
+              0
+            ],
+            [
+              0.12,
+              0.4
+            ],
+            [
+              0.09,
+              0.72
+            ],
+            [
+              0,
+              0.72
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-left carbon",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0,
+              0.72
+            ],
+            [
+              0.34,
+              0.72
+            ],
+            [
+              0.34,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-left carbon",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.34,
+              0.8
+            ],
+            [
+              0.75,
+              0.8
+            ],
+            [
+              0.75,
+              1
+            ],
+            [
+              0.34,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-left carbon",
+          "panel": "sidepod-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.75,
+              0.45
+            ],
+            [
+              1,
+              0.45
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.75,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-left red",
+          "panel": "sidepod-left",
+          "color": "red",
+          "polygon": [
+            [
+              0.15,
+              0.1
+            ],
+            [
+              0.85,
+              0.1
+            ],
+            [
+              0.85,
+              0.22
+            ],
+            [
+              0.15,
+              0.2
+            ]
+          ]
+        },
+        {
+          "name": "engine-cover-left red",
+          "panel": "engine-cover-left",
+          "color": "red",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              0.22,
+              0
+            ],
+            [
+              0.24,
+              0.26
+            ],
+            [
+              0,
+              0.28
+            ]
+          ]
+        },
+        {
+          "name": "engine-cover-left red",
+          "panel": "engine-cover-left",
+          "color": "red",
+          "polygon": [
+            [
+              0,
+              0.8
+            ],
+            [
+              0.85,
+              0.8
+            ],
+            [
+              1,
+              0.7
+            ],
+            [
+              1,
+              0.84
+            ],
+            [
+              0.85,
+              0.94
+            ],
+            [
+              0,
+              0.94
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left white",
+          "panel": "top-cowl-left",
+          "color": "white"
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.36
+            ],
+            [
+              0.4,
+              0.38
+            ],
+            [
+              0.4,
+              0.395
+            ],
+            [
+              0.2,
+              0.375
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.41
+            ],
+            [
+              0.4,
+              0.43
+            ],
+            [
+              0.4,
+              0.44499999999999995
+            ],
+            [
+              0.2,
+              0.425
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.45999999999999996
+            ],
+            [
+              0.4,
+              0.48
+            ],
+            [
+              0.4,
+              0.495
+            ],
+            [
+              0.2,
+              0.475
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.51
+            ],
+            [
+              0.4,
+              0.53
+            ],
+            [
+              0.4,
+              0.545
+            ],
+            [
+              0.2,
+              0.525
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.56
+            ],
+            [
+              0.4,
+              0.5800000000000001
+            ],
+            [
+              0.4,
+              0.5950000000000001
+            ],
+            [
+              0.2,
+              0.5750000000000001
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-left carbon",
+          "panel": "top-cowl-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.2,
+              0.61
+            ],
+            [
+              0.4,
+              0.63
+            ],
+            [
+              0.4,
+              0.645
+            ],
+            [
+              0.2,
+              0.625
+            ]
+          ]
+        },
+        {
+          "name": "nose-side-left white",
+          "panel": "nose-side-left",
+          "color": "white"
+        },
+        {
+          "name": "nose-side-left carbon",
+          "panel": "nose-side-left",
+          "color": "carbon",
+          "polygon": [
+            [
+              0,
+              0.75
+            ],
+            [
+              1,
+              0.75
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "nose-side-left red",
+          "panel": "nose-side-left",
+          "color": "red",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.08
+            ],
+            [
+              0,
+              0.08
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-right carbon",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              1,
+              0
+            ],
+            [
+              0.9,
+              0
+            ],
+            [
+              0.88,
+              0.4
+            ],
+            [
+              0.91,
+              0.72
+            ],
+            [
+              1,
+              0.72
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-right carbon",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              1,
+              0.72
+            ],
+            [
+              0.6599999999999999,
+              0.72
+            ],
+            [
+              0.6599999999999999,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-right carbon",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.6599999999999999,
+              0.8
+            ],
+            [
+              0.25,
+              0.8
+            ],
+            [
+              0.25,
+              1
+            ],
+            [
+              0.6599999999999999,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-right carbon",
+          "panel": "sidepod-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.25,
+              0.45
+            ],
+            [
+              0,
+              0.45
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              0.25,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "sidepod-right red",
+          "panel": "sidepod-right",
+          "color": "red",
+          "polygon": [
+            [
+              0.85,
+              0.1
+            ],
+            [
+              0.15000000000000002,
+              0.1
+            ],
+            [
+              0.15000000000000002,
+              0.22
+            ],
+            [
+              0.85,
+              0.2
+            ]
+          ]
+        },
+        {
+          "name": "engine-cover-right red",
+          "panel": "engine-cover-right",
+          "color": "red",
+          "polygon": [
+            [
+              1,
+              0
+            ],
+            [
+              0.78,
+              0
+            ],
+            [
+              0.76,
+              0.26
+            ],
+            [
+              1,
+              0.28
+            ]
+          ]
+        },
+        {
+          "name": "engine-cover-right red",
+          "panel": "engine-cover-right",
+          "color": "red",
+          "polygon": [
+            [
+              1,
+              0.8
+            ],
+            [
+              0.15000000000000002,
+              0.8
+            ],
+            [
+              0,
+              0.7
+            ],
+            [
+              0,
+              0.84
+            ],
+            [
+              0.15000000000000002,
+              0.94
+            ],
+            [
+              1,
+              0.94
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right white",
+          "panel": "top-cowl-right",
+          "color": "white"
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.36
+            ],
+            [
+              0.6,
+              0.38
+            ],
+            [
+              0.6,
+              0.395
+            ],
+            [
+              0.8,
+              0.375
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.41
+            ],
+            [
+              0.6,
+              0.43
+            ],
+            [
+              0.6,
+              0.44499999999999995
+            ],
+            [
+              0.8,
+              0.425
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.45999999999999996
+            ],
+            [
+              0.6,
+              0.48
+            ],
+            [
+              0.6,
+              0.495
+            ],
+            [
+              0.8,
+              0.475
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.51
+            ],
+            [
+              0.6,
+              0.53
+            ],
+            [
+              0.6,
+              0.545
+            ],
+            [
+              0.8,
+              0.525
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.56
+            ],
+            [
+              0.6,
+              0.5800000000000001
+            ],
+            [
+              0.6,
+              0.5950000000000001
+            ],
+            [
+              0.8,
+              0.5750000000000001
+            ]
+          ]
+        },
+        {
+          "name": "top-cowl-right carbon",
+          "panel": "top-cowl-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.8,
+              0.61
+            ],
+            [
+              0.6,
+              0.63
+            ],
+            [
+              0.6,
+              0.645
+            ],
+            [
+              0.8,
+              0.625
+            ]
+          ]
+        },
+        {
+          "name": "nose-side-right white",
+          "panel": "nose-side-right",
+          "color": "white"
+        },
+        {
+          "name": "nose-side-right carbon",
+          "panel": "nose-side-right",
+          "color": "carbon",
+          "polygon": [
+            [
+              1,
+              0.75
+            ],
+            [
+              0,
+              0.75
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        },
+        {
+          "name": "nose-side-right red",
+          "panel": "nose-side-right",
+          "color": "red",
+          "polygon": [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0.08
+            ],
+            [
+              1,
+              0.08
+            ]
+          ]
+        },
+        {
+          "name": "nose-top red",
+          "panel": "nose-top",
+          "color": "red"
+        },
+        {
+          "name": "nose-top white",
+          "panel": "nose-top",
+          "color": "white",
+          "polygon": [
+            [
+              0.08,
+              0
+            ],
+            [
+              0.92,
+              0
+            ],
+            [
+              0.92,
+              0.95
+            ],
+            [
+              0.8,
+              0.982
+            ],
+            [
+              0.5,
+              0.985
+            ],
+            [
+              0.2,
+              0.982
+            ],
+            [
+              0.08,
+              0.95
+            ]
+          ]
+        },
+        {
+          "name": "nose-top carbon",
+          "panel": "nose-top",
+          "color": "carbon",
+          "polygon": [
+            [
+              0.08,
+              0
+            ],
+            [
+              0.92,
+              0
+            ],
+            [
+              0.92,
+              0.1
+            ],
+            [
+              0.08,
+              0.1
+            ]
+          ]
+        },
+        {
+          "name": "cockpit-rim carbon",
+          "panel": "cockpit-rim",
+          "color": "carbon"
+        },
+        {
+          "name": "cockpit-rim white",
+          "panel": "cockpit-rim",
+          "color": "white",
+          "polygon": [
+            [
+              0,
+              0
+            ],
+            [
+              0.22,
+              0
+            ],
+            [
+              0.22,
+              0.84
+            ],
+            [
+              0,
+              0.96
+            ]
+          ]
+        },
+        {
+          "name": "cockpit-rim white",
+          "panel": "cockpit-rim",
+          "color": "white",
+          "polygon": [
+            [
+              0.78,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0.96
+            ],
+            [
+              0.78,
+              0.84
+            ]
+          ]
+        },
+        {
+          "name": "halo-left white",
+          "panel": "halo-left",
+          "color": "white"
+        },
+        {
+          "name": "halo-front white",
+          "panel": "halo-front",
+          "color": "white"
+        },
+        {
+          "name": "halo-right white",
+          "panel": "halo-right",
+          "color": "white"
+        },
+        {
+          "name": "main-body-left-07 red",
+          "panel": "main-body-left-07",
+          "color": "red"
+        },
+        {
+          "name": "main-body-right-08 red",
+          "panel": "main-body-right-08",
+          "color": "red"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "haas-side.png sidepod-left",
+          "panel": "sidepod-left",
+          "image": "haas-side.png",
+          "position": [
+            0.52,
+            0.58
+          ],
+          "flip": "auto",
+          "width": 0.4,
+          "allow_shared": true,
+          "face_mask": "main_body:left-side"
+        },
+        {
+          "name": "fix-black.png sidepod-left",
+          "panel": "sidepod-left",
+          "image": "fix-black.png",
+          "position": [
+            0.24,
+            0.46
+          ],
+          "flip": "auto",
+          "width": 0.085,
+          "allow_shared": true
+        },
+        {
+          "name": "zoomex-white.png sidepod-left",
+          "panel": "sidepod-left",
+          "image": "zoomex-white.png",
+          "position": [
+            0.17,
+            0.82
+          ],
+          "flip": "auto",
+          "width": 0.16,
+          "allow_shared": true
+        },
+        {
+          "name": "alpinestars-white.png sidepod-left",
+          "panel": "sidepod-left",
+          "image": "alpinestars-white.png",
+          "position": [
+            0.88,
+            0.8
+          ],
+          "flip": "auto",
+          "width": 0.065,
+          "allow_shared": true
+        },
+        {
+          "name": "gr-g.png engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "gr-g.png",
+          "position": [
+            0.34,
+            0.4
+          ],
+          "flip": "auto",
+          "width": 0.32,
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "gr-r.png engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "gr-r.png",
+          "position": [
+            0.62,
+            0.4
+          ],
+          "flip": "auto",
+          "width": 0.32,
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "ruckus-horizontal-white.png engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "ruckus-horizontal-white.png",
+          "position": [
+            0.11,
+            0.12
+          ],
+          "flip": "auto",
+          "width": 0.18,
+          "allow_shared": true
+        },
+        {
+          "name": "safety-e.png engine-cover-left",
+          "panel": "engine-cover-left",
+          "image": "safety-e.png",
+          "position": [
+            0.25,
+            0.28
+          ],
+          "flip": "auto",
+          "width": 0.045,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png nose-side-left",
+          "panel": "nose-side-left",
+          "image": "orion180-black.png",
+          "position": [
+            0.7,
+            0.36
+          ],
+          "flip": "auto",
+          "width": 0.19
+        },
+        {
+          "name": "haas-side.png sidepod-right",
+          "panel": "sidepod-right",
+          "image": "haas-side.png",
+          "position": [
+            0.48,
+            0.58
+          ],
+          "flip": "auto",
+          "width": 0.4,
+          "allow_shared": true,
+          "face_mask": "main_body:right-side"
+        },
+        {
+          "name": "fix-black.png sidepod-right",
+          "panel": "sidepod-right",
+          "image": "fix-black.png",
+          "position": [
+            0.76,
+            0.46
+          ],
+          "flip": "auto",
+          "width": 0.085,
+          "allow_shared": true
+        },
+        {
+          "name": "zoomex-white.png sidepod-right",
+          "panel": "sidepod-right",
+          "image": "zoomex-white.png",
+          "position": [
+            0.83,
+            0.82
+          ],
+          "flip": "auto",
+          "width": 0.16,
+          "allow_shared": true
+        },
+        {
+          "name": "alpinestars-white.png sidepod-right",
+          "panel": "sidepod-right",
+          "image": "alpinestars-white.png",
+          "position": [
+            0.12,
+            0.8
+          ],
+          "flip": "auto",
+          "width": 0.065,
+          "allow_shared": true
+        },
+        {
+          "name": "gr-g.png engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "gr-g.png",
+          "position": [
+            0.6599999999999999,
+            0.4
+          ],
+          "flip": "auto",
+          "width": 0.32,
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "gr-r.png engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "gr-r.png",
+          "position": [
+            0.38,
+            0.4
+          ],
+          "flip": "auto",
+          "width": 0.32,
+          "allow_shared": true,
+          "clip": false
+        },
+        {
+          "name": "ruckus-horizontal-white.png engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "ruckus-horizontal-white.png",
+          "position": [
+            0.89,
+            0.12
+          ],
+          "flip": "auto",
+          "width": 0.18,
+          "allow_shared": true
+        },
+        {
+          "name": "safety-e.png engine-cover-right",
+          "panel": "engine-cover-right",
+          "image": "safety-e.png",
+          "position": [
+            0.75,
+            0.28
+          ],
+          "flip": "auto",
+          "width": 0.045,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png nose-side-right",
+          "panel": "nose-side-right",
+          "image": "orion180-black.png",
+          "position": [
+            0.30000000000000004,
+            0.36
+          ],
+          "flip": "auto",
+          "width": 0.19
+        },
+        {
+          "name": "tgr-colour.png nose-top",
+          "panel": "nose-top",
+          "image": "tgr-colour.png",
+          "position": [
+            0.5,
+            0.135
+          ],
+          "flip": "auto",
+          "width": 0.48,
+          "allow_shared": true
+        },
+        {
+          "name": "number31-grey.png nose-top",
+          "panel": "nose-top",
+          "image": "number31-grey.png",
+          "position": [
+            0.5,
+            0.205
+          ],
+          "flip": "auto",
+          "width": 0.42,
+          "allow_shared": true
+        },
+        {
+          "name": "us-flag.png nose-top",
+          "panel": "nose-top",
+          "image": "us-flag.png",
+          "position": [
+            0.5,
+            0.275
+          ],
+          "flip": "auto",
+          "width": 0.3,
+          "allow_shared": true
+        },
+        {
+          "name": "automation-black.png nose-top",
+          "panel": "nose-top",
+          "image": "automation-black.png",
+          "position": [
+            0.5,
+            0.35
+          ],
+          "flip": "auto",
+          "width": 0.36,
+          "allow_shared": true
+        },
+        {
+          "name": "ic-compact-black.png nose-top",
+          "panel": "nose-top",
+          "image": "ic-compact-black.png",
+          "position": [
+            0.5,
+            0.43
+          ],
+          "flip": "auto",
+          "width": 0.34,
+          "allow_shared": true
+        },
+        {
+          "name": "zoomex-black.png nose-top",
+          "panel": "nose-top",
+          "image": "zoomex-black.png",
+          "position": [
+            0.5,
+            0.51
+          ],
+          "flip": "auto",
+          "width": 0.34,
+          "allow_shared": true
+        },
+        {
+          "name": "uchicago-black.png nose-top",
+          "panel": "nose-top",
+          "image": "uchicago-black.png",
+          "position": [
+            0.5,
+            0.59
+          ],
+          "flip": "auto",
+          "width": 0.32,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png nose-top",
+          "panel": "nose-top",
+          "image": "orion180-black.png",
+          "position": [
+            0.5,
+            0.67
+          ],
+          "flip": "auto",
+          "width": 0.28,
+          "allow_shared": true
+        },
+        {
+          "name": "mphasis-black.png nose-top",
+          "panel": "nose-top",
+          "image": "mphasis-black.png",
+          "position": [
+            0.5,
+            0.745
+          ],
+          "flip": "auto",
+          "width": 0.25,
+          "allow_shared": true
+        },
+        {
+          "name": "pirelli-black.png nose-top",
+          "panel": "nose-top",
+          "image": "pirelli-black.png",
+          "position": [
+            0.5,
+            0.815
+          ],
+          "flip": "auto",
+          "width": 0.23,
+          "allow_shared": true
+        },
+        {
+          "name": "commscope-black.png nose-top",
+          "panel": "nose-top",
+          "image": "commscope-black.png",
+          "position": [
+            0.5,
+            0.875
+          ],
+          "flip": "auto",
+          "width": 0.19,
+          "allow_shared": true
+        },
+        {
+          "name": "playngo-colour.png nose-top",
+          "panel": "nose-top",
+          "image": "playngo-colour.png",
+          "position": [
+            0.5,
+            0.925
+          ],
+          "flip": "auto",
+          "width": 0.15,
+          "allow_shared": true
+        },
+        {
+          "name": "haas-roundel.png nose-top",
+          "panel": "nose-top",
+          "image": "haas-roundel.png",
+          "position": [
+            0.5,
+            0.96
+          ],
+          "flip": "auto",
+          "width": 0.095,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png cockpit-rim",
+          "panel": "cockpit-rim",
+          "image": "orion180-black.png",
+          "position": [
+            0.11,
+            0.45
+          ],
+          "flip": "auto",
+          "rotation": 90,
+          "width": 0.18,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png cockpit-rim",
+          "panel": "cockpit-rim",
+          "image": "orion180-black.png",
+          "position": [
+            0.89,
+            0.45
+          ],
+          "flip": "auto",
+          "rotation": -90,
+          "width": 0.18,
+          "allow_shared": true
+        },
+        {
+          "name": "haas-side.png halo-front",
+          "panel": "halo-front",
+          "image": "haas-side.png",
+          "flip": "auto",
+          "warp_uv_px": [
+            [
+              [
+                1745.0,
+                865.0
+              ],
+              [
+                1833.0,
+                880.0
+              ],
+              [
+                1920.0,
+                865.0
+              ]
+            ],
+            [
+              [
+                1745.0,
+                905.0
+              ],
+              [
+                1833.0,
+                925.0
+              ],
+              [
+                1920.0,
+                905.0
+              ]
+            ]
+          ],
+          "clip": false,
+          "allow_shared": true
+        },
+        {
+          "name": "ic-compact-black.png halo-left",
+          "panel": "halo-left",
+          "image": "ic-compact-black.png",
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                2640.0,
+                695.0
+              ],
+              [
+                2720.0,
+                650.0
+              ],
+              [
+                2800.0,
+                625.0
+              ]
+            ],
+            [
+              [
+                2640.0,
+                735.0
+              ],
+              [
+                2720.0,
+                685.0
+              ],
+              [
+                2800.0,
+                655.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "ic-compact-black.png halo-right",
+          "panel": "halo-right",
+          "image": "ic-compact-black.png",
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                820.0,
+                625.0
+              ],
+              [
+                900.0,
+                650.0
+              ],
+              [
+                980.0,
+                695.0
+              ]
+            ],
+            [
+              [
+                820.0,
+                655.0
+              ],
+              [
+                900.0,
+                685.0
+              ],
+              [
+                980.0,
+                735.0
+              ]
+            ]
+          ],
+          "clip": false
+        },
+        {
+          "name": "orion180-black.png halo-left",
+          "panel": "halo-left",
+          "image": "orion180-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "warp_uv_px": [
+            [
+              [
+                2850,
+                626
+              ],
+              [
+                2940,
+                616
+              ],
+              [
+                3030,
+                613
+              ]
+            ],
+            [
+              [
+                2850,
+                640
+              ],
+              [
+                2940,
+                630
+              ],
+              [
+                3030,
+                627
+              ]
+            ]
+          ],
+          "width": 0.2,
+          "allow_shared": true
+        },
+        {
+          "name": "orion180-black.png halo-right",
+          "panel": "halo-right",
+          "image": "orion180-black.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "warp_uv_px": [
+            [
+              [
+                610,
+                613
+              ],
+              [
+                700,
+                616
+              ],
+              [
+                790,
+                626
+              ]
+            ],
+            [
+              [
+                610,
+                627
+              ],
+              [
+                700,
+                630
+              ],
+              [
+                790,
+                640
+              ]
+            ]
+          ],
+          "width": 0.2,
+          "allow_shared": true
+        },
+        {
+          "name": "playngo-colour.png halo-left",
+          "panel": "halo-left",
+          "image": "playngo-colour.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "warp_uv_px": [
+            [
+              [
+                3100,
+                617
+              ],
+              [
+                3170,
+                624
+              ],
+              [
+                3240,
+                634
+              ]
+            ],
+            [
+              [
+                3100,
+                631
+              ],
+              [
+                3170,
+                638
+              ],
+              [
+                3240,
+                648
+              ]
+            ]
+          ],
+          "width": 0.2,
+          "allow_shared": true
+        },
+        {
+          "name": "playngo-colour.png halo-right",
+          "panel": "halo-right",
+          "image": "playngo-colour.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "warp_uv_px": [
+            [
+              [
+                400,
+                634
+              ],
+              [
+                470,
+                624
+              ],
+              [
+                540,
+                617
+              ]
+            ],
+            [
+              [
+                400,
+                648
+              ],
+              [
+                470,
+                638
+              ],
+              [
+                540,
+                631
+              ]
+            ]
+          ],
+          "width": 0.2,
+          "allow_shared": true
+        }
+      ]
+    },
+    "front_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "front-wing-element-03-left-top white",
+          "panel": "front-wing-element-03-left-top",
+          "color": "white"
+        },
+        {
+          "name": "front-wing-element-04-left-top white",
+          "panel": "front-wing-element-04-left-top",
+          "color": "white"
+        },
+        {
+          "name": "front-wing-element-03-right-top white",
+          "panel": "front-wing-element-03-right-top",
+          "color": "white"
+        },
+        {
+          "name": "front-wing-element-04-right-top white",
+          "panel": "front-wing-element-04-right-top",
+          "color": "white"
+        },
+        {
+          "name": "front-wing-endplate-left-inner red",
+          "panel": "front-wing-endplate-left-inner",
+          "color": "red"
+        },
+        {
+          "name": "front-wing-endplate-left-outer red",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.68
+            ],
+            [
+              0.0,
+              0.68
+            ]
+          ]
+        },
+        {
+          "name": "front-wing-endplate-left-outer white",
+          "panel": "front-wing-endplate-left-outer",
+          "color": "white",
+          "polygon": [
+            [
+              0.0,
+              0.68
+            ],
+            [
+              1.0,
+              0.68
+            ],
+            [
+              1.0,
+              0.73
+            ],
+            [
+              0.0,
+              0.73
+            ]
+          ]
+        },
+        {
+          "name": "front-wing-endplate-right-inner red",
+          "panel": "front-wing-endplate-right-inner",
+          "color": "red"
+        },
+        {
+          "name": "front-wing-endplate-right-outer red",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "red",
+          "polygon": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.68
+            ],
+            [
+              0.0,
+              0.68
+            ]
+          ]
+        },
+        {
+          "name": "front-wing-endplate-right-outer white",
+          "panel": "front-wing-endplate-right-outer",
+          "color": "white",
+          "polygon": [
+            [
+              0.0,
+              0.68
+            ],
+            [
+              1.0,
+              0.68
+            ],
+            [
+              1.0,
+              0.73
+            ],
+            [
+              0.0,
+              0.73
+            ]
+          ]
+        }
+      ],
+      "stickers": [
+        {
+          "name": "ic-compact-white.png front-wing-element-01-top",
+          "panel": "front-wing-element-01-top",
+          "image": "ic-compact-white.png",
+          "position": [
+            0.75,
+            0.5
+          ],
+          "flip": "auto",
+          "width": 0.18
+        },
+        {
+          "name": "ic-compact-white.png front-wing-element-01-top",
+          "panel": "front-wing-element-01-top",
+          "image": "ic-compact-white.png",
+          "position": [
+            0.25,
+            0.5
+          ],
+          "flip": "auto",
+          "width": 0.18
+        },
+        {
+          "name": "gr-g.png front-wing-element-03-left-top",
+          "panel": "front-wing-element-03-left-top",
+          "image": "gr-g.png",
+          "position": [
+            0.33,
+            0.55
+          ],
+          "flip": "auto",
+          "width": 0.24,
+          "allow_shared": true
+        },
+        {
+          "name": "gr-r.png front-wing-element-03-left-top",
+          "panel": "front-wing-element-03-left-top",
+          "image": "gr-r.png",
+          "position": [
+            0.55,
+            0.55
+          ],
+          "flip": "auto",
+          "width": 0.24,
+          "allow_shared": true
+        },
+        {
+          "name": "gr-g.png front-wing-element-03-right-top",
+          "panel": "front-wing-element-03-right-top",
+          "image": "gr-g.png",
+          "position": [
+            0.67,
+            0.55
+          ],
+          "flip": "auto",
+          "width": 0.24,
+          "allow_shared": true
+        },
+        {
+          "name": "gr-r.png front-wing-element-03-right-top",
+          "panel": "front-wing-element-03-right-top",
+          "image": "gr-r.png",
+          "position": [
+            0.45,
+            0.55
+          ],
+          "flip": "auto",
+          "width": 0.24,
+          "allow_shared": true
+        },
+        {
+          "name": "mphasis-white.png front-wing-endplate-left-inner",
+          "panel": "front-wing-endplate-left-inner",
+          "image": "mphasis-white.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "flip": "auto",
+          "width": 0.65
+        },
+        {
+          "name": "mphasis-white.png front-wing-endplate-left-outer",
+          "panel": "front-wing-endplate-left-outer",
+          "image": "mphasis-white.png",
+          "position": [
+            0.5,
+            0.38
+          ],
+          "flip": "auto",
+          "width": 0.65
+        },
+        {
+          "name": "mphasis-white.png front-wing-endplate-right-inner",
+          "panel": "front-wing-endplate-right-inner",
+          "image": "mphasis-white.png",
+          "position": [
+            0.5,
+            0.45
+          ],
+          "flip": "auto",
+          "width": 0.65
+        },
+        {
+          "name": "mphasis-white.png front-wing-endplate-right-outer",
+          "panel": "front-wing-endplate-right-outer",
+          "image": "mphasis-white.png",
+          "position": [
+            0.5,
+            0.38
+          ],
+          "flip": "auto",
+          "width": 0.65
+        }
+      ]
+    },
+    "rear_wing": {
+      "color": "carbon",
+      "base": [
+        {
+          "name": "rear-wing-main-top red",
+          "panel": "rear-wing-main-top",
+          "color": "red"
+        },
+        {
+          "name": "rear-wing-drs-shared-top-bottom red",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "color": "red"
+        },
+        {
+          "name": "rear-wing-drs-tip-left-top red",
+          "panel": "rear-wing-drs-tip-left-top",
+          "color": "red"
+        },
+        {
+          "name": "rear-wing-drs-tip-right-top red",
+          "panel": "rear-wing-drs-tip-right-top",
+          "color": "red"
+        },
+        {
+          "name": "rear-wing-endplate-left-outer white",
+          "panel": "rear-wing-endplate-left-outer",
+          "color": "white"
+        },
+        {
+          "name": "rear-wing-endplate-right-outer white",
+          "panel": "rear-wing-endplate-right-outer",
+          "color": "white"
+        }
+      ],
+      "stickers": [
+        {
+          "name": "haas-rear.png rear-wing-main-top",
+          "panel": "rear-wing-main-top",
+          "image": "haas-rear.png",
+          "position": [
+            0.5,
+            0.55
+          ],
+          "flip": "auto",
+          "size": [
+            0.8,
+            0.55
+          ],
+          "allow_shared": true
+        },
+        {
+          "name": "haas-side-vector-audit.png rear-wing-drs-rear",
+          "panel": "rear-wing-drs-shared-top-bottom",
+          "image": "haas-side-vector-audit.png",
+          "flip": "auto",
+          "allow_shared": true,
+          "warp_uv_px": [
+            [
+              [
+                3447.17,
+                1393.05
+              ],
+              [
+                3446.82,
+                2613.14
+              ]
+            ],
+            [
+              [
+                3562.26,
+                1392.96
+              ],
+              [
+                3561.91,
+                2613.05
+              ]
+            ]
+          ],
+          "clip": true
+        },
+        {
+          "name": "playngo-colour.png rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "playngo-colour.png",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "flip": "auto",
+          "width": 0.48
+        },
+        {
+          "name": "singha-black.png rear-wing-endplate-left-outer",
+          "panel": "rear-wing-endplate-left-outer",
+          "image": "singha-black.png",
+          "position": [
+            0.5,
+            0.65
+          ],
+          "flip": "auto",
+          "width": 0.34
+        },
+        {
+          "name": "playngo-colour.png rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "playngo-colour.png",
+          "position": [
+            0.5,
+            0.36
+          ],
+          "flip": "auto",
+          "width": 0.48
+        },
+        {
+          "name": "singha-black.png rear-wing-endplate-right-outer",
+          "panel": "rear-wing-endplate-right-outer",
+          "image": "singha-black.png",
+          "position": [
+            0.5,
+            0.65
+          ],
+          "flip": "auto",
+          "width": 0.34
+        }
+      ]
+    },
+    "mirrors": {
+      "color": "carbon",
+      "base": [],
+      "stickers": [
+        {
+          "name": "ic-compact-white.png mirrors-left-01",
+          "panel": "mirrors-left-01",
+          "image": "ic-compact-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "width": 0.55,
+          "allow_shared": true
+        },
+        {
+          "name": "ic-compact-white.png mirrors-right-07",
+          "panel": "mirrors-right-07",
+          "image": "ic-compact-white.png",
+          "position": [
+            0.5,
+            0.5
+          ],
+          "flip": "auto",
+          "width": 0.55,
+          "allow_shared": true
+        }
+      ]
+    },
+    "floor": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "cockpit_foam": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "winglets": {
+      "color": "red",
+      "base": [],
+      "stickers": []
+    },
+    "front_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    },
+    "rear_covers": {
+      "color": "carbon",
+      "base": [],
+      "stickers": []
+    }
+  }
+}

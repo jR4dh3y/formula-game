@@ -1,0 +1,209 @@
+[
+  {
+    "source": "crowdstrike.png",
+    "output": "crowdstrike-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/7kV12gdw6Rkq79wGV9MLVX/c989cfa87af6e69364161d081abced18/crowdstrike.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "crowdstrike.png",
+    "output": "crowdstrike-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/7kV12gdw6Rkq79wGV9MLVX/c989cfa87af6e69364161d081abced18/crowdstrike.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "ineos.png",
+    "output": "ineos-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/663FCePRDuRpey2IYG8997/229fe947e6467d99538f70e6d5aaeab4/ineos.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "ineos.png",
+    "output": "ineos-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/663FCePRDuRpey2IYG8997/229fe947e6467d99538f70e6d5aaeab4/ineos.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "microsoft.png",
+    "output": "microsoft-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/1ifH43gKsnYGRO5Vpus4Db/c66d4fbda2a1f60e6da7fa933974e143/microsoft.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "microsoft.png",
+    "output": "microsoft-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/1ifH43gKsnYGRO5Vpus4Db/c66d4fbda2a1f60e6da7fa933974e143/microsoft.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "snapdragon_footer_logo.png",
+    "output": "snapdragon_footer_logo-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/zVLeaFlwtPShBiJLlQICh/d82231f05029755c8c43e95d9154373d/snapdragon_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "snapdragon_footer_logo.png",
+    "output": "snapdragon_footer_logo-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/zVLeaFlwtPShBiJLlQICh/d82231f05029755c8c43e95d9154373d/snapdragon_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "Solera_footer_logo.png",
+    "output": "solera_footer_logo-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/4pPFW7Y73xPJE9bYkVQieh/ce12562a5eaa087f9f39989ea241fbc9/Solera_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "Solera_footer_logo.png",
+    "output": "solera_footer_logo-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/4pPFW7Y73xPJE9bYkVQieh/ce12562a5eaa087f9f39989ea241fbc9/Solera_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "UBS_footer_logo.png",
+    "output": "ubs_footer_logo-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/5e0RNBRzfD9G81osnG3gzH/dc80f5e5ecc4f4fcc5adbbea42bb2b20/UBS_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "UBS_footer_logo.png",
+    "output": "ubs_footer_logo-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/5e0RNBRzfD9G81osnG3gzH/dc80f5e5ecc4f4fcc5adbbea42bb2b20/UBS_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "SIGNIFY_LOGO_MONO_W.png",
+    "output": "signify_logo_mono_w-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/6b5xBXlA72EuBjYztJ3h1K/cceee2f24e27ffdfdb4c087434b2773b/SIGNIFY_LOGO_MONO_W.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "white"
+  },
+  {
+    "source": "SIGNIFY_LOGO_MONO_W.png",
+    "output": "signify_logo_mono_w-black.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/6b5xBXlA72EuBjYztJ3h1K/cceee2f24e27ffdfdb4c087434b2773b/SIGNIFY_LOGO_MONO_W.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "color": "black"
+  },
+  {
+    "source": "petronas_footer_logo.png",
+    "output": "petronas-white.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/pA4cma2WAAEuEOuDHAGEJ/d0d04553f435a9be9798abafd44c49ed/petronas_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0,
+      0.875,
+      1,
+      1
+    ],
+    "color": "white"
+  },
+  {
+    "source": "petronas_footer_logo.png",
+    "output": "petronas-teal.png",
+    "url": "https://images.ctfassets.net/1fvlg6xqnm65/pA4cma2WAAEuEOuDHAGEJ/d0d04553f435a9be9798abafd44c49ed/petronas_footer_logo.png",
+    "notes": "Official team partner artwork; brand trademark; derived photo colour variant.",
+    "crop": [
+      0,
+      0,
+      1,
+      0.83
+    ]
+  },
+  {
+    "source": "mercedes-benz-9.svg",
+    "output": "mercedes-star.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/mercedes-benz-9.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_white": true,
+    "color": "white"
+  },
+  {
+    "source": "mercedes-benz-9.svg",
+    "output": "mercedes-star-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/mercedes-benz-9.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_white": true,
+    "color": "black"
+  },
+  {
+    "source": "teamviewer-1.svg",
+    "output": "teamviewer-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/teamviewer-1.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "color": "white"
+  },
+  {
+    "source": "iwc-schaffhausen.svg",
+    "output": "iwc-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/iwc-schaffhausen.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_all_white": true,
+    "color": "white"
+  },
+  {
+    "source": "sap-3.svg",
+    "output": "sap-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/sap-3.svg",
+    "notes": "Public brand vector reproduction; identity reviewed against launch photo. Trademark.",
+    "remove_all_white": true,
+    "color": "black"
+  },
+  {
+    "source": "photo-launch-11.jpg",
+    "output": "number63.png",
+    "url": "https://www.racefans.net/wp-content/uploads/2026/01/racefansdotnet-24-01-22-10-04-30-2-M560064.jpg",
+    "notes": "Genuine photographed glyph/mark crop, no replacement font; perspective and photo edge quality require review.",
+    "source_crop": [
+      923,
+      551,
+      1002,
+      591
+    ],
+    "dark_ink": 85,
+    "color": "black"
+  },
+  {
+    "source": "amg.svg",
+    "output": "amg-black.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/amg.svg",
+    "notes": "Actual AMG slanted stripe wordmark, verified against W17 silver shoulder; public brand vector reproduction.",
+    "color": "black",
+    "remove_all_white": true
+  },
+  {
+    "source": "petronas-syntium.svg",
+    "output": "syntium-white.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/petronas-syntium.svg",
+    "notes": "Actual Syntium wordmark, public vector reproduction, white car variant.",
+    "color": "white"
+  },
+  {
+    "source": "mercedes-benz-9.svg",
+    "output": "mercedes-field-star.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/mercedes-benz-9.svg",
+    "notes": "Genuine star silhouette path index5 retained from original artwork; outer circle excluded for actual W17 cowl pattern.",
+    "svg_paths": [
+      5
+    ],
+    "color": "white"
+  },
+  {
+    "source": "microsoft-5.svg",
+    "output": "microsoft-colour-icon.png",
+    "url": "https://cdn.worldvectorlogo.com/logos/microsoft-5.svg",
+    "notes": "Actual four-colour Microsoft squares, verified worldvector artwork."
+  }
+]
