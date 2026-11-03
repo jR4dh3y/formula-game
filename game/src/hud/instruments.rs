@@ -80,7 +80,6 @@ fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
     let player = &race.entrants[session.player];
     let car = &player.car;
     let lap = (player.timing.laps_completed + 1).min(race.laps);
-    let position = race.position_of(session.player);
     // ---- Dash (bottom right): RPM LEDs, lap / gear / speed, lap time and
     // position, then pedal traces.
     let pad = 14.0 * scale;
@@ -263,8 +262,7 @@ fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
         &kmh.to_string(),
     );
 
-    // Lower row: current lap time where a fuel readout would sit, position
-    // under the speed window.
+    // Lower row: lap time on the left and the live sector clock on the right.
     let lower_y = main_y + main_h + 14. * scale;
     let time_w = speed_x - gap - inner_x;
     well(hud, inner_x, lower_y, time_w, lower_h, scale);
@@ -292,14 +290,14 @@ fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
         14.0 * scale,
         (speed_x + 10.0 * scale, lower_y + 14.0 * scale),
         Align::Left,
-        "POS",
+        "SECTOR TIME",
     );
     hud.segments(
         lower_size,
         (speed_x + side_w - 12.0 * scale, lower_value_y),
         Align::Right,
         ink,
-        &format!("{position}/{}", race.entrants.len()),
+        &format!("{:.1}", (race.time - player.timing.sector_start).max(0.)),
     );
     if let Some(text) = refusal {
         let tag_w = hud.text_width(&style.bold, 20.0 * scale, text) + 24.0 * scale;

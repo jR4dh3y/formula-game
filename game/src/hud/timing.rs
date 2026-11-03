@@ -1,5 +1,6 @@
 //! Timing tower additions use the incumbent instrument palette and fonts.
 
+use super::telemetry::Split;
 use super::*;
 
 /// Fixed columns keep timing readable as digits and sector states change.
@@ -18,7 +19,13 @@ pub(super) fn strip(
     let timing = &race.entrants[session.player].timing;
     let running =
         matches!(race.phase, Phase::Racing | Phase::Finishing) && timing.finish_time.is_none();
-    hud.fill_rect(x, y, w, 248. * s, WELL);
+    // Keep the timing panel in the same material family as the tower above:
+    // digital is an opaque LCD, while analog lets the track show through.
+    let panel = match hud.finish {
+        Finish::Digital => Color::from_rgb(6, 10, 11),
+        Finish::Analog => Color::from_black_alpha(210),
+    };
+    hud.fill_rect(x, y, w, 248. * s, panel);
     let label_x = x + 12. * s;
     let value_x = x + w - 12. * s;
     hud.text_mid(
@@ -99,20 +106,14 @@ pub(super) fn strip(
         let active = running && timing.distance >= 0. && timing.sector == sector;
         let split = session.telemetry.splits[sector];
         let fresh = split.is_some_and(|split| split.lap == timing.laps_completed);
-        let color = if active {
-            BLUE
-        } else if fresh {
-            colors.ink
-        } else {
-            colors.muted
-        };
+        let color = split_color(split, active, fresh);
         if active {
             hud.fill_rect(
                 x + 5. * s,
                 top,
                 w - 10. * s,
                 26. * s,
-                Color::from_rgb(16, 30, 45),
+                Color::from_rgb(16, 30, 45).gamma_multiply(0.78),
             );
         }
         let mid = top + 13. * s;
@@ -123,6 +124,21 @@ pub(super) fn strip(
             Align::Left,
             color,
             &format!("S{}", sector + 1),
+        );
+        minisectors(
+            hud,
+            x + 72. * s,
+            top + 8. * s,
+            72. * s,
+            10. * s,
+            MinisectorState {
+                sector,
+                active,
+                split,
+                timing,
+                track_length: race.track.length,
+                scale: s,
+            },
         );
         let value = if active {
             format!("{:.1}", (race.time - timing.sector_start).max(0.))
@@ -164,6 +180,83 @@ pub(super) fn strip(
             Align::Right,
             color,
             &status,
+        );
+    }
+}
+
+fn split_color(split: Option<Split>, active: bool, fresh: bool) -> Color {
+    if active {
+        BLUE
+    } else if let Some(split) = split.filter(|_| fresh) {
+        split
+            .delta
+            .map_or(GREEN, |delta| if delta <= 0. { PURPLE } else { AMBER })
+    } else if split.is_some() {
+        DIM
+    } else {
+        Color::from_gray(75)
+    }
+}
+
+struct MinisectorState<'a> {
+    sector: usize,
+    active: bool,
+    split: Option<Split>,
+    timing: &'a racecraft_sim::race::Timing,
+    track_length: f64,
+    scale: f32,
+}
+
+/// Draw the F1-style three-cell sector bar. The simulation exposes sector
+/// boundaries, so the live sector fills cells from the car's distance and the
+/// completed split colours all three cells with its delta state.
+fn minisectors(hud: &Hud, x: f32, y: f32, w: f32, h: f32, state: MinisectorState<'_>) {
+    let MinisectorState {
+        sector,
+        active,
+        split,
+        timing,
+        track_length,
+        scale,
+    } = state;
+    let gap = 3. * scale;
+    let cell_w = (w - gap * 2.) / 3.;
+    let completed_color = split_color(
+        split,
+        false,
+        split.is_some_and(|split| split.lap == timing.laps_completed),
+    );
+    let sector_length = track_length / 3.;
+    let progress = if active && sector_length > 0. {
+        ((timing.distance.rem_euclid(track_length) - sector as f64 * sector_length) / sector_length)
+            .clamp(0., 1.)
+    } else if split.is_some() {
+        1.
+    } else {
+        0.
+    };
+    let filled = (progress * 3.).floor() as usize;
+    for mini in 0..3 {
+        let color = if active {
+            if mini < filled {
+                BLUE
+            } else if mini == filled && progress > 0. {
+                BLUE.gamma_multiply(0.55)
+            } else {
+                Color::from_gray(65)
+            }
+        } else if split.is_some() {
+            completed_color
+        } else {
+            Color::from_gray(65)
+        };
+        hud.fill_round(
+            x + mini as f32 * (cell_w + gap),
+            y,
+            cell_w,
+            h,
+            2. * scale,
+            color,
         );
     }
 }
