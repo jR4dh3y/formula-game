@@ -35,7 +35,10 @@ for n, call in enumerate(calls, 1):
     send({"jsonrpc": "2.0", "id": n, "method": "tools/call",
           "params": {"name": call["tool"], "arguments": call.get("args", {})}})
     message = reply(n)
-    result = message.get("result", message.get("error"))
+    if message.get("error") is not None:
+        print(f"[{n}] {call['tool']}: error: {message['error']}")
+        break
+    result = message.get("result")
     for item in (result or {}).get("content", []):
         if item.get("type") == "image":
             shot += 1

@@ -651,6 +651,7 @@ impl AiDriver {
             _ => {}
         }
         let Some(corner) = corner else {
+            self.moved_for_corner = None;
             self.intent = Intent::Line;
             return;
         };

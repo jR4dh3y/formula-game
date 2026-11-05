@@ -20,7 +20,6 @@ for ob in bpy.data.objects:
         T = [Vector((uv[l].uv.x*S, (1-uv[l].uv.y)*S)) for l in t.loops]
         tris.append((P, T, ob.name))
 print("tris", len(tris))
-lo = Vector((min(p[0][0][i] for p in [ (x,) for x in [t[0] for t in tris]]) for i in range(3)))
 def bary(p, a, b, c):
     v0, v1, v2 = b-a, c-a, p-a
     d = v0.x*v1.y - v1.x*v0.y

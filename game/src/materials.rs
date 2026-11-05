@@ -211,6 +211,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn retain_used_releases_unreferenced_painted_instances() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let source = materials.add(StandardMaterial::default());
+        let texture = Handle::<Image>::default();
+        let mut instances = SurfaceMaterials::default();
+        let kept = instances.instance("kept", &source, texture.clone(), &mut materials);
+        let removed = instances.instance("removed", &source, texture, &mut materials);
+        let used = HashSet::from([kept.id()]);
+
+        instances.retain_used(&used);
+
+        assert!(instances.0.values().any(|handle| handle.id() == kept.id()));
+        assert!(!instances
+            .0
+            .values()
+            .any(|handle| handle.id() == removed.id()));
+    }
+
+    #[test]
     fn driver_livery_falls_back_by_part_and_lod_without_leaking_to_other_teams() {
         let root = std::env::temp_dir().join(format!("f1-livery-paths-{}", std::process::id()));
         let teams =

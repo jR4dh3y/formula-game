@@ -59,6 +59,9 @@ def build(part, base, fills, stickers, shapes):
     if '{"activeLayer"' not in out:
         print(part, "FAILED:", out[-800:]); return
     errors = [l for l in out.splitlines() if '"ok":false' in l or "stopping" in l or "app:" in l]
+    if errors:
+        print(part, "FAILED:", errors[:3])
+        return
     layers = json.loads(out[out.rindex('{"activeLayer"'):].split("\n")[0])["layers"]
     hide = [l["id"] for l in layers if l["name"] == "Background"]
     fin = [{"tool": "command_run", "args": {"id": "layer.setProps", "params": {"layers": hide, "visible": False}}},

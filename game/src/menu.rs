@@ -76,11 +76,21 @@ impl Tab {
                 } else {
                     vec![Self::Join, Self::Host]
                 };
-                tabs.extend(
-                    Self::ALL
-                        .into_iter()
-                        .filter(|tab| !matches!(tab.group(), "GAMEPLAY" | "TOOLS")),
-                );
+                tabs.extend(Self::ALL.into_iter().filter(|tab| {
+                    !matches!(
+                        tab,
+                        Self::Track
+                            | Self::Setup
+                            | Self::Camera
+                            | Self::Controls
+                            | Self::Aids
+                            | Self::Graphics
+                            | Self::Effects
+                            | Self::Audio
+                            | Self::Hud
+                            | Self::Benchmark
+                    )
+                }));
                 tabs
             }
         }

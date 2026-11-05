@@ -294,6 +294,21 @@ fn drive(
                     proof.ticks = 0;
                     return;
                 }
+                let expected_livery = frontend
+                    .teams
+                    .selection(&frontend.draft.team, &frontend.draft.driver)
+                    .ok()
+                    .and_then(|(team, driver)| {
+                        crate::materials::livery_texture(
+                            &frontend.draft.assets,
+                            &crate::teams::Teams::identity(team, driver),
+                            Some("lod1"),
+                            "source_paint_main_body_stickers_lod",
+                        )
+                    });
+                if let Some(expected) = expected_livery {
+                    assert_eq!(car_preview.applied_livery_path(), Some(expected.as_str()));
+                }
                 snapshot(&mut commands, &mut proof, "settings-Driver-Ferrari");
                 proof.car_step = 3;
             }

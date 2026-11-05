@@ -44,7 +44,9 @@ for d in json.load(open(spec)):
     acc = {}
     for i in idx:
         T = UV[i]; P = P3[i]
-        x0, y0 = np.floor(T.min(0)).astype(int); x1, y1 = np.ceil(T.max(0)).astype(int)
+        x0, y0 = np.maximum(np.floor(T.min(0)).astype(int), 0)
+        x1, y1 = np.minimum(np.ceil(T.max(0)).astype(int), S - 1)
+        if x0 > x1 or y0 > y1: continue
         xs, ys = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
         v0 = T[1] - T[0]; v1 = T[2] - T[0]; den = v0[0] * v1[1] - v1[0] * v0[1]
         if abs(den) < 1e-9: continue

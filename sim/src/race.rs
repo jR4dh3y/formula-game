@@ -648,7 +648,9 @@ impl Race {
                 }
             }
         }
-        self.order = order;
+        if self.phase != Phase::Finished {
+            self.order = order;
+        }
         if self.phase == Phase::Finishing {
             let everyone = self
                 .entrants
@@ -983,10 +985,16 @@ mod tests {
         // The human never drives; the AI wins and the race still ends.
         let mut race = Race::new(Arc::new(oval_track()), field(1, 1), 1, 5);
         let mut ticks = 0;
+        let mut saw_finishing = false;
         while race.phase != Phase::Finished && ticks < (400.0 * PHYSICS_RATE) as usize {
             race.step(&[CarInput::default()]);
+            saw_finishing |= race.phase == Phase::Finishing;
             ticks += 1;
         }
+        assert!(
+            saw_finishing,
+            "the winner must enter the finishing grace window"
+        );
         assert_eq!(race.phase, Phase::Finished);
         assert!(race.entrants[0].timing.finish_time.is_none());
         assert_eq!(race.order(), &[1, 0]);
@@ -1729,11 +1737,13 @@ mod spa_lines {
         for seed in [2, 4, 6] {
             let mut race = duel(&track, seed);
             let mut sides: Vec<(f64, f64)> = Vec::new();
+            let mut defensive_intents = 0;
             let mut ticks = 0;
             while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
                 race.step(&[]);
                 if let Driver::Ai(ai) = &race.entrants[0].driver {
                     if let Intent::Defend { side, apex_s } = ai.intent {
+                        defensive_intents += 1;
                         if let Some(seen) = sides.iter().find(|(apex, _)| *apex == apex_s) {
                             assert_eq!(
                                 seen.1, side,
@@ -1746,6 +1756,10 @@ mod spa_lines {
                 }
                 ticks += 1;
             }
+            assert!(
+                defensive_intents > 0,
+                "seed {seed}: no defensive intent observed"
+            );
         }
     }
 
@@ -1761,8 +1775,14 @@ mod spa_lines {
         let passes = |track: &Arc<Track>| {
             let mut won = 0;
             let mut contacts = 0;
+            let mut overtakes = 0;
             for seed in [1, 3, 5, 7, 9, 11] {
                 let mut race = duel(track, seed);
+                let fast = race
+                    .entrants
+                    .iter()
+                    .position(|entrant| entrant.name == "Fast")
+                    .unwrap();
                 let mut ticks = 0;
                 while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
                     race.step(&[]);
@@ -1771,6 +1791,11 @@ mod spa_lines {
                         .iter()
                         .filter(|event| matches!(event, RaceEvent::Contact { b: Some(_), .. }))
                         .count();
+                    overtakes += race
+                        .events
+                        .iter()
+                        .filter(|event| matches!(event, RaceEvent::Overtake { entrant, .. } if *entrant == fast))
+                        .count();
                     race.events.clear();
                     ticks += 1;
                 }
@@ -1778,14 +1803,15 @@ mod spa_lines {
                     won += 1;
                 }
             }
-            (won, contacts)
+            (won, contacts, overtakes)
         };
-        let (multi, multi_contacts) = passes(&track);
-        let (one, _) = passes(&single);
+        let (multi, multi_contacts, multi_overtakes) = passes(&track);
+        let (one, _, _) = passes(&single);
         eprintln!(
             "faster car won {multi}/6 with lanes, {one}/6 with one line; {multi_contacts} contacts"
         );
         assert!(multi >= one, "lanes made passing harder: {multi} vs {one}");
+        assert!(multi_overtakes >= 1, "no overtakes with passing lanes");
         assert!(multi_contacts <= 4, "{multi_contacts} contacts with lanes");
     }
 

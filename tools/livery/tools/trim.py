@@ -13,4 +13,4 @@ for r in rep:
         Image.fromarray(arr[y0:y1,x0:x1]).save(r['path'])
         r['x']+=int(x0); r['y']+=int(y0); r['w']=int(x1-x0); r['h']=int(y1-y0)
     print(r['name'], r['x'], r['y'], r['w'], r['h'])
-json.dump(rep,open('decal_report.json','w'))
+json.dump([r for r in rep if "error" not in r],open('decal_report.json','w'))

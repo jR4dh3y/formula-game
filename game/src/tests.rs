@@ -1784,6 +1784,9 @@ fn rendered_menu_restarts() {
         session: Res<Session>,
         mut exit: MessageWriter<AppExit>,
     ) {
+        if let Some(error) = frontend.error.as_deref() {
+            panic!("menu restart failed: {error}");
+        }
         if !session.ready || frontend.pending {
             restarts.frames = 0;
             return;

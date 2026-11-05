@@ -25,6 +25,7 @@ pub(crate) struct CarPreview {
     root: Option<Entity>,
     asset: Option<Handle<WorldAsset>>,
     textures: Vec<Handle<Image>>,
+    livery_path: Option<String>,
     scene_ready: bool,
     pub(super) ready: bool,
     failed: bool,
@@ -41,6 +42,11 @@ impl CarPreview {
     #[cfg(test)]
     pub(super) fn selected_car(&self) -> Option<&str> {
         self.selected.as_ref().map(|(car, ..)| car.as_str())
+    }
+
+    #[cfg(test)]
+    pub(super) fn applied_livery_path(&self) -> Option<&str> {
+        self.livery_path.as_deref()
     }
 
     pub(super) fn show(&self, ui: &mut egui::Ui) {
@@ -89,6 +95,7 @@ pub(crate) fn setup(
         root: None,
         asset: None,
         textures: Vec::new(),
+        livery_path: None,
         scene_ready: false,
         ready: false,
         failed: false,
@@ -205,6 +212,7 @@ pub(crate) fn update(
         preview.ready = false;
         preview.scene_ready = false;
         preview.textures.clear();
+        preview.livery_path = None;
         preview.failed = false;
         preview.retry_at = time.elapsed_secs_f64() + 5.;
     }
@@ -270,11 +278,12 @@ fn ready(
                                 &crate::teams::Teams::identity(team, driver),
                                 // 2048² is plenty for the preview and keeps a
                                 // paused race plus preview inside 4 GB GPUs.
-                                None,
+                                Some("lod1"),
                                 &name.0,
                             )
                         })
                     {
+                        preview.livery_path = Some(path.clone());
                         let texture = server.load(path);
                         material.base_color = Color::WHITE;
                         material.base_color_texture = Some(texture.clone());

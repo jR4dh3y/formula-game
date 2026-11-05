@@ -248,7 +248,7 @@ impl Online {
         frontend.draft.ai_power = self.settings.ai_power;
     }
     /// The room tab: connecting, lobby, loading, live standings or results.
-    pub fn room_tab(&mut self, ui: &mut egui::Ui, frontend: &Frontend, session: &Session) {
+    pub fn room_tab(&mut self, ui: &mut egui::Ui, frontend: &mut Frontend, session: &Session) {
         let mut intent = std::mem::take(&mut self.intent);
         let page = std::mem::replace(&mut self.page, Page::Connect);
         match &page {
@@ -426,12 +426,15 @@ impl Online {
         &mut self,
         ui: &mut egui::Ui,
         lobby: &Lobby,
-        frontend: &Frontend,
+        frontend: &mut Frontend,
         intent: &mut Intent,
     ) {
         let owner = self.client.as_ref().is_some_and(|c| c.owner());
         let wide = ui.available_width() >= 900.;
-        let draw_rules = |ui: &mut egui::Ui, this: &mut Self, intent: &mut Intent| {
+        let draw_rules = |ui: &mut egui::Ui,
+                          this: &mut Self,
+                          frontend: &mut Frontend,
+                          intent: &mut Intent| {
             card(ui, "Race rules", |ui| {
                 if owner {
                     let before = lobby.settings.clone();
@@ -444,6 +447,7 @@ impl Online {
                             track: lobby.settings.track.clone(),
                             ..RaceSettings::default()
                         };
+                        frontend.draft.ai_power = settings.ai_power;
                         intent.send = Some(ClientMessage::Settings(settings.clone()));
                     }
                     // The controls edit a draft; the room changes only on Apply.
@@ -459,6 +463,7 @@ impl Online {
                                 .add(egui::Button::new(RichText::new("Apply").strong()).fill(RED))
                                 .clicked()
                             {
+                                frontend.draft.ai_power = settings.ai_power;
                                 intent.send = Some(ClientMessage::Settings(settings.clone()));
                             }
                             if ui.button("Discard").clicked() {
@@ -502,26 +507,27 @@ impl Online {
             });
         };
         let address = self.host.is_some().then_some(self.port);
-        let draw_grid = |ui: &mut egui::Ui, this: &mut Self, intent: &mut Intent| {
-            if let Some(port) = address {
-                notice(
-                    ui,
-                    &format!("Hosting on UDP port {port}. Share your LAN or VPN IP address."),
-                    DIM,
-                );
-                ui.add_space(8.);
-            }
-            this.roster(ui, lobby, frontend, owner, intent);
-        };
+        let draw_grid =
+            |ui: &mut egui::Ui, this: &mut Self, frontend: &Frontend, intent: &mut Intent| {
+                if let Some(port) = address {
+                    notice(
+                        ui,
+                        &format!("Hosting on UDP port {port}. Share your LAN or VPN IP address."),
+                        DIM,
+                    );
+                    ui.add_space(8.);
+                }
+                this.roster(ui, lobby, frontend, owner, intent);
+            };
         if wide {
             ui.columns(2, |columns| {
-                draw_grid(&mut columns[0], self, intent);
-                draw_rules(&mut columns[1], self, intent);
+                draw_grid(&mut columns[0], self, &*frontend, intent);
+                draw_rules(&mut columns[1], self, frontend, intent);
             });
         } else {
-            draw_grid(ui, self, intent);
+            draw_grid(ui, self, &*frontend, intent);
             ui.separator();
-            draw_rules(ui, self, intent);
+            draw_rules(ui, self, frontend, intent);
         }
     }
 
@@ -1049,6 +1055,7 @@ pub fn poll(
     mut log_stage: Local<Option<(Stage, usize)>>,
 ) {
     if let Some(host) = online.request.take() {
+        online.settings.ai_power = frontend.draft.ai_power;
         if let Err(error) = online.begin(host, &options, frontend.aids) {
             online.error = Some(error);
         }
@@ -1367,7 +1374,7 @@ mod tests {
         let mut output = context.run_ui(egui::RawInput::default(), |ui| {
             online.join_tab(ui, &mut frontend);
             online.host_tab(ui, &mut frontend);
-            online.room_tab(ui, &frontend, &session);
+            online.room_tab(ui, &mut frontend, &session);
         });
         online.finish(&frontend, &mut session, &options);
         assert!(!output.shapes.is_empty());
