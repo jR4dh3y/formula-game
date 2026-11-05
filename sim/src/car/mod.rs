@@ -315,6 +315,11 @@ impl Car {
     }
 
     pub fn step(&mut self, input: &CarInput, track: &Track, dt: f64) {
+        self.step_with_power(input, track, dt, 1.);
+    }
+
+    /// Race-owned AI handicap. Human inputs always use full engine output.
+    pub(crate) fn step_with_power(&mut self, input: &CarInput, track: &Track, dt: f64, power: f64) {
         let spec = self.spec.clone();
         let forward = self.forward();
         let left = self.left();
@@ -349,6 +354,9 @@ impl Car {
         let drive =
             self.powertrain
                 .drive_force(&spec.engine, throttle, forward_speed, rear_radius, dt);
+
+        // Preserve engine braking; scale only delivered propulsion.
+        let drive = if drive > 0. { drive * power } else { drive };
 
         // Steering: smoothed toward a speed-limited target.
         let target = input.steer.clamp(-1.0, 1.0) * self.steer_limit(speed);

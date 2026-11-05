@@ -58,6 +58,7 @@ pub struct Rival {
 pub struct AiDriver {
     pub profile: DriverProfile,
     speed_profile: Vec<f64>,
+    passing_speeds: Option<[Vec<f64>; 2]>,
     corners: Vec<CornerPlan>,
     pub intent: Intent,
     rng: Rng,
@@ -68,6 +69,8 @@ pub struct AiDriver {
     stuck_timer: f64,
     /// Smoothed tactical offset from the racing line, metres.
     line_offset: f64,
+    /// One tactical move for this braking zone, even if a threat disappears.
+    moved_for_corner: Option<f64>,
     /// Tyre grip the current speed profile was planned for.
     planned_grip: f64,
     /// Set while the race holds the car on the grid.
@@ -85,6 +88,7 @@ struct Plan {
     profile: DriverProfile,
     grip: f64,
     speed_profile: Vec<f64>,
+    passing_speeds: Option<[Vec<f64>; 2]>,
     corners: Vec<CornerPlan>,
 }
 
@@ -118,6 +122,7 @@ impl AiDriver {
     pub fn new(profile: DriverProfile, car: &Car, track: &Track, seed: u64) -> Self {
         let planned_grip = tyre_grip(car);
         let speed_profile = speed_profile(profile, car, &track.racing_line, planned_grip);
+        let passing_speeds = passing_speeds(profile, car, track, planned_grip);
         let corners = find_corners(track, &speed_profile);
         let mut rng = Rng::new(seed);
         // Stagger replanning so a full field never plans on the same tick.
@@ -125,6 +130,7 @@ impl AiDriver {
         Self {
             profile,
             speed_profile,
+            passing_speeds,
             corners,
             intent: Intent::Line,
             rng,
@@ -133,6 +139,7 @@ impl AiDriver {
             plan_timer,
             stuck_timer: 0.0,
             line_offset: 0.0,
+            moved_for_corner: None,
             planned_grip,
             on_grid: false,
             launch: None,
@@ -149,6 +156,7 @@ impl AiDriver {
             profile: self.profile,
             grip: self.planned_grip,
             speed_profile: std::mem::take(&mut self.speed_profile),
+            passing_speeds: self.passing_speeds.take(),
             corners: std::mem::take(&mut self.corners),
         };
         let next = match self.previous_plan.take() {
@@ -156,7 +164,9 @@ impl AiDriver {
             _ => {
                 let speed_profile = speed_profile(profile, car, &track.racing_line, grip);
                 let corners = find_corners(track, &speed_profile);
+                let passing_speeds = passing_speeds(profile, car, track, grip);
                 Plan {
+                    passing_speeds,
                     profile,
                     grip,
                     speed_profile,
@@ -167,6 +177,7 @@ impl AiDriver {
         self.profile = next.profile;
         self.planned_grip = next.grip;
         self.speed_profile = next.speed_profile;
+        self.passing_speeds = next.passing_speeds;
         self.corners = next.corners;
         self.previous_plan = Some(Box::new(current));
     }
@@ -204,6 +215,8 @@ impl AiDriver {
         self.stuck_timer = 0.0;
         self.intent = Intent::Line;
         self.launch = None;
+        self.moved_for_corner = None;
+        self.line_offset = 0.;
     }
 
     pub fn drive(&mut self, car: &Car, track: &Track, rivals: &[Rival], dt: f64) -> CarInput {
@@ -266,9 +279,13 @@ impl AiDriver {
 
         // Lateral target: racing line, or the tactical side, then leave room.
         let lookahead = (6.0 + speed * 0.42).clamp(9.0, 42.0);
-        let line_lateral = track.racing_line.offsets[track.station_at(s + lookahead)];
+        let line_lateral = track.racing_line.lateral_at(s + lookahead);
         let ahead_frame = track.frame_at(s + lookahead);
         let limit = (ahead_frame.half_width - 1.4).max(0.0);
+        // Attackers stay in the tow on the optimal line and only take the
+        // passing line once they pull out; defenders commit to the inside line.
+        let lane = self.tactical_line(track);
+        let mut on_lane = false;
         let mut lateral = match self.intent {
             Intent::Line => self
                 .launch
@@ -295,7 +312,21 @@ impl AiDriver {
                         if pull_out {
                             // Alongside, not out on the kerb: one car width
                             // plus margin beside the car being passed.
-                            target.lateral + side * (car.spec.width + 1.3)
+                            let beside = target.lateral + side * (car.spec.width + 1.3);
+                            match lane {
+                                // Follow the passing line through the corner,
+                                // but never closer than alongside the target.
+                                Some(lane) => {
+                                    on_lane = true;
+                                    let path = lane.lateral_at(s + lookahead);
+                                    if side > 0.0 {
+                                        path.max(beside)
+                                    } else {
+                                        path.min(beside)
+                                    }
+                                }
+                                None => beside,
+                            }
                         } else {
                             target.lateral
                         }
@@ -303,7 +334,13 @@ impl AiDriver {
                     None => line_lateral,
                 }
             }
-            Intent::Defend { side, .. } => side * (limit - 1.2),
+            Intent::Defend { side, .. } => match lane {
+                Some(lane) => {
+                    on_lane = true;
+                    lane.lateral_at(s + lookahead)
+                }
+                None => side * (limit - 1.2),
+            },
         };
         let mut lane_min = -limit;
         let mut lane_max = limit;
@@ -356,7 +393,8 @@ impl AiDriver {
         // Smooth only the tactical move away from the line: the line itself
         // swings across the whole road through esses and must not lag.
         let offset = lateral.clamp(-limit, limit) - line_lateral;
-        self.line_offset += (offset - self.line_offset) * (dt * 2.5).min(1.0);
+        self.line_offset +=
+            ((offset - self.line_offset) * (dt * 2.5).min(1.0)).clamp(-2.4 * dt, 2.4 * dt);
         // Room owed to an overlapping car is a hard boundary. Smoothing the
         // safety offset otherwise cuts across that car as the line changes.
         let lateral_target = if lane_min <= lane_max {
@@ -412,7 +450,7 @@ impl AiDriver {
         let ahead = s + anticipation - mistake - late_braking;
         let mut target_speed = match &self.launch {
             Some(launch) => launch.speed[track.station_at(ahead)],
-            None => self.target_speed(track, ahead),
+            None => self.tactical_speed(track, ahead, on_lane),
         };
         let planned = target_speed;
         // Dirty air costs front downforce. The car is front-limited, so plan
@@ -424,10 +462,16 @@ impl AiDriver {
         // it at what the car can corner with the downforce lost to the car
         // ahead. Ordinary corners already plan for dirty air above.
         if car.aero.dirty_air() > 0.01 {
-            let path = self
-                .launch
-                .as_ref()
-                .map_or(&track.racing_line, |launch| &launch.line);
+            let path = self.launch.as_ref().map_or_else(
+                || {
+                    if on_lane {
+                        self.tactical_line(track).unwrap_or(&track.racing_line)
+                    } else {
+                        &track.racing_line
+                    }
+                },
+                |launch| &launch.line,
+            );
             let bend = (0..=6)
                 .map(|step| path.curvature[track.station_at(ahead + step as f64 * 8.0)].abs())
                 .fold(0.0, f64::max);
@@ -527,6 +571,54 @@ impl AiDriver {
         }
     }
 
+    fn tactical_line<'a>(&self, track: &'a Track) -> Option<&'a RacingLine> {
+        let side = match self.intent {
+            Intent::Line => return None,
+            Intent::Attack { side, .. } | Intent::Defend { side, .. } => side,
+        };
+        track
+            .passing_lines
+            .as_ref()
+            .map(|lines| &lines[usize::from(side < 0.)])
+    }
+
+    fn tactical_speed(&self, track: &Track, s: f64, on_lane: bool) -> f64 {
+        let optimal = self.target_speed(track, s);
+        if !on_lane {
+            return optimal;
+        }
+        let side = match self.intent {
+            Intent::Line => return optimal,
+            Intent::Attack { side, .. } | Intent::Defend { side, .. } => side,
+        };
+        // During a lane transition respect both paths' braking envelopes.
+        self.passing_speeds.as_ref().map_or(optimal, |speeds| {
+            optimal.min(speeds[usize::from(side < 0.)][track.station_at(s)])
+        })
+    }
+
+    fn lane_at(&self, track: &Track, side: f64, s: f64) -> f64 {
+        track.passing_lines.as_ref().map_or(
+            side * (track.frame_at(s).half_width - 2.6).max(0.),
+            |lines| lines[usize::from(side < 0.)].lateral_at(s),
+        )
+    }
+
+    /// Check the swept corridor and the next second of longitudinal closure.
+    fn lane_is_clear(&self, car: &Car, track: &Track, rivals: &[Rival], side: f64) -> bool {
+        let lane = self.lane_at(track, side, car.track_position.s + car.speed() * 0.5);
+        let from = car.track_position.lateral;
+        let min = from.min(lane) - car.spec.width - 0.7;
+        let max = from.max(lane) + car.spec.width + 0.7;
+        !rivals.iter().any(|rival| {
+            let predicted = rival.gap + (rival.speed - car.speed());
+            let crosses = rival.gap.signum() != predicted.signum();
+            (crosses || rival.gap.abs().min(predicted.abs()) < car.spec.length + 2.)
+                && rival.lateral > min
+                && rival.lateral < max
+        })
+    }
+
     /// Whether the car being attacked is close enough that the move is on.
     fn attack_overlap(&self, car: &Car, rivals: &[Rival]) -> bool {
         rivals
@@ -552,7 +644,7 @@ impl AiDriver {
         // Forget a plan once its corner is behind us.
         match self.intent {
             Intent::Attack { apex_s, .. } | Intent::Defend { apex_s, .. }
-                if track.delta(s, apex_s) < -15.0 =>
+                if track.delta(s, apex_s) < -40.0 =>
             {
                 self.intent = Intent::Line;
             }
@@ -562,11 +654,17 @@ impl AiDriver {
             self.intent = Intent::Line;
             return;
         };
+        if self
+            .moved_for_corner
+            .is_some_and(|apex| apex != corner.apex_s)
+            && self.intent == Intent::Line
+        {
+            self.moved_for_corner = None;
+        }
         let to_brake = track.delta(s, corner.brake_s).rem_euclid(track.length);
         // A packed braking zone has no free lane for an attacking or defensive
         // swerve. Hold position until the pack spreads, then resume racing.
         if in_pack(car, rivals) {
-            self.intent = Intent::Line;
             self.mistake = 0.0;
             return;
         }
@@ -591,6 +689,11 @@ impl AiDriver {
             .filter(|rival| rival.gap < 0.0 && rival.gap > -20.0)
             .max_by(|a, b| a.gap.total_cmp(&b.gap));
 
+        // On tracks with passing lanes a defender holds its single move to
+        // the apex; an attacker may still abort a hopeless move below.
+        if track.passing_lines.is_some() && matches!(self.intent, Intent::Defend { .. }) {
+            return;
+        }
         match self.intent {
             Intent::Attack { apex_s, .. } => {
                 // Back out of a hopeless move instead of dive-bombing.
@@ -626,6 +729,9 @@ impl AiDriver {
                 }
             }
             Intent::Line => {
+                if self.moved_for_corner == Some(corner.apex_s) {
+                    return;
+                }
                 let corner_close = to_brake < 320.0;
                 if let Some(target) = ahead {
                     let closing = car.speed() - target.speed;
@@ -634,30 +740,48 @@ impl AiDriver {
                     let in_range = target.gap < 12.0 + keen * 20.0;
                     // Before a braking zone, line up a move when catching or
                     // towed; on a straight, pull out of a strong tow to pass.
-                    let straight_pass = towed && closing > 0.5 && target.gap < 15.0;
+                    let straight_pass =
+                        (towed || car.drs.flap > 0.5 || track.passing_lines.is_some())
+                            && closing > 0.5
+                            && target.gap < 22.0;
                     if in_range && (corner_close && (towed || closing > 1.5) || straight_pass) {
                         // Go for the inside when it is open. If the leader has
                         // covered it, only a car already alongside goes around
                         // the outside; otherwise stay in the tow and wait.
                         let covering = (target.lateral - corner.inside * 3.0).abs() < 2.5;
                         let alongside = target.gap < car.spec.length;
-                        if !covering || alongside {
-                            let side = if covering {
-                                -corner.inside
+                        let sides = if covering {
+                            [-corner.inside, corner.inside]
+                        } else {
+                            [corner.inside, -corner.inside]
+                        };
+                        let side = sides.into_iter().find(|side| {
+                            if track.passing_lines.is_some() {
+                                self.lane_is_clear(car, track, rivals, *side)
+                                    && (self.lane_at(track, *side, s) - target.lateral).abs()
+                                        > car.spec.width + 0.7
                             } else {
-                                corner.inside
-                            };
+                                (!covering || alongside) && *side == sides[0]
+                            }
+                        });
+                        if let Some(side) = side {
                             self.intent = Intent::Attack {
                                 side,
                                 apex_s: corner.apex_s,
                             };
+                            self.moved_for_corner = Some(corner.apex_s);
                             return;
                         }
                     }
                 }
                 if let Some(chaser) = behind {
                     let threat = chaser.speed > car.speed() - 1.0 && chaser.gap > -14.0;
-                    if corner_close && threat && self.profile.aggression > 0.25 {
+                    if corner_close
+                        && threat
+                        && self.profile.aggression > 0.25
+                        && self.lane_is_clear(car, track, rivals, corner.inside)
+                    {
+                        self.moved_for_corner = Some(corner.apex_s);
                         self.intent = Intent::Defend {
                             side: corner.inside,
                             apex_s: corner.apex_s,
@@ -722,6 +846,19 @@ fn speed_profile(profile: DriverProfile, car: &Car, line: &RacingLine, tyre_grip
         // small margin, whatever their pace.
         &envelope(spec.tyre_friction * FLAT_MARGIN * tyre_grip, 0.76),
     )
+}
+
+fn passing_speeds(
+    profile: DriverProfile,
+    car: &Car,
+    track: &Track,
+    grip: f64,
+) -> Option<[Vec<f64>; 2]> {
+    track.passing_lines.as_ref().map(|lines| {
+        lines
+            .each_ref()
+            .map(|line| speed_profile(profile, car, line, grip))
+    })
 }
 
 /// Share of the car's real grip a bend must fit within to be taken flat.
@@ -1046,6 +1183,8 @@ pub struct AiState {
     plan_timer: f64,
     stuck_timer: f64,
     line_offset: f64,
+    /// One tactical move for this braking zone, even if a threat disappears.
+    moved_for_corner: Option<f64>,
     #[serde(with = "crate::exact")]
     planned_grip: f64,
 }
@@ -1062,6 +1201,7 @@ impl AiDriver {
             plan_timer: self.plan_timer,
             stuck_timer: self.stuck_timer,
             line_offset: self.line_offset,
+            moved_for_corner: self.moved_for_corner,
             planned_grip: self.planned_grip,
         }
     }
@@ -1085,5 +1225,6 @@ impl AiDriver {
         self.plan_timer = state.plan_timer;
         self.stuck_timer = state.stuck_timer;
         self.line_offset = state.line_offset;
+        self.moved_for_corner = state.moved_for_corner;
     }
 }

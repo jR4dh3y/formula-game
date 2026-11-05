@@ -101,8 +101,11 @@ fn drive(
     let began = *proof.began.get_or_insert_with(std::time::Instant::now);
     assert!(
         began.elapsed().as_secs() < 150,
-        "settings proof stalled at {}",
-        proof.step
+        "settings proof stalled at {} (car step {}, preview ready {}, team {})",
+        proof.step,
+        proof.car_step,
+        car_preview.ready,
+        frontend.draft.team
     );
     if !session.ready {
         return;
@@ -268,7 +271,7 @@ fn drive(
             if tab == Tab::Car && proof.car_step == 2 {
                 assert_eq!(car_preview.selected_car(), Some("gen22"));
             }
-            if tab == Tab::Driver && rect.width() > 1100. && proof.car_step < 3 {
+            if tab == Tab::Car && proof.car_step == 2 && rect.width() > 1100. {
                 assert_eq!(frontend.draft.car, "gen22");
                 if frontend.draft.team != "ferrari" {
                     click(
@@ -286,6 +289,12 @@ fn drive(
                     .find(|team| team.id == "ferrari")
                     .unwrap();
                 assert_eq!(frontend.draft.driver, team.drivers[0].id);
+                // The preview reloads with the team's livery before the capture.
+                if !car_preview.ready {
+                    proof.ticks = 0;
+                    return;
+                }
+                snapshot(&mut commands, &mut proof, "settings-Driver-Ferrari");
                 proof.car_step = 3;
             }
             if tab == Tab::Audio

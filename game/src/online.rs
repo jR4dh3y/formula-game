@@ -63,6 +63,7 @@ impl Online {
                 car: options.car.clone(),
                 laps: options.laps,
                 ai_cars: options.ai_cars,
+                ai_power: options.ai_power,
                 setup: options.setup,
                 assists: options.player_assists(),
                 corner_braking: options.corner_braking,
@@ -210,7 +211,7 @@ impl Online {
             }
         }
     }
-    pub fn join_tab(&mut self, ui: &mut egui::Ui, frontend: &Frontend) {
+    pub fn join_tab(&mut self, ui: &mut egui::Ui, frontend: &mut Frontend) {
         self.driver_section(ui, frontend);
         ui.separator();
         section(ui, "Room");
@@ -223,6 +224,7 @@ impl Online {
         });
     }
     pub fn host_tab(&mut self, ui: &mut egui::Ui, frontend: &mut Frontend) {
+        self.settings.ai_power = frontend.draft.ai_power;
         self.driver_section(ui, frontend);
         ui.separator();
         section(ui, "Room");
@@ -243,6 +245,7 @@ impl Online {
         ui.separator();
         section(ui, "Race rules");
         rules(ui, &mut self.settings, MAX_PLAYERS - 1);
+        frontend.draft.ai_power = self.settings.ai_power;
     }
     /// The room tab: connecting, lobby, loading, live standings or results.
     pub fn room_tab(&mut self, ui: &mut egui::Ui, frontend: &Frontend, session: &Session) {
@@ -285,6 +288,10 @@ impl Online {
     pub fn finish(&mut self, frontend: &Frontend, session: &mut Session, options: &Options) {
         let intent = std::mem::take(&mut self.intent);
         if let Some(host) = intent.start {
+            self.identity = Some(racecraft_net::DriverIdentity {
+                team: frontend.draft.team.clone(),
+                driver: frontend.draft.driver.clone(),
+            });
             if let Err(error) = self.begin(host, options, frontend.aids) {
                 self.error = Some(error);
             }
@@ -303,7 +310,7 @@ impl Online {
             self.leave(session);
         }
     }
-    fn driver_section(&mut self, ui: &mut egui::Ui, frontend: &Frontend) {
+    fn driver_section(&mut self, ui: &mut egui::Ui, frontend: &mut Frontend) {
         section(ui, "Your driver");
         field(ui, "Driver name", |ui| {
             ui.add(
@@ -313,30 +320,17 @@ impl Online {
                     .desired_width(ui.available_width()),
             );
         });
-        if !frontend.teams.teams.is_empty() {
-            field(ui, "GEN22 identity", |ui| {
-                egui::ComboBox::from_id_salt("online-identity")
-                    .width(ui.available_width())
-                    .selected_text(self.identity.as_ref().map_or_else(
-                        || "Assign a free driver".to_owned(),
-                        |i| identity_label(frontend, i),
-                    ))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.identity, None, "Assign a free driver");
-                        for team in &frontend.teams.teams {
-                            for driver in &team.drivers {
-                                ui.selectable_value(
-                                    &mut self.identity,
-                                    Some(racecraft_net::DriverIdentity {
-                                        team: team.id.clone(),
-                                        driver: driver.id.clone(),
-                                    }),
-                                    format!("{} · {}", team.name, driver.name),
-                                );
-                            }
-                        }
-                    });
-            });
+        if let Ok((team, driver)) = frontend
+            .teams
+            .selection(&frontend.draft.team, &frontend.draft.driver)
+        {
+            ui.label(format!(
+                "{} · #{} {}",
+                team.name, driver.number, driver.name
+            ));
+        }
+        if ui.button("Choose team & driver").clicked() {
+            frontend.tab = Tab::Car;
         }
     }
 
@@ -481,6 +475,7 @@ impl Online {
                         .show(ui, |ui| {
                             summary(ui, "Laps", s.laps.to_string());
                             summary(ui, "AI drivers", s.ai_cars.to_string());
+                            summary(ui, "AI engine power", format!("{:.0}%", s.ai_power * 100.));
                             summary(
                                 ui,
                                 "Driving aids",
@@ -807,6 +802,7 @@ fn rules(ui: &mut egui::Ui, settings: &mut RaceSettings, max_ai: usize) {
     field(ui, "AI drivers", |ui| {
         ui.add(egui::Slider::new(&mut settings.ai_cars, 0..=max_ai));
     });
+    crate::menu::ai_power_slider(ui, &mut settings.ai_power);
     field(ui, "Lock aids", |ui| {
         ui.checkbox(&mut settings.lock_aids, "Everyone uses the host's aids");
     });
@@ -1369,7 +1365,7 @@ mod tests {
         let context = egui::Context::default();
         online.prepare();
         let mut output = context.run_ui(egui::RawInput::default(), |ui| {
-            online.join_tab(ui, &frontend);
+            online.join_tab(ui, &mut frontend);
             online.host_tab(ui, &mut frontend);
             online.room_tab(ui, &frontend, &session);
         });

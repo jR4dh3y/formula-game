@@ -268,7 +268,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 graphics::apply,
                 assets::update_opponent_lods.after(graphics::apply),
                 materials::prepare,
-                assets::check_loading,
+                assets::check_loading.after(materials::prepare),
                 benchmark::advance,
                 assets::sync_cars,
                 assets::animate_controls,

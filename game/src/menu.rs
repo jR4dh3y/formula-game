@@ -39,7 +39,7 @@ pub(crate) enum Tab {
     Room,
     Track,
     Car,
-    Driver,
+    Setup,
     Camera,
     Controls,
     Aids,
@@ -54,7 +54,7 @@ impl Tab {
     const ALL: [Self; 11] = [
         Self::Track,
         Self::Car,
-        Self::Driver,
+        Self::Setup,
         Self::Camera,
         Self::Controls,
         Self::Aids,
@@ -97,7 +97,7 @@ impl Tab {
     fn group(self) -> &'static str {
         match self {
             Self::Join | Self::Host | Self::Room => "MULTIPLAYER",
-            Self::Track | Self::Car | Self::Driver => "GAMEPLAY",
+            Self::Track | Self::Car | Self::Setup => "GAMEPLAY",
             Self::Camera | Self::Controls | Self::Aids => "DRIVING",
             Self::Graphics | Self::Effects | Self::Hud => "VISUALS",
             Self::Audio => "AUDIO",
@@ -112,7 +112,7 @@ impl Tab {
             Self::Room => "Room",
             Self::Track => "Track",
             Self::Car => "Car",
-            Self::Driver => "Driver",
+            Self::Setup => "Setup",
             Self::Camera => "Camera",
             Self::Controls => "Controls",
             Self::Aids => "Driving assistance",
@@ -128,8 +128,8 @@ impl Tab {
         match self {
             Self::Join | Self::Host | Self::Room => "",
             Self::Track => "Choose a circuit, race length and grid.",
-            Self::Car => "Choose your car, tyres and wing levels.",
-            Self::Driver => "Choose your team and driver.",
+            Self::Car => "Choose your car, team and driver.",
+            Self::Setup => "Choose your tyres and wing levels.",
             Self::Camera => "Choose your driving view and adjust its framing.",
             Self::Controls => "See the keyboard and gamepad bindings.",
             Self::Aids => "Choose an assist preset or tune braking, steering and car control.",
@@ -275,6 +275,7 @@ impl Frontend {
     pub fn new(options: &Options) -> Self {
         let (store, prefs) = crate::preferences::Store::load(options);
         let mut draft = options.clone();
+        draft.ai_power = prefs.ai_power;
         draft.camera = prefs.camera;
         draft.weather = prefs.weather;
         let teams = crate::teams::Teams::load(&options.assets).unwrap_or_default();
@@ -388,6 +389,7 @@ pub fn apply(
         aids: frontend.aids,
         corner_braking: frontend.corner_braking,
         racing_line: frontend.show_racing_line,
+        ai_power: frontend.draft.ai_power,
         camera: frontend.draft.camera,
         views: frontend.views.clone(),
         graphics: frontend.graphics,
@@ -1135,14 +1137,19 @@ fn render_settings_page(
                 Part::Settings => selection(ui, &frontend.catalog, &mut frontend.draft),
                 Part::Preview => track_preview(ui, &frontend.catalog, &frontend.draft),
             }),
-            Tab::Car => page(ui, |ui, part| match part {
-                Part::Settings => car_choice(ui, frontend),
-                Part::Preview => car_preview.show(ui),
-            }),
-            Tab::Driver => page(ui, |ui, part| match part {
-                Part::Settings => driver_choice(ui, frontend),
-                Part::Preview => driver_card(ui, frontend),
-            }),
+            Tab::Car => {
+                let editable = !online.as_ref().is_some_and(|o| o.in_room());
+                ui.add_enabled_ui(editable, |ui| {
+                    car_driver_page(ui, frontend, car_preview);
+                    ui.add_space(16.);
+                    ui.separator();
+                    car_model_choice(ui, frontend);
+                });
+                if !editable {
+                    ui.label("Your room has assigned this car and driver. Leave the room to change them.");
+                }
+            }
+            Tab::Setup => setup_choice(ui, frontend),
             Tab::Aids => {
                 let presets = aids_panel(ui, frontend);
                 #[cfg(test)]
@@ -1260,6 +1267,7 @@ fn selection_rest(ui: &mut egui::Ui, draft: &mut Options) {
             );
         });
     }
+    ai_power_slider(ui, &mut draft.ai_power);
     draft.grid_slot = draft.grid_slot.clamp(1, draft.opponents + 1);
     setting_row(ui, "Grid position", |ui| {
         ui.add_sized(
@@ -1269,8 +1277,26 @@ fn selection_rest(ui: &mut egui::Ui, draft: &mut Options) {
     });
 }
 
-/// Car model, tyres and wings.
-fn car_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
+/// Shared by solo setup and the multiplayer host rules.
+pub(crate) fn ai_power_slider(ui: &mut egui::Ui, power: &mut f64) {
+    setting_row(ui, "AI engine power", |ui| {
+        ui.add(
+            egui::Slider::new(power, 0.5..=1.)
+                .step_by(0.01)
+                .custom_formatter(|v, _| format!("{:.0}%", v * 100.))
+                .custom_parser(|s| {
+                    s.trim_end_matches('%')
+                        .trim()
+                        .parse::<f64>()
+                        .ok()
+                        .map(|v| v / 100.)
+                }),
+        );
+    });
+}
+
+/// Car model.
+fn car_model_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let draft = &mut frontend.draft;
     let catalog = &frontend.catalog;
     section(ui, "Car");
@@ -1301,7 +1327,11 @@ fn car_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
             let _ = response;
         }
     });
-    ui.add_space(12.);
+}
+
+/// Tyres and wings.
+fn setup_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
+    let draft = &mut frontend.draft;
     section(ui, "Tyres & aero");
     setting_row(ui, "Tyre compound", |ui| {
         ui.horizontal_wrapped(|ui| {
@@ -1392,100 +1422,42 @@ fn driver_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     }
 }
 
-/// The selected driver as a team-coloured card: number, code, name and team.
-fn driver_card(ui: &mut egui::Ui, frontend: &Frontend) {
-    let width = ui.available_width();
-    let height = (width * 0.5).clamp(170., 300.);
-    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
-    let painter = ui.painter();
-    let selected = (frontend.draft.car == "gen22")
-        .then(|| {
-            frontend
-                .teams
-                .selection(&frontend.draft.team, &frontend.draft.driver)
-                .ok()
-        })
-        .flatten();
-    let Some((team, driver)) = selected else {
-        painter.rect_filled(rect, 10., WELL);
-        painter.text(
-            rect.center(),
-            egui::Align2::CENTER_CENTER,
-            "Red Bull RB6",
-            egui::FontId::proportional(26.),
-            DIM,
-        );
-        return;
-    };
-    let colour =
-        |hex: &str| crate::teams::rgb(hex).map_or(HOUSING, |[r, g, b]| Color32::from_rgb(r, g, b));
-    let (primary, secondary, accent) = (
-        colour(&team.colors.primary),
-        colour(&team.colors.secondary),
-        colour(&team.colors.accent),
-    );
-    painter.rect_filled(rect, 10., WELL);
-    // Team colour panel with a diagonal stripe in the secondary and accent.
-    let panel = rect.shrink(1.);
-    painter.rect_filled(panel, 10., primary.gamma_multiply(0.9));
-    let stripe = |offset: f32, thickness: f32, colour: Color32| {
-        let x = panel.right() - panel.width() * offset;
-        painter.add(egui::Shape::convex_polygon(
-            vec![
-                egui::pos2(x, panel.top()),
-                egui::pos2(x + thickness, panel.top()),
-                egui::pos2(x + thickness - panel.height() * 0.45, panel.bottom()),
-                egui::pos2(x - panel.height() * 0.45, panel.bottom()),
-            ],
-            colour,
-            egui::Stroke::NONE,
-        ));
-    };
-    stripe(0.34, panel.width() * 0.07, secondary);
-    stripe(0.24, panel.width() * 0.025, accent);
-    // Legibility scrim behind the text, only where the team colour is light.
-    let luminance = 0.2126 * f32::from(primary.r())
-        + 0.7152 * f32::from(primary.g())
-        + 0.0722 * f32::from(primary.b());
-    if luminance > 140. {
-        painter.rect_filled(
-            egui::Rect::from_min_max(
-                panel.left_top(),
-                egui::pos2(panel.center().x + 40., panel.bottom()),
-            ),
-            10.,
-            Color32::from_black_alpha(130),
-        );
+/// The car owns most of the page; selectors stay beside it or stack below.
+fn car_driver_page(ui: &mut egui::Ui, frontend: &mut Frontend, preview: &car_preview::CarPreview) {
+    let identity = frontend
+        .teams
+        .selection(&frontend.draft.team, &frontend.draft.driver)
+        .ok();
+    if frontend.draft.car == "gen22" {
+        if let Some((team, driver)) = identity {
+            ui.heading(format!("#{}  {}", driver.number, driver.name));
+            ui.label(RichText::new(&team.name).color(DIM));
+        }
+    } else {
+        ui.heading("Red Bull RB6");
     }
-    let pad = 22.;
-    painter.text(
-        panel.left_top() + egui::vec2(pad, pad - 6.),
-        egui::Align2::LEFT_TOP,
-        driver.number.to_string(),
-        egui::FontId::proportional(height * 0.36),
-        Color32::WHITE,
-    );
-    painter.text(
-        panel.left_bottom() + egui::vec2(pad, -pad - 52.),
-        egui::Align2::LEFT_BOTTOM,
-        &driver.abbr,
-        egui::FontId::proportional(20.),
-        accent,
-    );
-    painter.text(
-        panel.left_bottom() + egui::vec2(pad, -pad - 22.),
-        egui::Align2::LEFT_BOTTOM,
-        &driver.name,
-        egui::FontId::proportional(26.),
-        Color32::WHITE,
-    );
-    painter.text(
-        panel.left_bottom() + egui::vec2(pad, -pad),
-        egui::Align2::LEFT_BOTTOM,
-        team.name.to_uppercase(),
-        egui::FontId::proportional(14.),
-        Color32::from_gray(215),
-    );
+    ui.add_space(12.);
+    let width = ui.available_width();
+    if width >= 900. {
+        let preview_width = (width - 24.) * 0.64;
+        ui.horizontal_top(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(preview_width, 0.),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| preview.show(ui),
+            );
+            ui.add_space(16.);
+            ui.allocate_ui_with_layout(
+                egui::vec2(ui.available_width(), 0.),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| driver_choice(ui, frontend),
+            );
+        });
+    } else {
+        preview.show(ui);
+        ui.add_space(16.);
+        driver_choice(ui, frontend);
+    }
 }
 
 fn select_team(draft: &mut Options, team: &crate::teams::Team) {

@@ -18,6 +18,8 @@ pub struct Preferences {
     pub aids: Assists,
     pub corner_braking: f64,
     pub racing_line: bool,
+    #[serde(default = "full_ai_power")]
+    pub ai_power: f64,
     pub camera: Mode,
     pub views: BTreeMap<String, Tuning>,
     #[serde(default)]
@@ -33,6 +35,10 @@ pub struct Preferences {
     pub audio: crate::audio::Settings,
 }
 
+fn full_ai_power() -> f64 {
+    1.
+}
+
 fn vsync_default() -> bool {
     true
 }
@@ -46,6 +52,7 @@ impl Preferences {
             aids: options.player_assists(),
             corner_braking: options.corner_braking,
             racing_line: options.assist_level > 0.,
+            ai_power: options.ai_power,
             camera: options.camera,
             views: ["rb6", "gen22"]
                 .map(|id| (id.into(), Tuning::for_car(id)))
@@ -87,6 +94,11 @@ impl Preferences {
         for tuning in self.views.values_mut() {
             tuning.sanitize();
         }
+        self.ai_power = if self.ai_power.is_finite() {
+            self.ai_power.clamp(0.5, 1.)
+        } else {
+            1.
+        };
         self.audio.sanitize();
         if let Some(video) = &mut self.video {
             video.sanitize();
@@ -138,6 +150,9 @@ impl Store {
             .and_then(|bytes| saved_preferences(&bytes))
             .unwrap_or_else(|| Preferences::defaults(options));
         prefs.sanitize();
+        if options.ai_power_explicit {
+            prefs.ai_power = options.ai_power;
+        }
         if options.weather_explicit {
             prefs.weather = options.weather;
         }

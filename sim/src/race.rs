@@ -76,6 +76,9 @@ pub const RECOVERY_GHOST: f64 = 3.0;
 /// Metres behind a rejoin spot that must be free of cars in its lane.
 const REJOIN_CLEAR_BEHIND: f64 = 120.0;
 
+/// Seconds after the winner finishes before unfinished cars are classified.
+pub const FINISH_GRACE: f64 = 120.0;
+
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Phase {
     /// Red lights coming on; `lights` of five are lit. Cars are held.
@@ -125,6 +128,7 @@ pub struct Race {
     pub events: Vec<RaceEvent>,
     /// Empty when no car in the field has DRS.
     pub drs_zones: Vec<drs::Zone>,
+    ai_power: f64,
     order: Vec<usize>,
     finish_order: Vec<usize>,
     rng: Rng,
@@ -182,6 +186,7 @@ impl Race {
             Vec::new()
         };
         Self {
+            ai_power: 1.,
             drs_zones,
             track,
             entrants,
@@ -198,6 +203,15 @@ impl Race {
             finish_order: Vec::new(),
             rng,
         }
+    }
+
+    /// Scales propulsion for AI, including disconnected humans taken over by AI.
+    pub fn set_ai_power(&mut self, power: f64) {
+        self.ai_power = if power.is_finite() {
+            power.clamp(0.5, 1.)
+        } else {
+            1.
+        };
     }
 
     /// Entrant indices from first to last.
@@ -249,7 +263,12 @@ impl Race {
                     input.throttle = input.throttle.min(0.45);
                 }
             }
-            entrant.car.step(&input, &self.track, dt);
+            let power = if matches!(entrant.driver, Driver::Ai(_)) {
+                self.ai_power
+            } else {
+                1.
+            };
+            entrant.car.step_with_power(&input, &self.track, dt, power);
         }
 
         for entrant in &mut self.entrants {
@@ -630,13 +649,21 @@ impl Race {
             }
         }
         self.order = order;
-        if self.phase == Phase::Finishing
-            && self
+        if self.phase == Phase::Finishing {
+            let everyone = self
                 .entrants
                 .iter()
-                .all(|entrant| entrant.timing.finish_time.is_some())
-        {
-            self.phase = Phase::Finished;
+                .all(|entrant| entrant.timing.finish_time.is_some());
+            // Stopped, crashed or lapped cars must not hold the results forever:
+            // classify them by distance once the grace period after the winner ends.
+            let winner = self
+                .finish_order
+                .first()
+                .and_then(|&first| self.entrants[first].timing.finish_time);
+            let expired = winner.is_some_and(|time| self.time - time > FINISH_GRACE);
+            if everyone || expired {
+                self.phase = Phase::Finished;
+            }
         }
     }
 
@@ -906,6 +933,63 @@ mod tests {
         }
         assert_eq!(race.phase, Phase::Finished);
         assert_eq!(race.order()[0], 1, "the faster car stayed stuck behind");
+    }
+
+    /// Speeds of (human, AI) after a straight-line launch with the given AI power.
+    fn launch_speeds(ai_power: f64) -> (f64, f64) {
+        let track = Arc::new(crate::track::stadium(800.0, 30.0, Vec::new()));
+        let mut race = Race::new(track, field(1, 1), 1, 7);
+        race.set_ai_power(ai_power);
+        let full = CarInput {
+            throttle: 1.0,
+            shift_up: true,
+            ..CarInput::default()
+        };
+        let mut racing = 0;
+        while racing < (6.0 * PHYSICS_RATE) as usize {
+            race.step(std::slice::from_ref(&full));
+            if race.phase == Phase::Racing {
+                racing += 1;
+            }
+        }
+        (race.entrants[0].car.speed(), race.entrants[1].car.speed())
+    }
+
+    #[test]
+    fn ai_power_slows_only_the_ai() {
+        let (human_full, ai_full) = launch_speeds(1.0);
+        let (human_low, ai_low) = launch_speeds(0.5);
+        assert_eq!(
+            human_full, human_low,
+            "the player's car must not be handicapped"
+        );
+        assert!(
+            ai_low < ai_full - 1.0,
+            "50% AI power should be clearly slower: {ai_low:.2} vs {ai_full:.2} m/s"
+        );
+    }
+
+    #[test]
+    fn ai_power_is_clamped_to_the_slider_range() {
+        let mut race = Race::new(Arc::new(oval_track()), field(0, 1), 1, 1);
+        race.set_ai_power(0.3);
+        assert_eq!(race.ai_power, 0.5);
+        race.set_ai_power(f64::NAN);
+        assert_eq!(race.ai_power, 1.0);
+    }
+
+    #[test]
+    fn a_stopped_car_cannot_hold_back_the_results() {
+        // The human never drives; the AI wins and the race still ends.
+        let mut race = Race::new(Arc::new(oval_track()), field(1, 1), 1, 5);
+        let mut ticks = 0;
+        while race.phase != Phase::Finished && ticks < (400.0 * PHYSICS_RATE) as usize {
+            race.step(&[CarInput::default()]);
+            ticks += 1;
+        }
+        assert_eq!(race.phase, Phase::Finished);
+        assert!(race.entrants[0].timing.finish_time.is_none());
+        assert_eq!(race.order(), &[1, 0]);
     }
 
     #[test]
@@ -1564,5 +1648,167 @@ impl Race {
                 slot as u64 + 1,
             )));
         }
+    }
+}
+
+/// Spa passing lanes and tactical line choice. Needs converted assets:
+/// `F1_ASSETS=assets cargo test -p racecraft-sim -- --ignored spa_lines`.
+#[cfg(test)]
+mod spa_lines {
+    use super::*;
+    use crate::ai::Intent;
+    use crate::car::spec::test_wheels;
+
+    fn spa() -> Option<Arc<Track>> {
+        let root = std::env::var("F1_ASSETS").ok()?;
+        Some(Arc::new(
+            Track::load(std::path::Path::new(&root).join("tracks/spa")).unwrap(),
+        ))
+    }
+
+    fn duel(track: &Arc<Track>, seed: u64) -> Race {
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
+        let driver = |name: &str, pace: f64| EntrantConfig {
+            name: name.into(),
+            spec: spec.clone(),
+            setup: Setup::default(),
+            assists: Assists {
+                automatic_gears: true,
+                ..Assists::default()
+            },
+            ai: Some(DriverProfile {
+                pace,
+                aggression: 0.7,
+                consistency: 1.0,
+            }),
+            human_slot: 0,
+            livery: [1.0; 3],
+        };
+        Race::new(
+            track.clone(),
+            vec![driver("Slow", 0.93), driver("Fast", 0.99)],
+            2,
+            seed,
+        )
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_stay_on_track_and_are_smooth() {
+        let Some(track) = spa() else { return };
+        let lanes = track.passing_lines.as_ref().expect("Spa has passing lanes");
+        for (side, lane) in lanes.iter().enumerate() {
+            let mut apart = 0usize;
+            for (i, station) in track.stations.iter().enumerate() {
+                let offset = lane.offsets[i];
+                assert!(
+                    offset.abs() <= station.half_width - 1.4 + 1e-6,
+                    "lane {side} leaves the track at station {i}: {offset:.2} m"
+                );
+                let next = lane.offsets[(i + 1) % lane.offsets.len()];
+                assert!(
+                    (next - offset).abs() < 0.35,
+                    "lane {side} jumps {:.2} m at station {i}",
+                    next - offset
+                );
+                if (offset - track.racing_line.offsets[i]).abs() > 2.0 {
+                    apart += 1;
+                }
+            }
+            assert!(
+                apart * 3 > track.stations.len(),
+                "lane {side} is not a real alternative to the optimal line"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_a_defender_moves_once_per_corner() {
+        let Some(track) = spa() else { return };
+        for seed in [2, 4, 6] {
+            let mut race = duel(&track, seed);
+            let mut sides: Vec<(f64, f64)> = Vec::new();
+            let mut ticks = 0;
+            while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
+                race.step(&[]);
+                if let Driver::Ai(ai) = &race.entrants[0].driver {
+                    if let Intent::Defend { side, apex_s } = ai.intent {
+                        if let Some(seen) = sides.iter().find(|(apex, _)| *apex == apex_s) {
+                            assert_eq!(
+                                seen.1, side,
+                                "seed {seed}: defender switched sides for the corner at {apex_s:.0} m"
+                            );
+                        } else {
+                            sides.push((apex_s, side));
+                        }
+                    }
+                }
+                ticks += 1;
+            }
+        }
+    }
+
+    /// Laps on which the faster car leads, with and without passing lanes.
+    #[test]
+    #[ignore]
+    fn spa_lines_multiple_lines_pass_at_least_as_often_as_one() {
+        let Some(track) = spa() else { return };
+        let root = std::env::var("F1_ASSETS").unwrap();
+        let mut single = Track::load(std::path::Path::new(&root).join("tracks/spa")).unwrap();
+        single.passing_lines = None;
+        let single = Arc::new(single);
+        let passes = |track: &Arc<Track>| {
+            let mut won = 0;
+            let mut contacts = 0;
+            for seed in [1, 3, 5, 7, 9, 11] {
+                let mut race = duel(track, seed);
+                let mut ticks = 0;
+                while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
+                    race.step(&[]);
+                    contacts += race
+                        .events
+                        .iter()
+                        .filter(|event| matches!(event, RaceEvent::Contact { b: Some(_), .. }))
+                        .count();
+                    race.events.clear();
+                    ticks += 1;
+                }
+                if race.entrants[race.order()[0]].name == "Fast" {
+                    won += 1;
+                }
+            }
+            (won, contacts)
+        };
+        let (multi, multi_contacts) = passes(&track);
+        let (one, _) = passes(&single);
+        eprintln!(
+            "faster car won {multi}/6 with lanes, {one}/6 with one line; {multi_contacts} contacts"
+        );
+        assert!(multi >= one, "lanes made passing harder: {multi} vs {one}");
+        assert!(multi_contacts <= 4, "{multi_contacts} contacts with lanes");
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_ai_power_slows_ai_lap_times() {
+        let Some(track) = spa() else { return };
+        let best = |power: f64| {
+            let mut race = duel(&track, 3);
+            race.set_ai_power(power);
+            let mut ticks = 0;
+            while race.phase != Phase::Finished && ticks < (600.0 * PHYSICS_RATE) as usize {
+                race.step(&[]);
+                ticks += 1;
+            }
+            race.entrants
+                .iter()
+                .filter_map(|e| e.timing.best_lap)
+                .fold(f64::INFINITY, f64::min)
+        };
+        let (full, mid, low) = (best(1.0), best(0.8), best(0.5));
+        eprintln!("Spa best AI lap: 100% {full:.2}s, 80% {mid:.2}s, 50% {low:.2}s");
+        assert!(mid > full + 0.5, "80% power barely slowed the AI");
+        assert!(low > mid + 2.0, "50% power barely slowed the AI");
     }
 }

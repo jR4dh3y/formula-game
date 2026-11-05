@@ -14,6 +14,8 @@ pub struct Options {
     pub join: Option<String>,
     pub name: String,
     pub ai_cars: usize,
+    pub ai_power: f64,
+    pub ai_power_explicit: bool,
     pub test_driver: bool,
     pub test_lobby: Option<usize>,
     pub track: String,
@@ -55,6 +57,7 @@ impl Options {
   --join ADDRESS      join IP:PORT or wss://server.onrender.com
   --name NAME         unique lobby driver name
   --ai-cars N         AI cars in a hosted room, 0-15 (default: 0)
+  --ai-power 0.50-1.00   AI engine power multiplier (default: 1.00)
   --test-driver       drive this online client with a scripted controller
   --test-lobby N      automatically ready/start once N test clients join
   --assets DIR        asset directory (default: ./assets)
@@ -94,6 +97,8 @@ impl Options {
             join: None,
             name: format!("Driver-{:04x}", racecraft_net::random_id() as u16),
             ai_cars: 0,
+            ai_power: 1.,
+            ai_power_explicit: false,
             track: "spa".to_string(),
             car: "gen22".to_string(),
             weather: crate::sky::Weather::default(),
@@ -156,6 +161,13 @@ impl Options {
                     options.ai_cars = value()?
                         .parse::<usize>()
                         .map_err(|_| "AI cars must be an integer from 0 to 15")?;
+                }
+                "--ai-power" => {
+                    options.ai_power = number(value()?)?;
+                    if !(0.5..=1.).contains(&options.ai_power) {
+                        return Err("AI power must be 0.50–1.00".into());
+                    }
+                    options.ai_power_explicit = true;
                 }
                 "--assets" => options.assets = PathBuf::from(value()?),
                 "--track" => options.track = value()?,

@@ -1038,8 +1038,9 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
 
     draw_map(hud, style, session, display.map, scale);
 
-    // ---- Results
-    if race.phase == Phase::Finished {
+    // ---- Results: provisional as soon as the player takes the flag.
+    let final_results = race.phase == Phase::Finished;
+    if final_results || player.timing.finish_time.is_some() {
         let panel_w = 560.0 * scale;
         // Clear the timing tower, its control strip and the minimap.
         let left = (width * 0.5 - panel_w * 0.5).max(tower_x + tower_w + 16.0 * scale);
@@ -1060,7 +1061,23 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
             (left + 38.0 * scale, top + 12.0 * scale),
             Align::Left,
             ink,
-            "RESULTS",
+            if final_results {
+                "RESULTS"
+            } else {
+                "PROVISIONAL"
+            },
+        );
+        caption(
+            hud,
+            style,
+            13.0 * scale,
+            (left + 38.0 * scale, top + 52.0 * scale),
+            Align::Left,
+            if final_results {
+                "ESC  MENU"
+            } else {
+                "OTHERS STILL FINISHING  ·  ESC  MENU"
+            },
         );
         caption(
             hud,

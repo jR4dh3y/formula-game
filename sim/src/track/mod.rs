@@ -87,6 +87,8 @@ pub struct Track {
     pub corners: Vec<Corner>,
     pub collision: CollisionWorld,
     pub racing_line: RacingLine,
+    /// Left and right passing lanes. Only Spa has validated alternative paths.
+    pub passing_lines: Option<[RacingLine; 2]>,
     pub sun_direction: DVec3,
 }
 
@@ -112,6 +114,12 @@ impl Track {
         let stations = resample(&points, &file.half_width);
         let length = stations.len() as f64 * STATION_SPACING;
         let racing_line = RacingLine::compute(&stations);
+        let passing_lines = (file.name == "Spa-Francorchamps").then(|| {
+            [
+                racing_line.side_lane(&stations, 1.),
+                racing_line.side_lane(&stations, -1.),
+            ]
+        });
         let sun = DVec3::from(file.sun_direction).normalize_or(DVec3::NEG_Y);
         Ok(Self {
             name: file.name,
@@ -128,6 +136,7 @@ impl Track {
                 .collect(),
             collision,
             racing_line,
+            passing_lines,
             sun_direction: sun,
         })
     }

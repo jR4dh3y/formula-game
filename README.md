@@ -90,7 +90,7 @@ Install Rust 1.97.1 or newer and your platform's Bevy build dependencies. On Lin
 cargo run -p f1-the-game -- --assets /path/to/assets --auto-gears
 ```
 
-The generated assets are separate from this repository. [Download the complete assets ZIP](https://github.com/jR4dh3y/formula-game/releases/download/assets-68ae3a48b726ffa5/f1-racecraft-assets.zip) using this permanent link. Extract the ZIP into the repository root to create `./assets`, or point `--assets` at an existing converted asset tree:
+The generated assets are separate from this repository. [Download the complete assets ZIP](https://github.com/jR4dh3y/formula-game/releases/download/assets-68ae3a48b726ffa5/f1-racecraft-assets.zip) using this permanent link. Extract the ZIP into the repository root to create `./assets`, or point `--assets` at an existing converted asset tree; team liveries ship separately: [download the liveries ZIP](https://github.com/jR4dh3y/formula-game/releases/download/liveries-0a14081c2385c999/f1-racecraft-liveries.zip) (SHA-256 `0a14081c2385c99923169c91a1daadd8a3e28d632bde82e104bf025c29c7c911`) and extract it into the repository root as well, so it lands in `assets/cars/gen22/liveries/`. Release builds overlay it automatically. Asset tree:
 
 ```text
 assets/

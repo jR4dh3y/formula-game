@@ -25,6 +25,7 @@ pub(super) fn session() -> Session {
         source: String::new(),
         length: 256.0,
         racing_line: RacingLine::compute(&stations),
+        passing_lines: None,
         stations,
         corners: vec![],
         collision: CollisionWorld::from_bytes(b"F1CL\x01\0\0\0\0\0\0\0\0\0\0\0").unwrap(),
@@ -1152,6 +1153,8 @@ fn rendered_car_review() {
 
 #[allow(clippy::too_many_arguments)]
 fn car_review_contract(
+    server: Res<AssetServer>,
+    images: Res<Assets<Image>>,
     session: Res<Session>,
     options: Res<Options>,
     materials: Res<Assets<StandardMaterial>>,
@@ -1178,13 +1181,36 @@ fn car_review_contract(
         return;
     }
     // Assert the material seen by the renderer, including legacy asset packages.
-    for (_, name, handle, _) in &surfaces {
+    for (surface, name, handle, _) in &surfaces {
         if !name.0.starts_with("source_paint_") {
             continue;
         }
         let material = materials.get(&handle.0).unwrap();
-        assert!(material.base_color_texture.is_none());
-        assert_eq!(material.base_color, Color::linear_rgb(0.32, 0.34, 0.36));
+        let livery = session.identities[surface.entrant]
+            .as_ref()
+            .and_then(|identity| {
+                materials::livery_texture(&options.assets, identity, surface.lod, &name.0)
+            });
+        assert_eq!(material.base_color_texture.is_some(), livery.is_some());
+        if let Some(path) = &livery {
+            let texture = material.base_color_texture.as_ref().unwrap();
+            assert_eq!(
+                server.get_path(texture.id()).unwrap().path(),
+                std::path::Path::new(path)
+            );
+            assert!(
+                images.contains(texture.id()),
+                "livery must load before the race starts"
+            );
+        }
+        assert_eq!(
+            material.base_color,
+            if livery.is_some() {
+                Color::WHITE
+            } else {
+                Color::linear_rgb(0.32, 0.34, 0.36)
+            }
+        );
     }
     for part in &rig_parts {
         if matches!(part.kind, assets::RigKind::Steering) {
@@ -1726,4 +1752,68 @@ fn cockpit_lock_review(
             .store(true, std::sync::atomic::Ordering::SeqCst);
         exit.write(AppExit::Success);
     }
+}
+
+/// Starting new races from the menu must release the previous race's liveries.
+/// `F1_TEST_ASSETS=assets cargo test --release -p f1-the-game -- --ignored rendered_menu_restarts`
+#[test]
+#[ignore = "requires Vulkan display and F1_TEST_ASSETS"]
+fn rendered_menu_restarts() {
+    let root = std::env::var("F1_TEST_ASSETS").expect("set F1_TEST_ASSETS");
+    let options = Options::parse(
+        [
+            "--assets", &root, "--car", "gen22", "--team", "ferrari", "--driver", "hamilton",
+            "--size", "1280x720", "--mute",
+        ]
+        .into_iter()
+        .map(str::to_owned),
+    )
+    .unwrap();
+    let mut app = build_app(options).unwrap();
+    #[derive(Resource, Default)]
+    struct Restarts {
+        started: usize,
+        frames: usize,
+        done: Arc<std::sync::atomic::AtomicBool>,
+    }
+    let restarts = Restarts::default();
+    let done = restarts.done.clone();
+    fn drive(
+        mut restarts: ResMut<Restarts>,
+        mut frontend: ResMut<menu::Frontend>,
+        session: Res<Session>,
+        mut exit: MessageWriter<AppExit>,
+    ) {
+        if !session.ready || frontend.pending {
+            restarts.frames = 0;
+            return;
+        }
+        restarts.frames += 1;
+        if restarts.frames < 30 {
+            return;
+        }
+        if restarts.started == 3 {
+            restarts
+                .done
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+            exit.write(AppExit::Success);
+            return;
+        }
+        // Alternate drivers so each start loads a different body texture.
+        frontend.draft.driver = if restarts.started.is_multiple_of(2) {
+            "leclerc"
+        } else {
+            "hamilton"
+        }
+        .into();
+        frontend.pending = true;
+        restarts.started += 1;
+        restarts.frames = 0;
+    }
+    app.insert_resource(restarts).add_systems(Update, drive);
+    assert!(
+        app.run().is_success(),
+        "the app quit, e.g. out of GPU memory"
+    );
+    assert!(done.load(std::sync::atomic::Ordering::SeqCst));
 }
