@@ -32,15 +32,19 @@ def prepare_gnu_texture_kernels(cargo):
     )
     directory = Path(package["manifest_path"]).parent / "src/ispc"
     aliases = {
-        "kernelx86_64-pc-windows-gnu.lib": "kernelx86_64-pc-windows-msvc.lib",
-        "kernel_astcx86_64-pc-windows-gnu.lib": "kernel_astcx86_64-pc-windows-msvc.lib",
-        "ispc_texcomp_astcx86_64-pc-windows-gnu-MD.lib":
-            "ispc_texcomp_astcx86_64-pc-windows-msvc-MD.lib",
+        "kernelx86_64-pc-windows-gnu": "kernelx86_64-pc-windows-msvc",
+        "kernel_astcx86_64-pc-windows-gnu": "kernel_astcx86_64-pc-windows-msvc",
+        "ispc_texcomp_astcx86_64-pc-windows-gnu-MD":
+            "ispc_texcomp_astcx86_64-pc-windows-msvc-MD",
     }
     for target, source in aliases.items():
-        target_path = directory / target
-        if not target_path.exists():
-            shutil.copy2(directory / source, target_path)
+        source_path = directory / f"{source}.lib"
+        for target_path in [
+            directory / f"{target}.lib",
+            directory / f"lib{target}.a",
+        ]:
+            if not target_path.exists():
+                shutil.copy2(source_path, target_path)
 
 
 def copy_notices(cargo, manifest, destination):
