@@ -1630,7 +1630,7 @@ fn corner_braking_slider(ui: &mut egui::Ui, value: &mut f64) {
             egui::Slider::new(value, 0.0..=1.0)
                 .custom_formatter(|value, _| format!("{:.0}%", value * 100.)),
         )
-        .on_hover_text("Brakes for bends and reduces a held accelerator.");
+        .on_hover_text("Brakes for bends. Reduces your throttle only while adding brake pressure.");
     });
 }
 
@@ -1655,7 +1655,7 @@ fn car_control_sliders(ui: &mut egui::Ui, aids: &mut Assists) {
         (
             &mut aids.stability,
             "Stability assistance",
-            "Helps recover a developing slide.",
+            "Helps recover a developing slide. With steering above 50% and stability at least 50%, also steadies turn-in at the grip limit.",
         ),
     ] {
         setting_row(ui, label, |ui| {

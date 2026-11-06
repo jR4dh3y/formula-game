@@ -61,9 +61,9 @@ impl Guidance {
             let braking = corner_braking.clamp(0., 1.);
             if braking > 0. {
                 input.brake = raw.brake.max(reference.brake * braking);
-                input.throttle = raw.throttle * (1. - braking + braking * reference.throttle);
-                // A braking intervention must not fight a held accelerator.
-                if input.brake > raw.brake + 0.02 {
+                // Corner assistance owns braking, not the accelerator. The AI's
+                // coasting and traction trims otherwise hold back a held pedal.
+                if input.brake > raw.brake {
                     input.throttle *= 1. - input.brake;
                 }
             }
@@ -208,6 +208,30 @@ mod tests {
             "guidance did not keep the car on track"
         );
         assert!(assisted.4 > 1000., "insufficient progress");
+    }
+
+    #[test]
+    fn corner_assist_preserves_the_pedal_when_it_is_not_braking() {
+        let mut session = crate::tests::session();
+        let mut guide = Guidance::new(&session.race, 0);
+        let track = &session.race.track;
+        let car = &mut session.race.entrants[0].car;
+        let mut samples = 0;
+        for speed in (100..650).map(|i| i as f64 / 10.) {
+            car.velocity = car.forward() * speed;
+            for pedal in [0.4, 1.0] {
+                let raw = CarInput {
+                    throttle: pedal,
+                    ..Default::default()
+                };
+                let input = guide.apply(car, track, raw, 1., 1. / 360.);
+                if input.brake == 0. {
+                    samples += 1;
+                    assert_eq!(input.throttle, pedal, "speed {speed}: {input:?}");
+                }
+            }
+        }
+        assert!(samples > 100, "no unbraked samples exercised");
     }
 
     #[test]
