@@ -45,8 +45,8 @@ fn spec(root: &Path, model: &str) -> Arc<CarSpec> {
     })
 }
 
-/// The race gives AI drivers the default aids; `PROBE_AIDS=full` then
-/// raises the stability aid to the player default.
+/// The race gives AI drivers sub-threshold stability; `PROBE_AIDS=full` then
+/// raises it to the player default.
 fn set_aids(race: &mut Race) {
     if std::env::var("PROBE_AIDS").is_ok_and(|aids| aids == "full") {
         race.entrants[0].car.assists.stability = 1.0;

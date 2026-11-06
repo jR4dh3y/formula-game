@@ -239,8 +239,9 @@ mod tests {
         let base = "cars/gen22/liveries/ferrari";
         let team_path = format!("{base}/main_body.png");
         let driver_path = format!("{base}/leclerc/main_body.png");
-        let lod_path = format!("{base}/leclerc/lod2/main_body.png");
-        for path in [&team_path, &driver_path, &lod_path] {
+        let lod1_path = format!("{base}/leclerc/lod1/main_body.png");
+        let lod2_path = format!("{base}/leclerc/lod2/main_body.png");
+        for path in [&team_path, &driver_path, &lod1_path, &lod2_path] {
             std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
             std::fs::write(root.join(path), []).unwrap();
         }
@@ -251,8 +252,18 @@ mod tests {
                 Some("lod2"),
                 "source_paint_main_body_stickers_lod.001"
             ),
-            Some(lod_path)
+            Some(lod2_path)
         );
+        assert_eq!(
+            livery_texture(
+                &root,
+                &identity,
+                Some("lod1"),
+                "source_paint_main_body_stickers_lod"
+            ),
+            Some(lod1_path.clone())
+        );
+        std::fs::remove_file(root.join(&lod1_path)).unwrap();
         assert_eq!(
             livery_texture(
                 &root,
@@ -262,7 +273,7 @@ mod tests {
             ),
             Some(driver_path.clone())
         );
-        std::fs::remove_file(root.join(driver_path)).unwrap();
+        std::fs::remove_file(root.join(&driver_path)).unwrap();
         assert_eq!(
             livery_texture(&root, &identity, None, "source_paint_main_body_stickers"),
             Some(team_path)

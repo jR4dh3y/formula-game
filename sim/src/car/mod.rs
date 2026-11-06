@@ -18,6 +18,9 @@ const REAR_ABS_HEADROOM: f64 = 0.35;
 
 pub const AIR_DENSITY: f64 = 1.225;
 pub const GRAVITY: f64 = 9.81;
+/// Stability aid for AI-controlled cars: retain slide recovery without
+/// enabling the player's yaw ceiling at the 0.5 activation boundary.
+pub(crate) const AI_STABILITY: f64 = 0.49;
 
 /// One tick of driver commands. Steering is positive to the left.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -42,8 +45,9 @@ pub struct Assists {
     pub braking: f64,
     /// Traction smoothing, 0..1.
     pub traction: f64,
-    /// Slide recovery, 0..1. Above 0.5 with steering above 0.5 also limits
-    /// turn-in yaw overshoot; the ceiling is enabled fully rather than blended.
+    /// Slide recovery, 0..1. At least 0.5 with steering above 0.5 also
+    /// limits turn-in yaw overshoot; the ceiling is enabled fully rather than
+    /// blended.
     pub stability: f64,
     pub automatic_gears: bool,
     /// Lets this driver open DRS anywhere, not only where it is earned.
@@ -342,7 +346,9 @@ impl Car {
 
     fn assisted_lock(&self, angle: f64) -> f64 {
         const FULL_LOCK: f64 = 0.36;
-        FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * self.assists.steering
+        // Car::assists is mutable and can be restored from a host snapshot.
+        let steering = self.assists.steering.clamp(0.0, 1.0);
+        FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * steering
     }
 
     /// Lock the steering and stability aids allow into the turn the car is
@@ -360,9 +366,9 @@ impl Car {
     /// the tyre curve about the direction the front axle travels, never
     /// past the peak. It only takes lock away, and never into opposite lock.
     ///
-    /// Both aids above half enable the full ceiling. Blending the lock limit
-    /// leaves the fronts beyond their peak and causes sustained yaw wobble.
-    /// Lower settings retain slide recovery without this turn-in control.
+    /// The ceiling requires steering above half and stability at least half.
+    /// Blending the lock limit leaves the fronts beyond their peak and causes
+    /// sustained yaw wobble. Lower settings retain slide recovery only.
     fn yaw_ceiling_lock(
         &self,
         target: f64,
@@ -1368,9 +1374,10 @@ mod steering_stability {
     const DT: f64 = 1.0 / 360.0;
 
     /// Steering and stability aid levels: the player default and Beginner
-    /// preset run the yaw ceiling; values below half retain slide recovery only.
+    /// preset run the yaw ceiling; the supported AI profile retains slide
+    /// recovery below the ceiling threshold.
     const FULL_AIDS: (f64, f64) = (1.0, 1.0);
-    const AI_AIDS: (f64, f64) = (1.0, 0.49);
+    const AI_AIDS: (f64, f64) = (1.0, AI_STABILITY);
 
     fn gen22() -> CarSpec {
         CarSpec::gen22(test_wheels(), 5.4, 1.9)
@@ -1668,14 +1675,21 @@ mod steering_stability {
         }
     }
 
+    #[test]
+    fn out_of_range_steering_assist_cannot_invert_turn_in_limit() {
+        let mut pad = Skidpad::with(250.0, gen22(), (2.0, AI_STABILITY));
+        assert!(pad.car.turn_in_limit(pad.car.speed()) >= 0.0);
+        pad.step(1.0);
+    }
+
     /// Keyboard turn-in and weaving at 150–300 km/h for both cars, with the
-    /// AI's aids (half stability, no ceiling) and with both aids at full.
+    /// AI's slide-recovery aids (no yaw ceiling) and with both aids at full.
     /// `cargo test -p racecraft-sim --lib probe_keyboard_turn_in -- --ignored --nocapture`
     #[test]
     #[ignore]
     fn probe_keyboard_turn_in() {
         for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
-            for (label, aids) in [("half stability", AI_AIDS), ("full aids", FULL_AIDS)] {
+            for (label, aids) in [("AI aids", AI_AIDS), ("full aids", FULL_AIDS)] {
                 for kmh in [150.0, 250.0, 300.0] {
                     let r = turn_in(kmh, spec(), aids);
                     let (weave_peak, straight) = weave(kmh, spec(), aids);

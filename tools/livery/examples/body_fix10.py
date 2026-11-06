@@ -15,7 +15,7 @@ def place(path, x, y, name):
             {"tool":"command_run","args":{"id":"layer.arrange.bringToFront","params":{"layer":"__last__"}}}]
 seq = []
 for z, name in (("halo","zone carbon halo"),("white","zone white"),("white_pin","zone white pinstripe"),("red_pin","zone red pinstripe"),("interior","zone cockpit interior")):
-    seq += place(f"ref/decals/zone_{z}.png", 2048, 2048, name)
+    seq += place(f"ref/zone_{z}.png", 2048, 2048, name)
 for r in json.load(open("decal_report.json")):
     seq += place(r["path"].replace("livery/","",1), r["x"]+r["w"]//2, r["y"]+r["h"]//2, r["name"])
 # copyToDocument lands on top already; drop the bringToFront placeholder steps

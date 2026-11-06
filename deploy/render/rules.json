@@ -3,6 +3,7 @@
   "car": "rb6",
   "laps": 3,
   "ai_cars": 0,
+  "ai_power": 1.0,
   "lock_aids": true,
   "assists": {
     "automatic_gears": true,

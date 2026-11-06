@@ -379,9 +379,11 @@ fn step_race(
     let input = if scripted.is_some() {
         input
     } else {
+        let rivals = race.rivals_of(*player);
         guidance.apply(
             &race.entrants[*player].car,
             &race.track,
+            &rivals,
             input,
             *corner_braking,
             1. / PHYSICS_RATE,

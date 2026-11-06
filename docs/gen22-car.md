@@ -79,7 +79,8 @@ textures under `cars/gen22/tyres/`, with `lod1/` and `lod2/` variants.
 Only the mask receives compound colour: soft red, medium yellow, hard white.
 The material hook selects each entrant's setup compound when attaching its
 scene, with separate instances for each compound and source LOD material.
-These PNGs use the existing sRGB, mip and BC7 preparation path. No overlay,
+Tyre textures and installed livery colour PNGs share the sRGB, mip-generation
+and texture-detail path, with BC7 compression on supported GPUs. No overlay,
 additional draw call, paint change or global exposure adjustment is involved.
 `tools/car/wheel_bake.py` evaluates the actual source wheel shaders with Cycles,
 before transforming geometry. It bakes source colour through emission extraction,

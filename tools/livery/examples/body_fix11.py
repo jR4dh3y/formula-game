@@ -5,7 +5,7 @@ pre = [{"tool":"command_run","args":{"id":"file.closeAll","params":{}}},{"tool":
        {"tool":"command_run","args":{"id":"layer.list","params":{"flat":True}},"limit":10**8}]
 out = pc(pre)
 L = {l["name"]: l["id"] for l in json.loads(out[out.index('{"activeLayer"'):].split("\n")[0])["layers"]}
-calls = [{"tool":"command_run","args":{"id":"layer.delete","params":{"layer":i}}} for n, i in L.items() if n[:2] in ("R ","L ","N ","H ")]
+calls = [{"tool":"command_run","args":{"id":"layer.delete","params":{"layer":i}}} for n, i in L.items() if n[:2] in ("R ","L ","N ","H ") and n != "N peroni"]
 for r in json.load(open("decal_report.json")):
     calls += [{"tool":"doc_open","args":{"path":r["path"].replace("livery/","",1)}},
               {"tool":"command_run","args":{"id":"layer.copyToDocument","params":{"document":0,"source":1,"at":[r["x"]+r["w"]//2, r["y"]+r["h"]//2],"name":r["name"]}}},

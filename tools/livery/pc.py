@@ -31,12 +31,14 @@ send({"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {
 reply(0)
 send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 shot = 0
+failed = False
 for n, call in enumerate(calls, 1):
     send({"jsonrpc": "2.0", "id": n, "method": "tools/call",
           "params": {"name": call["tool"], "arguments": call.get("args", {})}})
     message = reply(n)
     if message.get("error") is not None:
         print(f"[{n}] {call['tool']}: error: {message['error']}")
+        failed = True
         break
     result = message.get("result")
     for item in (result or {}).get("content", []):
@@ -54,6 +56,9 @@ for n, call in enumerate(calls, 1):
         continue
     if result and result.get("isError"):
         print(f"[{n}] stopping after error")
+        failed = True
         break
 proc.stdin.close()
 proc.wait(timeout=10)
+if failed:
+    raise SystemExit(1)

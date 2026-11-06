@@ -55,19 +55,32 @@ def build(part, base, fills, stickers, shapes):
             {"id": "edit.transform", "params": {"scaleX": s, "scaleY": s, "rotate": rot, "reference": "center"}},
             {"id": "layer.arrange.bringToFront", "params": {}}]})
     run("command_run", {"id": "layer.list", "params": {"flat": True}}, 10**8)
-    out = subprocess.run(["python3", "-I", "pc.py", json.dumps(calls)], capture_output=True, text=True).stdout
+    result = subprocess.run(["python3", "-I", "pc.py", json.dumps(calls)], capture_output=True, text=True)
+    out = result.stdout
+    if result.returncode:
+        print(part, "FAILED:", (result.stderr or out)[-800:])
+        raise SystemExit(1)
     if '{"activeLayer"' not in out:
-        print(part, "FAILED:", out[-800:]); return
+        print(part, "FAILED:", out[-800:])
+        raise SystemExit(1)
     errors = [l for l in out.splitlines() if '"ok":false' in l or "stopping" in l or "app:" in l]
     if errors:
         print(part, "FAILED:", errors[:3])
-        return
+        raise SystemExit(1)
     layers = json.loads(out[out.rindex('{"activeLayer"'):].split("\n")[0])["layers"]
     hide = [l["id"] for l in layers if l["name"] == "Background"]
     fin = [{"tool": "command_run", "args": {"id": "layer.setProps", "params": {"layers": hide, "visible": False}}},
            {"tool": "doc_save", "args": {"path": f"out/ferrari_{part}.pcraft"}},
            {"tool": "doc_export", "args": {"path": f"out/ferrari_{part}.png"}}]
-    out2 = subprocess.run(["python3", "-I", "pc.py", json.dumps(fin)], capture_output=True, text=True).stdout
+    result = subprocess.run(["python3", "-I", "pc.py", json.dumps(fin)], capture_output=True, text=True)
+    out2 = result.stdout
+    if result.returncode:
+        print(part, "FAILED:", (result.stderr or out2)[-800:])
+        raise SystemExit(1)
+    errors2 = [line for line in out2.splitlines() if '"ok":false' in line or "stopping" in line or "app:" in line]
+    if errors2:
+        print(part, "FAILED:", errors2[:3])
+        raise SystemExit(1)
     print(part, "errors:", errors[:3], "|", out2.strip().splitlines()[-1][:160])
 
 def flag(prefix, x0, x1, y, h, vertical=False):

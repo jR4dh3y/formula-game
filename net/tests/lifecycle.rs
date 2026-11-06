@@ -118,6 +118,20 @@ impl Proxy {
     }
 }
 #[test]
+fn shipped_and_legacy_room_settings_default_ai_power() {
+    let shipped: RaceSettings =
+        serde_json::from_str(include_str!("../../deploy/render/rules.json")).unwrap();
+    assert_eq!(shipped.ai_power, 1.);
+    shipped.validate().unwrap();
+
+    let mut legacy = serde_json::to_value(RaceSettings::default()).unwrap();
+    legacy.as_object_mut().unwrap().remove("ai_power");
+    let legacy: RaceSettings = serde_json::from_value(legacy).unwrap();
+    assert_eq!(legacy.ai_power, 1.);
+    legacy.validate().unwrap();
+}
+
+#[test]
 fn sixteen_real_udp_clients_race_with_loss_and_ai_takeover() {
     let fixture = Fixture::new();
     let settings = RaceSettings {

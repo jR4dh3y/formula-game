@@ -2,6 +2,8 @@
 # spec: [{"name","logo","Y","Z","width","side":-1|1}]  side=-1 -> right side (x<0)
 import bpy, sys, json, os, numpy as np
 from mathutils import Vector
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from decal_geometry import triangles_intersect_projected_rect
 glb, spec, outdir = sys.argv[sys.argv.index("--")+1:][:3]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
@@ -33,10 +35,9 @@ for d in json.load(open(spec)):
     else:
         side = d["side"]; D = np.array([side, 0.0, 0.0]); B = np.array([0.0, side, 0.0]); C0 = np.array([0.0, d["Y"], d["Z"]])
     U = np.cross(D, B)
-    rel = C - C0
-    sel = (N @ D > d.get("min_facing", 0.35)) & (np.abs(rel @ B) < W / 2 + 0.03) & (np.abs(rel @ U) < H / 2 + 0.03)
+    sel = (N @ D > d.get("min_facing", 0.35)) & triangles_intersect_projected_rect(P3, C0, B, U, W, H, 0.03)
     if "dir" not in d:
-        sel &= (C[:, 0] * side > 0.02)
+        sel &= (np.max(P3[:, :, 0] * side, axis=1) > 0.02)
     idx = np.nonzero(sel)[0]
     if len(idx):
         depth = C[idx] @ D; keep = depth > depth.max() - d.get("depth", 0.40)

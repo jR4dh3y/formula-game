@@ -38,6 +38,10 @@ pub fn quantize(race: &mut Race) -> Result<codec::Encoded, String> {
     Ok(encoded)
 }
 
+fn default_ai_power() -> f64 {
+    1.
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RaceSettings {
     pub track: String,
@@ -46,6 +50,7 @@ pub struct RaceSettings {
     /// Exact number of server-controlled cars in addition to connected humans.
     /// The server keeps the combined field at `MAX_PLAYERS` or below.
     pub ai_cars: usize,
+    #[serde(default = "default_ai_power")]
     pub ai_power: f64,
     pub lock_aids: bool,
     pub assists: Assists,
@@ -59,7 +64,7 @@ impl Default for RaceSettings {
             car: "rb6".into(),
             laps: 3,
             ai_cars: 0,
-            ai_power: 1.,
+            ai_power: default_ai_power(),
             lock_aids: true,
             assists: Assists {
                 automatic_gears: true,

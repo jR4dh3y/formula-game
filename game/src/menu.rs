@@ -76,21 +76,11 @@ impl Tab {
                 } else {
                     vec![Self::Join, Self::Host]
                 };
-                tabs.extend(Self::ALL.into_iter().filter(|tab| {
-                    !matches!(
-                        tab,
-                        Self::Track
-                            | Self::Setup
-                            | Self::Camera
-                            | Self::Controls
-                            | Self::Aids
-                            | Self::Graphics
-                            | Self::Effects
-                            | Self::Audio
-                            | Self::Hud
-                            | Self::Benchmark
-                    )
-                }));
+                tabs.extend(
+                    Self::ALL
+                        .into_iter()
+                        .filter(|tab| !matches!(tab, Self::Track | Self::Setup | Self::Benchmark)),
+                );
                 tabs
             }
         }
@@ -2353,6 +2343,118 @@ fn controls_panel(ui: &mut egui::Ui) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn render_online_settings(
+        context: &egui::Context,
+        frontend: &mut Frontend,
+        session: &mut Session,
+        preview: &car_preview::CarPreview,
+        online: &mut crate::online::Online,
+        events: Vec<egui::Event>,
+    ) {
+        context.begin_pass(egui::RawInput {
+            events,
+            ..Default::default()
+        });
+        let mut ui = egui::Ui::new(
+            context.clone(),
+            "online-settings".into(),
+            egui::UiBuilder::new().max_rect(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1100., 900.),
+            )),
+        );
+        render_settings_page(
+            &mut ui,
+            frontend,
+            session,
+            egui::vec2(1100., 900.),
+            1.,
+            preview,
+            Some(online),
+        );
+        context.end_pass().textures_delta.clear();
+    }
+
+    #[test]
+    fn online_navigation_renders_and_applies_player_settings() {
+        let mut options = Options::parse(std::iter::empty()).unwrap();
+        options.join = Some("127.0.0.1:7777".into());
+        let mut online = crate::online::Online::new(&options);
+        assert!(online.active());
+        let nav = Tab::nav(Some(&online));
+        let mut frontend = Frontend::new(&options);
+        let mut session = crate::tests::session();
+        let preview = car_preview::CarPreview::test_stub();
+        let context = egui::Context::default();
+
+        for tab in [
+            Tab::Car,
+            Tab::Camera,
+            Tab::Controls,
+            Tab::Aids,
+            Tab::Graphics,
+            Tab::Effects,
+            Tab::Audio,
+            Tab::Hud,
+        ] {
+            assert!(nav.contains(&tab), "{} is unavailable online", tab.label());
+            frontend.widgets.clear();
+            frontend.tab = tab;
+            render_online_settings(
+                &context,
+                &mut frontend,
+                &mut session,
+                &preview,
+                &mut online,
+                Vec::new(),
+            );
+            assert!(frontend
+                .widgets
+                .get("settings-content")
+                .is_some_and(|rect| rect.height() > 0.));
+        }
+        for tab in [Tab::Track, Tab::Setup, Tab::Benchmark] {
+            assert!(
+                !nav.contains(&tab),
+                "{} should stay excluded from online navigation",
+                tab.label()
+            );
+        }
+
+        frontend.widgets.clear();
+        frontend.tab = Tab::Aids;
+        render_online_settings(
+            &context,
+            &mut frontend,
+            &mut session,
+            &preview,
+            &mut online,
+            Vec::new(),
+        );
+        let position = frontend.widgets["balanced"].center();
+        for pressed in [true, false] {
+            render_online_settings(
+                &context,
+                &mut frontend,
+                &mut session,
+                &preview,
+                &mut online,
+                vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::default(),
+                    },
+                ],
+            );
+        }
+        assert!((frontend.aids.steering - 0.6).abs() < 1e-9);
+        assert!((frontend.aids.braking - 0.6).abs() < 1e-9);
+        assert!((frontend.corner_braking - 0.6).abs() < 1e-9);
+    }
 
     #[test]
     fn switching_teams_selects_a_valid_driver_and_reselecting_keeps_the_driver() {

@@ -35,6 +35,23 @@ pub(crate) struct CarPreview {
 
 impl CarPreview {
     #[cfg(test)]
+    pub(super) fn test_stub() -> Self {
+        Self {
+            texture: egui::TextureId::default(),
+            selected: None,
+            root: None,
+            asset: None,
+            textures: Vec::new(),
+            livery_path: None,
+            scene_ready: false,
+            ready: false,
+            failed: false,
+            retry_at: 0.,
+            image_visible: std::sync::atomic::AtomicBool::default(),
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn root(&self) -> Option<Entity> {
         self.root
     }
@@ -283,7 +300,9 @@ fn ready(
                             )
                         })
                     {
-                        preview.livery_path = Some(path.clone());
+                        if name.0 == "source_paint_main_body_stickers" {
+                            preview.livery_path = Some(path.clone());
+                        }
                         let texture = server.load(path);
                         material.base_color = Color::WHITE;
                         material.base_color_texture = Some(texture.clone());
