@@ -22,6 +22,26 @@ FOOTER = b"F1RACECRAFT-PKG1"
 def cargo_output(cargo, *args):
     return subprocess.check_output(cargo + list(args), cwd=ROOT, text=True)
 
+def prepare_gnu_texture_kernels(cargo):
+    """Reuse the crate's shipped Windows kernels under the GNU target names."""
+    metadata = json.loads(cargo_output(
+        cargo, "metadata", "--locked", "--format-version", "1",
+    ))
+    package = next(
+        package for package in metadata["packages"] if package["name"] == "intel_tex_2"
+    )
+    directory = Path(package["manifest_path"]).parent / "src/ispc"
+    aliases = {
+        "kernelx86_64-pc-windows-gnu.lib": "kernelx86_64-pc-windows-msvc.lib",
+        "kernel_astcx86_64-pc-windows-gnu.lib": "kernel_astcx86_64-pc-windows-msvc.lib",
+        "ispc_texcomp_astcx86_64-pc-windows-gnu-MD.lib":
+            "ispc_texcomp_astcx86_64-pc-windows-msvc-MD.lib",
+    }
+    for target, source in aliases.items():
+        target_path = directory / target
+        if not target_path.exists():
+            shutil.copy2(directory / source, target_path)
+
 
 def copy_notices(cargo, manifest, destination):
     metadata = json.loads(cargo_output(
@@ -103,7 +123,8 @@ def main():
             path = assets / "cars/gen22/tyres/lod2" / f"{compound}.png"
             if not path.is_file():
                 raise FileNotFoundError(path)
-    if not args.skip_build:
+    if not args.skip_build and args.target == TARGET:
+        prepare_gnu_texture_kernels(cargo)
         subprocess.run(cargo + ["build", "--release", "--locked", "-p",
                         "f1-the-game", "--target", args.target], cwd=ROOT, check=True)
     binary = ROOT / "target" / args.target / "release/f1-the-game.exe"

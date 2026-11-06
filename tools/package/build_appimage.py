@@ -92,9 +92,17 @@ def find_library(name):
 
 def owner(name):
     candidates = list(Path("/usr/lib").glob(f"**/{name}"))
-    if not candidates:
-        raise RuntimeError(f"Cannot find build-host provider of {name}")
-    return run("pacman", "-Qqo", str(candidates[0].resolve())).strip()
+    if candidates:
+        try:
+            return run("pacman", "-Qqo", str(candidates[0].resolve())).strip()
+        except subprocess.CalledProcessError:
+            pass
+    # Arch's runtime package may be absent from the build container even
+    # though the package archive can still be fetched and bundled.
+    fallback = name.split(".so", 1)[0]
+    if fallback in {"libpulse", "libpulse-simple"}:
+        return "libpulse"
+    raise RuntimeError(f"Cannot find build-host provider of {name}")
 
 
 def needed(path):
