@@ -384,6 +384,7 @@ fn visual_ready(
             }
             if !car.shadow_only && material_names.contains(entity) {
                 commands.entity(entity).insert(CarSurface {
+                    entrant: car.entrant,
                     lod: (car.entrant != session.player).then_some(if car.lod == Some(true) {
                         "lod2"
                     } else {
@@ -504,10 +505,19 @@ fn visual_ready(
     commands.entity(event.entity).insert(VisualReady);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn check_loading(
     server: Res<AssetServer>,
     mut visuals: ResMut<VisualAssets>,
     ready: Query<(), With<VisualReady>>,
+    surfaces: Query<
+        (
+            &bevy::gltf::GltfMaterialName,
+            &MeshMaterial3d<StandardMaterial>,
+        ),
+        With<CarSurface>,
+    >,
+    materials: Res<Assets<StandardMaterial>>,
     time: Res<Time<Real>>,
     mut session: ResMut<Session>,
     mut exit: MessageWriter<AppExit>,
@@ -517,7 +527,23 @@ pub fn check_loading(
         return;
     }
     let started = *visuals.started.get_or_insert(time.elapsed_secs_f64());
-    for id in visuals.handles.iter().map(|handle| handle.id().untyped()) {
+    let textures: Vec<_> = surfaces
+        .iter()
+        .filter(|(name, _)| name.0.starts_with("source_paint_") || name.0 == "tyre")
+        .filter_map(|(_, handle)| {
+            materials
+                .get(&handle.0)?
+                .base_color_texture
+                .as_ref()
+                .map(|texture| texture.id())
+        })
+        .collect();
+    for id in visuals
+        .handles
+        .iter()
+        .map(|handle| handle.id().untyped())
+        .chain(textures.iter().map(|id| id.untyped()))
+    {
         if let Some(LoadState::Failed(error)) = server.get_load_state(id) {
             error!("visual asset failed: {error}");
             menu.error = Some(format!("Could not load a visual asset: {error}"));
@@ -529,7 +555,11 @@ pub fn check_loading(
             return;
         }
     }
-    if ready.iter().count() == visuals.scene_count {
+    if ready.iter().count() == visuals.scene_count
+        && textures
+            .iter()
+            .all(|id| server.is_loaded_with_dependencies(*id))
+    {
         session.ready = true;
         if session.screen == crate::menu::Screen::Loading {
             menu.race_started = true;
@@ -849,7 +879,8 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
             }
         })
         .collect();
-    let race = Race::new(track.clone(), entrants, options.laps, 0x5EED);
+    let mut race = Race::new(track.clone(), entrants, options.laps, 0x5EED);
+    race.set_ai_power(options.ai_power);
     Ok(race)
 }
 

@@ -76,6 +76,40 @@ impl RacingLine {
         )
     }
 
+    /// A smooth left/right lane with room for a car between its centre and the edge.
+    /// The inside lane depends on the approaching corner, not on a fixed lap label.
+    pub fn side_lane(&self, stations: &[Station], side: f64) -> Self {
+        let mut offsets: Vec<_> = stations
+            .iter()
+            .zip(&self.offsets)
+            .map(|(station, optimal)| {
+                let limit = (station.half_width - 1.4).max(0.);
+                (optimal * 0.12 + side * limit.min(3.4)).clamp(-limit, limit)
+            })
+            .collect();
+        for _ in 0..80 {
+            let previous = offsets.clone();
+            let count = offsets.len();
+            for (i, offset) in offsets.iter_mut().enumerate() {
+                let limit = (stations[i].half_width - 1.4).max(0.);
+                *offset = ((previous[(i + count - 1) % count]
+                    + previous[i] * 2.
+                    + previous[(i + 1) % count])
+                    * 0.25)
+                    .clamp(-limit, limit);
+            }
+        }
+        Self::from_offsets(stations, offsets)
+    }
+
+    /// Interpolated lateral target, including across the start/finish seam.
+    pub fn lateral_at(&self, s: f64) -> f64 {
+        let station = (s / STATION_SPACING).rem_euclid(self.offsets.len() as f64);
+        let i = station.floor() as usize;
+        let t = station.fract();
+        self.offsets[i] * (1. - t) + self.offsets[(i + 1) % self.offsets.len()] * t
+    }
+
     fn from_offsets(stations: &[Station], offsets: Vec<f64>) -> Self {
         let count = stations.len();
         let centers: Vec<DVec2> = stations

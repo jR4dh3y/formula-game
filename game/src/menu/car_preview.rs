@@ -13,7 +13,7 @@ use bevy_egui::{egui, EguiTextureHandle, EguiUserTextures};
 use racecraft_sim::Compound;
 
 const LAYER: usize = 2;
-const SIZE: (u32, u32) = (960, 400);
+const SIZE: (u32, u32) = (1200, 620);
 
 #[derive(Component)]
 pub(crate) struct PreviewCamera;
@@ -21,10 +21,11 @@ pub(crate) struct PreviewCamera;
 #[derive(Resource)]
 pub(crate) struct CarPreview {
     texture: egui::TextureId,
-    selected: Option<(String, Compound)>,
+    selected: Option<(String, Compound, String, String)>,
     root: Option<Entity>,
     asset: Option<Handle<WorldAsset>>,
-    tyre_texture: Option<Handle<Image>>,
+    textures: Vec<Handle<Image>>,
+    livery_path: Option<String>,
     scene_ready: bool,
     pub(super) ready: bool,
     failed: bool,
@@ -34,13 +35,35 @@ pub(crate) struct CarPreview {
 
 impl CarPreview {
     #[cfg(test)]
+    pub(super) fn test_stub() -> Self {
+        Self {
+            texture: egui::TextureId::default(),
+            selected: None,
+            root: None,
+            asset: None,
+            textures: Vec::new(),
+            livery_path: None,
+            scene_ready: false,
+            ready: false,
+            failed: false,
+            retry_at: 0.,
+            image_visible: std::sync::atomic::AtomicBool::default(),
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn root(&self) -> Option<Entity> {
         self.root
     }
 
     #[cfg(test)]
     pub(super) fn selected_car(&self) -> Option<&str> {
-        self.selected.as_ref().map(|(car, _)| car.as_str())
+        self.selected.as_ref().map(|(car, ..)| car.as_str())
+    }
+
+    #[cfg(test)]
+    pub(super) fn applied_livery_path(&self) -> Option<&str> {
+        self.livery_path.as_deref()
     }
 
     pub(super) fn show(&self, ui: &mut egui::Ui) {
@@ -48,7 +71,7 @@ impl CarPreview {
             ui.available_width(),
             ui.available_width() * SIZE.1 as f32 / SIZE.0 as f32,
         );
-        let response = ui.add(egui::Image::new((self.texture, size)).corner_radius(6));
+        let response = ui.add(egui::Image::new((self.texture, size)));
         self.image_visible.store(
             ui.is_rect_visible(response.rect),
             std::sync::atomic::Ordering::Relaxed,
@@ -88,7 +111,8 @@ pub(crate) fn setup(
         selected: None,
         root: None,
         asset: None,
-        tyre_texture: None,
+        textures: Vec::new(),
+        livery_path: None,
         scene_ready: false,
         ready: false,
         failed: false,
@@ -108,7 +132,7 @@ pub(crate) fn setup(
         RenderLayers::layer(LAYER),
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
-                viewport_height: 3.5,
+                viewport_height: 3.8,
             },
             ..OrthographicProjection::default_3d()
         }),
@@ -167,11 +191,16 @@ pub(crate) fn update(
     if !visible {
         return;
     }
-    let selected = (&frontend.draft.car, frontend.draft.setup.compound);
+    let selected = (
+        frontend.draft.car.clone(),
+        frontend.draft.setup.compound,
+        frontend.draft.team.clone(),
+        frontend.draft.driver.clone(),
+    );
     let retry = preview.failed && time.elapsed_secs_f64() >= preview.retry_at;
     if retry {
         server.reload(format!("cars/{}/car.glb", frontend.draft.car));
-        if let Some(texture) = &preview.tyre_texture {
+        for texture in &preview.textures {
             if let Some(path) = server.get_path(texture.id()) {
                 server.reload(path);
             }
@@ -181,7 +210,7 @@ pub(crate) fn update(
         || preview
             .selected
             .as_ref()
-            .is_none_or(|(car, compound)| (car, *compound) != selected)
+            .is_none_or(|previous| *previous != selected)
     {
         if let Some(root) = preview.root.take() {
             commands.entity(root).despawn();
@@ -196,10 +225,11 @@ pub(crate) fn update(
                 .id(),
         );
         preview.asset = Some(scene);
-        preview.selected = Some((selected.0.clone(), selected.1));
+        preview.selected = Some(selected);
         preview.ready = false;
         preview.scene_ready = false;
-        preview.tyre_texture = None;
+        preview.textures.clear();
+        preview.livery_path = None;
         preview.failed = false;
         preview.retry_at = time.elapsed_secs_f64() + 5.;
     }
@@ -211,7 +241,7 @@ pub(crate) fn update(
             server.get_recursive_dependency_load_state(asset.id()),
             Some(RecursiveDependencyLoadState::Failed(_))
         )
-    }) || preview.tyre_texture.as_ref().is_some_and(|texture| {
+    }) || preview.textures.iter().any(|texture| {
         matches!(
             server.get_load_state(texture.id()),
             Some(LoadState::Failed(_))
@@ -220,11 +250,12 @@ pub(crate) fn update(
     preview.ready = preview.scene_ready
         && !preview.failed
         && preview
-            .tyre_texture
-            .as_ref()
-            .is_none_or(|texture| server.is_loaded_with_dependencies(texture.id()));
+            .textures
+            .iter()
+            .all(|texture| server.is_loaded_with_dependencies(texture.id()));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn ready(
     event: On<WorldInstanceReady>,
     mut commands: Commands,
@@ -235,6 +266,7 @@ fn ready(
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     server: Res<AssetServer>,
+    frontend: Res<Frontend>,
     mut preview: ResMut<CarPreview>,
 ) {
     if preview.root != Some(event.entity) {
@@ -246,13 +278,36 @@ fn ready(
             if let Some(source) = materials.get(&handle.0) {
                 let mut material = source.clone();
                 crate::materials::calibrate(&name.0, &mut material);
-                if let Some((_, compound)) =
-                    preview.selected.as_ref().filter(|(car, _)| car == "gen22")
+                if let Some((_, compound, team, driver)) =
+                    preview.selected.clone().filter(|(car, ..)| car == "gen22")
                 {
                     if name.0 == "tyre" {
-                        let texture = server.load(crate::materials::tyre_texture(None, *compound));
+                        let texture = server.load(crate::materials::tyre_texture(None, compound));
                         material.base_color_texture = Some(texture.clone());
-                        preview.tyre_texture = Some(texture);
+                        preview.textures.push(texture);
+                    } else if let Some(path) = frontend
+                        .teams
+                        .selection(&team, &driver)
+                        .ok()
+                        .and_then(|(team, driver)| {
+                            crate::materials::livery_texture(
+                                &frontend.draft.assets,
+                                &crate::teams::Teams::identity(team, driver),
+                                // 2048² is plenty for the preview and keeps a
+                                // paused race plus preview inside 4 GB GPUs.
+                                Some("lod1"),
+                                &name.0,
+                            )
+                        })
+                    {
+                        if name.0 == "source_paint_main_body_stickers" {
+                            preview.livery_path = Some(path.clone());
+                        }
+                        let texture = server.load(path);
+                        material.base_color = Color::WHITE;
+                        material.base_color_texture = Some(texture.clone());
+                        material.base_color_channel = bevy::mesh::UvChannel::Uv0;
+                        preview.textures.push(texture);
                     }
                 }
                 commands

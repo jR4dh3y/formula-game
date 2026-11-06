@@ -16,6 +16,8 @@ permissions:
 env:
   ASSET_ARCHIVE_URL: https://github.com/jR4dh3y/formula-game/releases/download/assets-68ae3a48b726ffa5/f1-racecraft-assets.zip
   ASSET_ARCHIVE_SHA256: 68ae3a48b726ffa5789ca049ebc438e77db8aca6fa91a46755c1376ae4053e7d
+  LIVERY_ARCHIVE_URL: https://github.com/jR4dh3y/formula-game/releases/download/liveries-0a14081c2385c999/f1-racecraft-liveries.zip
+  LIVERY_ARCHIVE_SHA256: 0a14081c2385c99923169c91a1daadd8a3e28d632bde82e104bf025c29c7c911
 
 jobs:
   build-linux:
@@ -63,6 +65,9 @@ jobs:
           curl --fail --location --retry 3 --retry-all-errors \
             "$ASSET_ARCHIVE_URL" --output "$RUNNER_TEMP/f1-assets.zip"
           python tools/package/extract_assets.py "$RUNNER_TEMP/f1-assets.zip" "$RUNNER_TEMP/game-assets/assets" --sha256 "$ASSET_ARCHIVE_SHA256"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "$LIVERY_ARCHIVE_URL" --output "$RUNNER_TEMP/f1-liveries.zip"
+          python tools/package/overlay_assets.py "$RUNNER_TEMP/f1-liveries.zip" "$RUNNER_TEMP/game-assets/assets" --sha256 "$LIVERY_ARCHIVE_SHA256" --replace cars/gen22/liveries
 
       - name: Build normal and experimental AppImages
         run: |
@@ -124,6 +129,9 @@ jobs:
           $archive = Join-Path $env:RUNNER_TEMP 'f1-assets.zip'
           Invoke-WebRequest -Uri $env:ASSET_ARCHIVE_URL -OutFile $archive
           python tools/package/extract_assets.py $archive (Join-Path $env:RUNNER_TEMP 'game-assets/assets') --sha256 $env:ASSET_ARCHIVE_SHA256
+          $liveries = Join-Path $env:RUNNER_TEMP 'f1-liveries.zip'
+          Invoke-WebRequest -Uri $env:LIVERY_ARCHIVE_URL -OutFile $liveries
+          python tools/package/overlay_assets.py $liveries (Join-Path $env:RUNNER_TEMP 'game-assets/assets') --sha256 $env:LIVERY_ARCHIVE_SHA256 --replace cars/gen22/liveries
 
       - name: Build the portable EXE
         shell: pwsh

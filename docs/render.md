@@ -26,9 +26,11 @@ textures, audio and any GPU dependency. `--car gen22` includes its team roster.
 The generated bundle must be included in the deployment's source revision.
 Keep your source assets; the preparation command does not replace them.
 
-The default rules are three laps, no AI, automatic gears and medium tyres. The
-first player to join owns the room and can change supported lobby rules. Circuit
-and car are selected by the staged bundle and require a new deployment to change.
+The default rules are three laps, no AI, full AI power, automatic gears and
+medium tyres. Legacy rules files without `ai_power` default that engine setting
+to 1.0.
+The first player to join owns the room and can change supported lobby rules.
+Circuit and car are selected by the staged bundle and require a new deployment to change.
 
 ## Deploy
 

@@ -2,7 +2,7 @@
 //! the simulation's ABS, traction and stability controls. Throttle remains manual.
 
 use racecraft_sim::{
-    ai::{AiDriver, DriverProfile},
+    ai::{AiDriver, DriverProfile, Rival},
     Car, CarInput, Race, Track,
 };
 
@@ -40,16 +40,20 @@ impl Guidance {
         self.driver.target_speed(track, distance)
     }
 
+    /// `rivals` are the other cars as the AI sees them, so assisted steering
+    /// gives room to a car alongside and pulls out to pass a slower one
+    /// instead of following the racing line into it.
     pub fn apply(
         &mut self,
         car: &Car,
         track: &Track,
+        rivals: &[Rival],
         raw: CarInput,
         corner_braking: f64,
         dt: f64,
     ) -> CarInput {
         let mut input = raw;
-        let reference = self.driver.drive(car, track, &[], dt);
+        let reference = self.driver.drive(car, track, rivals, dt);
         let target_speed = self
             .driver
             .target_speed(track, car.track_position.s + car.speed() * 0.12 + 2.);
@@ -61,9 +65,9 @@ impl Guidance {
             let braking = corner_braking.clamp(0., 1.);
             if braking > 0. {
                 input.brake = raw.brake.max(reference.brake * braking);
-                input.throttle = raw.throttle * (1. - braking + braking * reference.throttle);
-                // A braking intervention must not fight a held accelerator.
-                if input.brake > raw.brake + 0.02 {
+                // Corner assistance owns braking, not the accelerator. The AI's
+                // coasting and traction trims otherwise hold back a held pedal.
+                if input.brake > raw.brake {
                     input.throttle *= 1. - input.brake;
                 }
             }
@@ -172,6 +176,7 @@ mod tests {
                 let input = guide.apply(
                     &race.entrants[0].car,
                     &race.track,
+                    &[],
                     CarInput {
                         throttle: 1.,
                         ..Default::default()
@@ -211,6 +216,97 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires converted game assets"]
+    fn spa_straight_allows_full_throttle_beside_a_rival_but_brakes_for_a_blocker() {
+        let root = std::env::var("F1_TEST_ASSETS").expect("F1_TEST_ASSETS");
+        let options = crate::options::Options::parse(
+            ["--assets", &root, "--opponents", "0", "--grid", "1"]
+                .into_iter()
+                .map(String::from),
+        )
+        .unwrap();
+        let mut race = crate::assets::load_race(&options).unwrap();
+        let mut passing_samples = 0;
+        for s in (1400..1800).step_by(20) {
+            let frame = race.track.frame_at(s as f64);
+            let lateral = race.track.racing_line.lateral_at(s as f64);
+            let car = &mut race.entrants[0].car;
+            *car = Car::new(
+                car.spec.clone(),
+                car.setup,
+                car.assists,
+                &race.track,
+                frame.point_at(lateral),
+                frame.tangent.x.atan2(frame.tangent.y),
+            );
+            car.velocity = car.forward() * (282. / 3.6);
+            car.powertrain.gear = 7;
+            let mut guide = Guidance::new(&race, 0);
+            let car = &race.entrants[0].car;
+            for blocked in [false, true] {
+                let ahead = race.track.frame_at(s as f64 + 8.);
+                let across = lateral + if blocked { 0. } else { 4. };
+                let point = ahead.point_at(across);
+                let rival = Rival {
+                    gap: 8.,
+                    lateral: across,
+                    speed: 60.,
+                    position: glam::DVec2::new(point.x, point.z),
+                };
+                let input = guide.apply(
+                    car,
+                    &race.track,
+                    &[rival],
+                    CarInput {
+                        throttle: 1.,
+                        ..Default::default()
+                    },
+                    1.,
+                    1. / 360.,
+                );
+                println!(
+                    "s={s} blocked={blocked} throttle={:.3} brake={:.3}",
+                    input.throttle, input.brake
+                );
+                if blocked {
+                    assert!(input.brake > 0.5 && input.throttle < 0.5, "{input:?}");
+                } else if input.brake == 0. {
+                    passing_samples += 1;
+                    assert_eq!(input.throttle, 1.);
+                }
+            }
+        }
+        assert!(
+            passing_samples >= 10,
+            "only {passing_samples} passing samples"
+        );
+    }
+
+    #[test]
+    fn corner_assist_preserves_the_pedal_when_it_is_not_braking() {
+        let mut session = crate::tests::session();
+        let mut guide = Guidance::new(&session.race, 0);
+        let track = &session.race.track;
+        let car = &mut session.race.entrants[0].car;
+        let mut samples = 0;
+        for speed in (100..650).map(|i| i as f64 / 10.) {
+            car.velocity = car.forward() * speed;
+            for pedal in [0.4, 1.0] {
+                let raw = CarInput {
+                    throttle: pedal,
+                    ..Default::default()
+                };
+                let input = guide.apply(car, track, &[], raw, 1., 1. / 360.);
+                if input.brake == 0. {
+                    samples += 1;
+                    assert_eq!(input.throttle, pedal, "speed {speed}: {input:?}");
+                }
+            }
+        }
+        assert!(samples > 100, "no unbraked samples exercised");
+    }
+
+    #[test]
     fn guidance_turns_and_brakes_for_a_corner_but_off_preserves_manual_input() {
         let mut session = crate::tests::session();
         let track = &session.race.track;
@@ -234,7 +330,7 @@ mod tests {
             throttle: 1.,
             ..Default::default()
         };
-        let input = guide.apply(car, track, raw, 1., 1. / 360.);
+        let input = guide.apply(car, track, &[], raw, 1., 1. / 360.);
         assert!(input.steer.abs() > 0.02, "no steering guidance");
         assert!(
             input.brake > 0.5 && input.throttle < 0.2,
@@ -242,11 +338,13 @@ mod tests {
         );
         assert!(guide.activity.braking && guide.activity.steering);
         car.assists.steering = 0.;
-        assert_eq!(guide.apply(car, track, raw, 0., 1. / 360.), raw);
+        assert_eq!(guide.apply(car, track, &[], raw, 0., 1. / 360.), raw);
         car.assists.steering = 1.;
         let override_input = CarInput { steer: -1., ..raw };
         assert_eq!(
-            guide.apply(car, track, override_input, 0., 1. / 360.).steer,
+            guide
+                .apply(car, track, &[], override_input, 0., 1. / 360.)
+                .steer,
             -1.
         );
     }

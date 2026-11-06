@@ -126,6 +126,9 @@ def main():
             destination = package / "assets" / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(assets / path, destination)
+        liveries = assets / "cars/gen22/liveries"
+        if liveries.is_dir():
+            shutil.copytree(liveries, package / "assets/cars/gen22/liveries")
         (package / "Play.cmd").write_text(
             '@echo off\ncd /d "%~dp0"\n'
             'if not defined F1_SETTINGS set "F1_SETTINGS=%LOCALAPPDATA%\\f1-racecraft\\preferences.json"\n'

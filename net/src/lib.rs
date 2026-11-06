@@ -38,6 +38,10 @@ pub fn quantize(race: &mut Race) -> Result<codec::Encoded, String> {
     Ok(encoded)
 }
 
+fn default_ai_power() -> f64 {
+    1.
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RaceSettings {
     pub track: String,
@@ -46,6 +50,8 @@ pub struct RaceSettings {
     /// Exact number of server-controlled cars in addition to connected humans.
     /// The server keeps the combined field at `MAX_PLAYERS` or below.
     pub ai_cars: usize,
+    #[serde(default = "default_ai_power")]
+    pub ai_power: f64,
     pub lock_aids: bool,
     pub assists: Assists,
     pub corner_braking: f64,
@@ -58,6 +64,7 @@ impl Default for RaceSettings {
             car: "rb6".into(),
             laps: 3,
             ai_cars: 0,
+            ai_power: default_ai_power(),
             lock_aids: true,
             assists: Assists {
                 automatic_gears: true,
@@ -79,6 +86,8 @@ impl RaceSettings {
                 .all(|b| b.is_ascii_alphanumeric() || b == b'_')
             || !(1..=100).contains(&self.laps)
             || self.ai_cars >= MAX_PLAYERS
+            || !self.ai_power.is_finite()
+            || !(0.5..=1.).contains(&self.ai_power)
         {
             return Err("invalid car, circuit, lap count or AI car count".into());
         }
@@ -201,7 +210,9 @@ pub fn load_race(root: &Path, settings: &RaceSettings, players: &[Player]) -> Re
             }
         })
         .collect();
-    Ok(Race::new(track, configs, settings.laps, 0x5eed))
+    let mut race = Race::new(track, configs, settings.laps, 0x5eed);
+    race.set_ai_power(settings.ai_power);
+    Ok(race)
 }
 
 /// GEN22 keeps stock team/driver identities unique; unspecified selections get a free driver.

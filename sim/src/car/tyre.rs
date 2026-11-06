@@ -84,6 +84,14 @@ pub fn lateral_shape(x: f64) -> f64 {
     }
 }
 
+/// Inverse of `lateral_shape` below the peak: the slip (in peak slip angles)
+/// that uses `share` of the available grip, for `share` in 0..=1.
+pub fn lateral_shape_inverse(share: f64) -> f64 {
+    // Root in 0..=1 of x³ - 3x + 2·share = 0.
+    let share = share.clamp(0.0, 1.0);
+    (2.0 * ((-share).acos() / 3.0 - std::f64::consts::TAU / 3.0).cos()).clamp(0.0, 1.0)
+}
+
 /// Load sensitivity: heavily loaded tyres produce a little less friction per newton.
 pub fn load_sensitivity(load: f64, nominal_load: f64) -> f64 {
     (1.0 - 0.045 * (load / nominal_load - 1.0)).clamp(0.7, 1.12)
@@ -116,6 +124,16 @@ mod tests {
         assert!(lateral_shape(0.5) < 1.0);
         assert!(lateral_shape(3.0) < 0.9);
         assert!(lateral_shape(3.0) > 0.8);
+    }
+
+    #[test]
+    fn lateral_shape_inverse_undoes_the_rising_side() {
+        for share in [0.0, 0.1, 0.5, 0.9, 1.0] {
+            let slip = lateral_shape_inverse(share);
+            assert!((0.0..=1.0).contains(&slip));
+            assert!((lateral_shape(slip) - share).abs() < 1e-9, "{share}");
+        }
+        assert_eq!(lateral_shape_inverse(1.5), 1.0);
     }
 
     #[test]

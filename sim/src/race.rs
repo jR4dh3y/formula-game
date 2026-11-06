@@ -6,7 +6,7 @@
 use crate::aero;
 use crate::ai::{AiDriver, DriverProfile, Rival};
 use crate::car::spec::{CarSpec, Setup};
-use crate::car::{Assists, Car, CarInput};
+use crate::car::{Assists, Car, CarInput, AI_STABILITY};
 use crate::drs;
 use crate::rng::Rng;
 use crate::track::Track;
@@ -76,6 +76,9 @@ pub const RECOVERY_GHOST: f64 = 3.0;
 /// Metres behind a rejoin spot that must be free of cars in its lane.
 const REJOIN_CLEAR_BEHIND: f64 = 120.0;
 
+/// Seconds after the winner finishes before unfinished cars are classified.
+pub const FINISH_GRACE: f64 = 120.0;
+
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Phase {
     /// Red lights coming on; `lights` of five are lit. Cars are held.
@@ -125,6 +128,7 @@ pub struct Race {
     pub events: Vec<RaceEvent>,
     /// Empty when no car in the field has DRS.
     pub drs_zones: Vec<drs::Zone>,
+    ai_power: f64,
     order: Vec<usize>,
     finish_order: Vec<usize>,
     rng: Rng,
@@ -141,6 +145,7 @@ impl Race {
                 let assists = if config.ai.is_some() {
                     Assists {
                         automatic_gears: true,
+                        stability: AI_STABILITY,
                         ..Assists::default()
                     }
                 } else {
@@ -182,6 +187,7 @@ impl Race {
             Vec::new()
         };
         Self {
+            ai_power: 1.,
             drs_zones,
             track,
             entrants,
@@ -198,6 +204,15 @@ impl Race {
             finish_order: Vec::new(),
             rng,
         }
+    }
+
+    /// Scales propulsion for AI, including disconnected humans taken over by AI.
+    pub fn set_ai_power(&mut self, power: f64) {
+        self.ai_power = if power.is_finite() {
+            power.clamp(0.5, 1.)
+        } else {
+            1.
+        };
     }
 
     /// Entrant indices from first to last.
@@ -249,7 +264,12 @@ impl Race {
                     input.throttle = input.throttle.min(0.45);
                 }
             }
-            entrant.car.step(&input, &self.track, dt);
+            let power = if matches!(entrant.driver, Driver::Ai(_)) {
+                self.ai_power
+            } else {
+                1.
+            };
+            entrant.car.step_with_power(&input, &self.track, dt, power);
         }
 
         for entrant in &mut self.entrants {
@@ -323,7 +343,9 @@ impl Race {
         }
     }
 
-    fn rivals_of(&self, index: usize) -> Vec<Rival> {
+    /// The other cars within range as `index`'s driver sees them, for the AI
+    /// and for anything else steering that car (such as driving aids).
+    pub fn rivals_of(&self, index: usize) -> Vec<Rival> {
         let me = &self.entrants[index];
         self.entrants
             .iter()
@@ -629,14 +651,24 @@ impl Race {
                 }
             }
         }
-        self.order = order;
-        if self.phase == Phase::Finishing
-            && self
+        if self.phase != Phase::Finished {
+            self.order = order;
+        }
+        if self.phase == Phase::Finishing {
+            let everyone = self
                 .entrants
                 .iter()
-                .all(|entrant| entrant.timing.finish_time.is_some())
-        {
-            self.phase = Phase::Finished;
+                .all(|entrant| entrant.timing.finish_time.is_some());
+            // Stopped, crashed or lapped cars must not hold the results forever:
+            // classify them by distance once the grace period after the winner ends.
+            let winner = self
+                .finish_order
+                .first()
+                .and_then(|&first| self.entrants[first].timing.finish_time);
+            let expired = winner.is_some_and(|time| self.time - time > FINISH_GRACE);
+            if everyone || expired {
+                self.phase = Phase::Finished;
+            }
         }
     }
 
@@ -908,6 +940,136 @@ mod tests {
         assert_eq!(race.order()[0], 1, "the faster car stayed stuck behind");
     }
 
+    /// Speeds of (human, AI) after a straight-line launch with the given AI power.
+    fn launch_speeds(ai_power: f64) -> (f64, f64) {
+        let track = Arc::new(crate::track::stadium(800.0, 30.0, Vec::new()));
+        let mut race = Race::new(track, field(1, 1), 1, 7);
+        race.set_ai_power(ai_power);
+        let full = CarInput {
+            throttle: 1.0,
+            shift_up: true,
+            ..CarInput::default()
+        };
+        let mut racing = 0;
+        while racing < (6.0 * PHYSICS_RATE) as usize {
+            race.step(std::slice::from_ref(&full));
+            if race.phase == Phase::Racing {
+                racing += 1;
+            }
+        }
+        (race.entrants[0].car.speed(), race.entrants[1].car.speed())
+    }
+
+    #[test]
+    fn ai_power_slows_only_the_ai() {
+        let (human_full, ai_full) = launch_speeds(1.0);
+        let (human_low, ai_low) = launch_speeds(0.5);
+        assert_eq!(
+            human_full, human_low,
+            "the player's car must not be handicapped"
+        );
+        assert!(
+            ai_low < ai_full - 1.0,
+            "50% AI power should be clearly slower: {ai_low:.2} vs {ai_full:.2} m/s"
+        );
+    }
+
+    #[test]
+    fn ai_power_is_clamped_to_the_slider_range() {
+        let mut race = Race::new(Arc::new(oval_track()), field(0, 1), 1, 1);
+        race.set_ai_power(0.3);
+        assert_eq!(race.ai_power, 0.5);
+        race.set_ai_power(f64::NAN);
+        assert_eq!(race.ai_power, 1.0);
+    }
+
+    #[test]
+    fn ai_takeover_preserves_automatic_gears_and_uses_ai_stability_profile() {
+        let mut race = Race::new(Arc::new(oval_track()), field(1, 0), 1, 5);
+        race.ai_takeover(0);
+        assert!(race.entrants[0].car.assists.automatic_gears);
+        assert!(race.entrants[0].car.assists.stability < 0.5);
+        assert!(matches!(race.entrants[0].driver, Driver::Ai(_)));
+    }
+
+    #[test]
+    fn a_stopped_car_cannot_hold_back_the_results() {
+        // The human never drives; the AI wins and the race still ends.
+        let mut race = Race::new(Arc::new(oval_track()), field(1, 1), 1, 5);
+        let input = [CarInput::default()];
+        let mut ticks = 0;
+        while race.phase != Phase::Finishing && ticks < (400.0 * PHYSICS_RATE) as usize {
+            race.step(&input);
+            ticks += 1;
+        }
+        assert_eq!(race.phase, Phase::Finishing, "the AI must finish");
+        let winner = race.finish_order[0];
+        let winner_finish_time = race.entrants[winner].timing.finish_time.unwrap();
+
+        let mut grace_ticks = 0;
+        while race.phase != Phase::Finished
+            && grace_ticks <= (FINISH_GRACE * PHYSICS_RATE) as usize + 2
+        {
+            assert_eq!(race.phase, Phase::Finishing);
+            assert!(race.time - winner_finish_time <= FINISH_GRACE);
+            race.step(&input);
+            grace_ticks += 1;
+        }
+        assert_eq!(race.phase, Phase::Finished);
+        assert!(race.time - winner_finish_time >= FINISH_GRACE);
+        assert!(race.entrants[0].timing.finish_time.is_none());
+        assert_eq!(race.order()[0], winner);
+    }
+    #[test]
+    fn a_moving_car_finishes_inside_the_grace_window() {
+        let track = Arc::new(oval_track());
+        let mut race = Race::new(track.clone(), field(2, 0), 10, 5);
+        let winner_finished_at = 100.0;
+        race.phase = Phase::Finishing;
+        race.time = winner_finished_at;
+        race.finish_order.push(0);
+        race.order = vec![0, 1];
+        race.entrants[0].timing.finish_time = Some(winner_finished_at);
+
+        let place = |entrant: &mut Entrant, distance: f64, speed: f64| {
+            let frame = track.frame_at(distance);
+            let position = frame.point_at(track.racing_line.lateral_at(distance)) + DVec3::Y * 0.3;
+            entrant.car.position = position;
+            entrant.car.yaw = frame.tangent.x.atan2(frame.tangent.y);
+            entrant.car.velocity = entrant.car.forward() * speed;
+            entrant.car.yaw_rate = 0.0;
+            entrant.car.track_position = track.project(position, None);
+            entrant.car.powertrain.gear = 6;
+            entrant.timing.distance = track.length + entrant.car.track_position.s;
+            entrant.timing.laps_completed = 1;
+        };
+        place(&mut race.entrants[0], 300.0, 0.0);
+        place(&mut race.entrants[1], track.length - 1.0, 60.0);
+        // The previously finished entrant stays classified first.
+        race.entrants[0].timing.finish_time = Some(winner_finished_at);
+        race.entrants[1].timing.finish_time = None;
+        race.entrants[1].timing.lap_start = winner_finished_at - 50.0;
+        let input = [
+            CarInput::default(),
+            CarInput {
+                throttle: 1.0,
+                ..CarInput::default()
+            },
+        ];
+        for _ in 0..30 {
+            race.step(&input);
+            if race.entrants[1].timing.finish_time.is_some() {
+                break;
+            }
+        }
+        let entrant_finish = race.entrants[1]
+            .timing
+            .finish_time
+            .expect("moving entrant should finish during the grace window");
+        assert!(entrant_finish - winner_finished_at < FINISH_GRACE);
+        assert_eq!(race.finish_order, [0, 1]);
+        assert_eq!(race.phase, Phase::Finished);
+    }
     #[test]
     fn walls_stop_cars() {
         let wall = crate::track::Wall {
@@ -934,6 +1096,181 @@ mod tests {
             .events
             .iter()
             .any(|event| matches!(event, RaceEvent::Contact { .. })));
+    }
+}
+
+/// Wheel-to-wheel racecraft on a generated track: no converted assets needed.
+#[cfg(test)]
+mod racecraft {
+    use super::*;
+    use crate::car::spec::test_wheels;
+
+    fn ai(name: &str, pace: f64, spec: &Arc<CarSpec>) -> EntrantConfig {
+        EntrantConfig {
+            name: name.into(),
+            spec: spec.clone(),
+            setup: Setup::default(),
+            assists: Assists {
+                automatic_gears: true,
+                ..Assists::default()
+            },
+            ai: Some(DriverProfile {
+                pace,
+                aggression: 0.6,
+                consistency: 1.0,
+            }),
+            human_slot: 0,
+            livery: [1.0; 3],
+        }
+    }
+
+    /// Puts a car at lap distance `s` and `lateral`, rolling at `speed` m/s.
+    fn place(track: &Track, car: &mut Car, s: f64, lateral: f64, speed: f64) {
+        let frame = track.frame_at(s);
+        car.position = frame.point_at(lateral);
+        car.yaw = frame.tangent.x.atan2(frame.tangent.y);
+        car.velocity = car.forward() * speed;
+        car.yaw_rate = 0.0;
+        car.track_position = track.project(car.position, None);
+        car.powertrain.gear = 6;
+    }
+
+    /// Mid-race: racing, no grid launch, timing consistent with the poses.
+    fn start_racing(race: &mut Race) {
+        race.phase = Phase::Racing;
+        for entrant in &mut race.entrants {
+            entrant.timing.distance = entrant.car.track_position.s;
+            entrant.timing.laps_completed = 1;
+        }
+    }
+
+    fn car_contacts(race: &mut Race) -> usize {
+        let count = race
+            .events
+            .iter()
+            .filter(|event| matches!(event, RaceEvent::Contact { b: Some(_), .. }))
+            .count();
+        race.events.clear();
+        count
+    }
+
+    /// A slow car on the racing line: steer for the line, hold `speed`.
+    fn cruise(car: &Car, track: &Track, speed: f64) -> CarInput {
+        let s = car.track_position.s + 25.0;
+        let target = track.frame_at(s).point_at(track.racing_line.lateral_at(s));
+        let offset = DVec2::new(target.x - car.position.x, target.z - car.position.z);
+        let curvature = 2.0 * offset.dot(car.left()) / offset.length_squared().max(1.0);
+        let wheel = (car.spec.wheelbase() * curvature).atan();
+        CarInput {
+            steer: (wheel / car.steer_limit(car.speed())).clamp(-1.0, 1.0),
+            throttle: ((speed - car.speed()) * 0.3 + 0.3).clamp(0.0, 1.0),
+            brake: ((car.speed() - speed - 2.0) * 0.2).clamp(0.0, 1.0),
+            ..CarInput::default()
+        }
+    }
+
+    /// (a) and (c): a quicker car closing on a slower one down a long
+    /// straight leaves the racing line, gets past without touching it, and
+    /// then moves back onto the line.
+    #[test]
+    fn a_faster_car_pulls_out_passes_on_the_straight_and_rejoins_the_line() {
+        let track = Arc::new(crate::track::stadium(1200.0, 60.0, Vec::new()));
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
+        let mut slow = ai("Slow", 0.95, &spec);
+        slow.ai = None;
+        let mut race = Race::new(track.clone(), vec![slow, ai("Fast", 0.95, &spec)], 5, 9);
+        let line = track.racing_line.lateral_at(100.0);
+        place(&track, &mut race.entrants[0].car, 100.0, line, 45.0);
+        place(&track, &mut race.entrants[1].car, 70.0, line, 50.0);
+        start_racing(&mut race);
+
+        let (mut widest, mut contacts, mut passed_at) = (0.0_f64, 0, None);
+        let mut back_on_line = false;
+        for tick in 0..(16.0 * PHYSICS_RATE) as usize {
+            let input = cruise(&race.entrants[0].car, &track, 45.0);
+            race.step(&[input]);
+            contacts += car_contacts(&mut race);
+            let (slow, fast) = (&race.entrants[0].car, &race.entrants[1].car);
+            let gap = track.delta(fast.track_position.s, slow.track_position.s);
+            let apart = (fast.track_position.lateral - slow.track_position.lateral).abs();
+            if gap.abs() < 12.0 {
+                widest = widest.max(apart);
+            }
+            if passed_at.is_none() && gap < -(fast.spec.length + 3.0) {
+                passed_at = Some(tick);
+            }
+            if let Some(at) = passed_at {
+                let p = fast.track_position;
+                let off_line = (p.lateral - track.racing_line.lateral_at(p.s)).abs();
+                back_on_line |= tick > at && off_line < 1.0 && gap < -15.0;
+            }
+            if back_on_line {
+                break;
+            }
+        }
+        assert_eq!(contacts, 0, "the pass touched the slower car");
+        // Clear air beside the slower car, not tucked in behind it.
+        let width = race.entrants[1].car.spec.width;
+        assert!(
+            widest > width + 0.6,
+            "the attacker stayed in line behind: at most {widest:.2} m apart"
+        );
+        assert!(passed_at.is_some(), "the faster car never got past");
+        let s = race.entrants[1].car.track_position.s;
+        assert!(
+            s < 1200.0,
+            "the pass was not made on the straight: {s:.0} m"
+        );
+        assert!(back_on_line, "the attacker did not rejoin the racing line");
+    }
+
+    /// (b): two cars arriving at a corner alongside, or overlapping by part
+    /// of a car, both get round it without touching. Each case had contact
+    /// before the cars held their lanes and planned for the tighter path.
+    #[test]
+    fn cars_alongside_into_a_corner_get_through_without_touching() {
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
+        // (corner radius, lateral offset of B from the line, A's lead, speed)
+        let cases = [
+            (25.0, -2.4, 0.0, 50.0),
+            (25.0, -2.4, -2.0, 62.0),
+            (25.0, -2.4, -4.0, 50.0),
+            (25.0, -3.2, 2.0, 50.0),
+            (40.0, 2.4, 4.0, 50.0),
+            (60.0, -3.2, 2.0, 62.0),
+        ];
+        for (radius, offset, lead, speed) in cases {
+            let track = Arc::new(crate::track::stadium(600.0, radius, Vec::new()));
+            let mut race = Race::new(
+                track.clone(),
+                vec![ai("A", 0.95, &spec), ai("B", 0.97, &spec)],
+                5,
+                3,
+            );
+            let s = 600.0 - 170.0;
+            let line = track.racing_line.lateral_at(s);
+            place(&track, &mut race.entrants[0].car, s + lead, line, speed);
+            let lane = (line - offset).clamp(-4.6, 4.6);
+            place(&track, &mut race.entrants[1].car, s, lane, speed);
+            start_racing(&mut race);
+            let mut contacts = 0;
+            for _ in 0..(9.0 * PHYSICS_RATE) as usize {
+                race.step(&[]);
+                contacts += car_contacts(&mut race);
+            }
+            let case = format!("radius {radius} m, offset {offset} m, lead {lead} m, {speed} m/s");
+            assert_eq!(contacts, 0, "{case}: cars touched in the corner");
+            for entrant in &race.entrants {
+                let p = entrant.car.track_position;
+                assert!(
+                    track.delta(s, p.s) > 250.0 && p.lateral.abs() < 6.0,
+                    "{case}: {} did not get round ({:.0} m, {:+.1} m)",
+                    entrant.name,
+                    p.s,
+                    p.lateral
+                );
+            }
+        }
     }
 }
 
@@ -1553,6 +1890,7 @@ impl Race {
     pub fn ai_takeover(&mut self, slot: usize) {
         if let Some(e) = self.entrants.get_mut(slot) {
             e.car.assists.automatic_gears = true;
+            e.car.assists.stability = AI_STABILITY;
             e.driver = Driver::Ai(Box::new(AiDriver::new(
                 DriverProfile {
                     pace: 0.95,
@@ -1564,5 +1902,200 @@ impl Race {
                 slot as u64 + 1,
             )));
         }
+    }
+}
+
+/// Spa passing lanes and tactical line choice. Needs converted assets:
+/// `F1_ASSETS=assets cargo test -p racecraft-sim -- --ignored spa_lines`.
+#[cfg(test)]
+mod spa_lines {
+    use super::*;
+    use crate::ai::Intent;
+    use crate::car::spec::test_wheels;
+
+    fn spa() -> Option<Arc<Track>> {
+        let root = std::env::var("F1_ASSETS").ok()?;
+        Some(Arc::new(
+            Track::load(std::path::Path::new(&root).join("tracks/spa")).unwrap(),
+        ))
+    }
+
+    fn duel(track: &Arc<Track>, seed: u64) -> Race {
+        duel_at(track, seed, 0.93)
+    }
+
+    /// The duel with the slower car at `slow_pace` (the faster one is 0.99).
+    fn duel_at(track: &Arc<Track>, seed: u64, slow_pace: f64) -> Race {
+        let spec = Arc::new(CarSpec::gen22(test_wheels(), 5.4, 1.9));
+        let driver = |name: &str, pace: f64| EntrantConfig {
+            name: name.into(),
+            spec: spec.clone(),
+            setup: Setup::default(),
+            assists: Assists {
+                automatic_gears: true,
+                ..Assists::default()
+            },
+            ai: Some(DriverProfile {
+                pace,
+                aggression: 0.7,
+                consistency: 1.0,
+            }),
+            human_slot: 0,
+            livery: [1.0; 3],
+        };
+        Race::new(
+            track.clone(),
+            vec![driver("Slow", slow_pace), driver("Fast", 0.99)],
+            2,
+            seed,
+        )
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_stay_on_track_and_are_smooth() {
+        let Some(track) = spa() else { return };
+        let lanes = track.passing_lines.as_ref().expect("Spa has passing lanes");
+        for (side, lane) in lanes.iter().enumerate() {
+            let mut apart = 0usize;
+            for (i, station) in track.stations.iter().enumerate() {
+                let offset = lane.offsets[i];
+                assert!(
+                    offset.abs() <= station.half_width - 1.4 + 1e-6,
+                    "lane {side} leaves the track at station {i}: {offset:.2} m"
+                );
+                let next = lane.offsets[(i + 1) % lane.offsets.len()];
+                assert!(
+                    (next - offset).abs() < 0.35,
+                    "lane {side} jumps {:.2} m at station {i}",
+                    next - offset
+                );
+                if (offset - track.racing_line.offsets[i]).abs() > 2.0 {
+                    apart += 1;
+                }
+            }
+            assert!(
+                apart * 3 > track.stations.len(),
+                "lane {side} is not a real alternative to the optimal line"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_a_defender_moves_once_per_corner() {
+        let Some(track) = spa() else { return };
+        let mut defensive_intents = 0;
+        for seed in [2, 4, 6] {
+            // Close enough on pace that the cars stay together and one of
+            // them has to defend. A clearly faster car now gets by early
+            // (often at La Source on lap one) and pulls away, so the 0.93
+            // duel no longer produces a defence to check.
+            let mut race = duel_at(&track, seed, 0.985);
+            // (car, apex, side) of every defensive move seen. Whichever car
+            // is ahead may defend: the faster one often passes early and then
+            // has to hold the slower one off.
+            let mut sides: Vec<(usize, f64, f64)> = Vec::new();
+            let mut ticks = 0;
+            while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
+                race.step(&[]);
+                for (car, entrant) in race.entrants.iter().enumerate() {
+                    let Driver::Ai(ai) = &entrant.driver else {
+                        continue;
+                    };
+                    if let Intent::Defend { side, apex_s } = ai.intent {
+                        defensive_intents += 1;
+                        if let Some(seen) = sides
+                            .iter()
+                            .find(|(who, apex, _)| *who == car && *apex == apex_s)
+                        {
+                            assert_eq!(
+                                seen.2, side,
+                                "seed {seed}: defender switched sides for the corner at {apex_s:.0} m"
+                            );
+                        } else {
+                            sides.push((car, apex_s, side));
+                        }
+                    }
+                }
+                ticks += 1;
+            }
+        }
+        assert!(defensive_intents > 0, "no defensive intent observed");
+    }
+
+    /// Laps on which the faster car leads, with and without passing lanes.
+    #[test]
+    #[ignore]
+    fn spa_lines_multiple_lines_pass_at_least_as_often_as_one() {
+        let Some(track) = spa() else { return };
+        let root = std::env::var("F1_ASSETS").unwrap();
+        let mut single = Track::load(std::path::Path::new(&root).join("tracks/spa")).unwrap();
+        single.passing_lines = None;
+        let single = Arc::new(single);
+        let passes = |track: &Arc<Track>| {
+            let mut won = 0;
+            let mut contacts = 0;
+            let mut overtakes = 0;
+            for seed in [1, 3, 5, 7, 9, 11] {
+                let mut race = duel(track, seed);
+                let fast = race
+                    .entrants
+                    .iter()
+                    .position(|entrant| entrant.name == "Fast")
+                    .unwrap();
+                let mut ticks = 0;
+                while race.phase != Phase::Finished && ticks < (420.0 * PHYSICS_RATE) as usize {
+                    race.step(&[]);
+                    contacts += race
+                        .events
+                        .iter()
+                        .filter(|event| matches!(event, RaceEvent::Contact { b: Some(_), .. }))
+                        .count();
+                    overtakes += race
+                        .events
+                        .iter()
+                        .filter(|event| matches!(event, RaceEvent::Overtake { entrant, .. } if *entrant == fast))
+                        .count();
+                    race.events.clear();
+                    ticks += 1;
+                }
+                if race.entrants[race.order()[0]].name == "Fast" {
+                    won += 1;
+                }
+            }
+            (won, contacts, overtakes)
+        };
+        let (multi, multi_contacts, multi_overtakes) = passes(&track);
+        let (one, _, _) = passes(&single);
+        eprintln!(
+            "faster car won {multi}/6 with lanes, {one}/6 with one line; {multi_contacts} contacts"
+        );
+        assert!(multi >= one, "lanes made passing harder: {multi} vs {one}");
+        assert!(multi_overtakes >= 1, "no overtakes with passing lanes");
+        assert!(multi_contacts <= 4, "{multi_contacts} contacts with lanes");
+    }
+
+    #[test]
+    #[ignore]
+    fn spa_lines_ai_power_slows_ai_lap_times() {
+        let Some(track) = spa() else { return };
+        let best = |power: f64| {
+            let mut race = duel(&track, 3);
+            race.set_ai_power(power);
+            let mut ticks = 0;
+            while race.phase != Phase::Finished && ticks < (600.0 * PHYSICS_RATE) as usize {
+                race.step(&[]);
+                ticks += 1;
+            }
+            race.entrants
+                .iter()
+                .filter_map(|e| e.timing.best_lap)
+                .fold(f64::INFINITY, f64::min)
+        };
+        let (full, mid, low) = (best(1.0), best(0.8), best(0.5));
+        eprintln!("Spa best AI lap: 100% {full:.2}s, 80% {mid:.2}s, 50% {low:.2}s");
+        assert!(mid > full + 0.5, "80% power barely slowed the AI");
+        assert!(low > mid + 2.0, "50% power barely slowed the AI");
     }
 }

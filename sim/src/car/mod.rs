@@ -11,13 +11,16 @@ use powertrain::Powertrain;
 use serde::{Deserialize, Serialize};
 use spec::{CarSpec, Setup};
 use std::sync::Arc;
-use tyre::{lateral_shape, load_sensitivity, AxleTyres};
+use tyre::{lateral_shape, lateral_shape_inverse, load_sensitivity, AxleTyres};
 
 /// Share of rear grip ABS keeps free of braking for cornering stability.
 const REAR_ABS_HEADROOM: f64 = 0.35;
 
 pub const AIR_DENSITY: f64 = 1.225;
 pub const GRAVITY: f64 = 9.81;
+/// Stability aid for AI-controlled cars: retain slide recovery without
+/// enabling the player's yaw ceiling at the 0.5 activation boundary.
+pub(crate) const AI_STABILITY: f64 = 0.49;
 
 /// One tick of driver commands. Steering is positive to the left.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -42,7 +45,9 @@ pub struct Assists {
     pub braking: f64,
     /// Traction smoothing, 0..1.
     pub traction: f64,
-    /// Mild slide recovery, 0..1.
+    /// Slide recovery, 0..1. At least 0.5 with steering above 0.5 also
+    /// limits turn-in yaw overshoot; the ceiling is enabled fully rather than
+    /// blended.
     pub stability: f64,
     pub automatic_gears: bool,
     /// Lets this driver open DRS anywhere, not only where it is earned.
@@ -300,21 +305,132 @@ impl Car {
 
     /// Largest road wheel angle the steering assist allows at `speed`.
     pub fn steer_limit(&self, speed: f64) -> f64 {
-        const FULL_LOCK: f64 = 0.36;
+        let (kinematic, _) = self.limit_angles(speed);
+        // Lets the driver take the front tyres just past their peak: enough to
+        // feel understeer when overdriving, not enough to make full lock correct.
+        self.assisted_lock(kinematic + self.spec.peak_slip_angle * 1.15)
+    }
+
+    /// Lock the steering assist allows into the turn the car is already
+    /// making. In a steady turn the road wheel angle is the kinematic angle
+    /// plus the front slip minus the rear slip, so the full `steer_limit`
+    /// runs the fronts near twice their peak slip at the limit, where the yaw
+    /// response at speed overshoots and sways before it settles. Opposite
+    /// lock keeps the whole `steer_limit` to catch a slide.
+    fn turn_in_limit(&self, speed: f64) -> f64 {
+        let (kinematic, rear_slip) = self.limit_angles(speed);
+        self.assisted_lock(kinematic + self.spec.peak_slip_angle * 1.15 - rear_slip)
+    }
+
+    /// Kinematic road wheel angle of the tightest steady turn at `speed`, and
+    /// the rear slip angle in it.
+    fn limit_angles(&self, speed: f64) -> (f64, f64) {
         let spec = &self.spec;
         let lift = self.setup.front_lift_area(&spec.aero) + self.setup.rear_lift_area(&spec.aero);
         // Compressions such as Eau Rouge press the tyres down and allow more lock.
         let gravity = (GRAVITY + self.vertical_acceleration).clamp(GRAVITY * 0.3, GRAVITY * 2.5);
-        let lateral_grip =
-            spec.tyre_friction * (gravity + 0.5 * AIR_DENSITY * lift * speed * speed / spec.mass);
+        let dynamic = 0.5 * AIR_DENSITY * speed * speed;
+        let lateral_grip = spec.tyre_friction * (gravity + dynamic * lift / spec.mass);
         let kinematic = (spec.wheelbase() * lateral_grip / speed.max(1.0).powi(2)).atan();
-        // Lets the driver take the front tyres just past their peak: enough to
-        // feel understeer when overdriving, not enough to make full lock correct.
-        let assisted = (kinematic + spec.peak_slip_angle * 1.15).min(FULL_LOCK);
-        FULL_LOCK + (assisted - FULL_LOCK) * self.assists.steering
+        // The rear carries the share of the cornering force its distance from
+        // the centre of gravity sets, against its static load and downforce.
+        let rear_load = spec.mass * gravity * (1.0 - spec.front_weight)
+            + dynamic * self.setup.rear_lift_area(&spec.aero);
+        let rear_share = spec.mass * lateral_grip * (1.0 - spec.front_weight)
+            / (spec.tyre_friction * spec.rear_grip * rear_load);
+        (
+            kinematic,
+            spec.peak_slip_angle * lateral_shape_inverse(rear_share),
+        )
+    }
+
+    fn assisted_lock(&self, angle: f64) -> f64 {
+        const FULL_LOCK: f64 = 0.36;
+        // Car::assists is mutable and can be restored from a host snapshot.
+        let steering = self.assists.steering.clamp(0.0, 1.0);
+        FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * steering
+    }
+
+    /// Lock the steering and stability aids allow into the turn the car is
+    /// already making, so the yaw rate closes on the car's grip ceiling
+    /// without overshooting it; `None` when the aid is off.
+    ///
+    /// Turned in at the limit, the front tyres build force at once but the
+    /// rear only as the body takes up sideslip, so the yaw rate overshoots
+    /// the steady turn by a third or more and swings back below it. The
+    /// ceiling is the steady turn of the weaker axle at its peak: from
+    /// `a·Ff = b·Fr`, `ay = Ff·L/(b·m)` for the front (`Fr·L/(a·m)` for the
+    /// rear) and the yaw rate is `ay/u`. The aid asks the front for
+    /// `Ff = (b·Fr + I·k·(r_max - r))/a`, the force that brings the yaw
+    /// rate onto the ceiling at the rate `k`, and finds its slip angle on
+    /// the tyre curve about the direction the front axle travels, never
+    /// past the peak. It only takes lock away, and never into opposite lock.
+    ///
+    /// The ceiling requires steering above half and stability at least half.
+    /// Blending the lock limit leaves the fronts beyond their peak and causes
+    /// sustained yaw wobble. Lower settings retain slide recovery only.
+    fn yaw_ceiling_lock(
+        &self,
+        target: f64,
+        loads: &[f64; 4],
+        forward_speed: f64,
+        lateral_speed: f64,
+    ) -> Option<f64> {
+        // The steady-turn estimate leaves out drag, drive and kerb moments;
+        // steady skidpad yaw rates stay within 4% of it from 150 to 300 km/h.
+        const MARGIN: f64 = 1.05;
+        // Yaw rate closing rate, 1/s: a quarter period of the ~3.5 Hz yaw
+        // mode the car has with its fronts saturated. Slower costs steady
+        // grip; faster lets the yaw rate overshoot again.
+        const CLOSING_RATE: f64 = 15.0;
+        let into_turn = target.signum();
+        if self.assists.steering <= 0.5
+            || self.assists.stability < 0.5
+            || forward_speed <= 5.0
+            || target == 0.0
+            || target * self.yaw_rate < 0.0
+        {
+            return None;
+        }
+        let spec = &self.spec;
+        let nominal_load = spec.mass * GRAVITY * 0.25;
+        let capacity = |axle: usize, scale: f64| -> f64 {
+            (2 * axle..2 * axle + 2)
+                .map(|index| {
+                    spec.tyre_friction
+                        * scale
+                        * self.tyres[axle].grip(self.setup.compound)
+                        * self.wheels[index].surface.grip()
+                        * load_sensitivity(loads[index], nominal_load)
+                        * loads[index]
+                })
+                .sum()
+        };
+        let front = capacity(0, 1.0);
+        let rear = capacity(1, spec.rear_grip);
+        let wheelbase = spec.wheelbase();
+        let a = spec.wheels[0].position.z - spec.cg_z();
+        let b = wheelbase - a;
+        let ceiling = (front / b).min(rear / a) * wheelbase / spec.mass / forward_speed * MARGIN;
+        let rear_force = into_turn * (self.wheels[2].lateral_force + self.wheels[3].lateral_force);
+        let wanted = (b * rear_force
+            + spec.yaw_inertia * CLOSING_RATE * (ceiling - into_turn * self.yaw_rate))
+            / a;
+        let slip = if wanted > 0.0 {
+            lateral_shape_inverse(wanted / front.max(1.0)) * spec.peak_slip_angle
+        } else {
+            0.0
+        };
+        let front_path = (lateral_speed + self.yaw_rate * a).atan2(forward_speed);
+        Some((into_turn * front_path + slip).max(0.0))
     }
 
     pub fn step(&mut self, input: &CarInput, track: &Track, dt: f64) {
+        self.step_with_power(input, track, dt, 1.);
+    }
+
+    /// Race-owned AI handicap. Human inputs always use full engine output.
+    pub(crate) fn step_with_power(&mut self, input: &CarInput, track: &Track, dt: f64, power: f64) {
         let spec = self.spec.clone();
         let forward = self.forward();
         let left = self.left();
@@ -350,10 +466,8 @@ impl Car {
             self.powertrain
                 .drive_force(&spec.engine, throttle, forward_speed, rear_radius, dt);
 
-        // Steering: smoothed toward a speed-limited target.
-        let target = input.steer.clamp(-1.0, 1.0) * self.steer_limit(speed);
-        let response = 30.0 - 18.0 * self.assists.steering;
-        self.steer_angle += (target - self.steer_angle) * (dt * response).min(1.0);
+        // Preserve engine braking; scale only delivered propulsion.
+        let drive = if drive > 0. { drive * power } else { drive };
 
         // Aerodynamics. An open DRS flap stalls part of the rear wing.
         self.drs
@@ -393,6 +507,22 @@ impl Car {
             (rear_axle * 0.5 + rear_shift).max(0.0),
         ];
         let nominal_load = spec.mass * GRAVITY * 0.25;
+
+        // Steering: smoothed toward a speed-limited target, after the loads so
+        // the yaw ceiling sees the grip this tick's downforce and transfer give.
+        let mut target = input.steer.clamp(-1.0, 1.0) * self.steer_limit(speed);
+        if target * self.yaw_rate >= 0.0 {
+            let limit = self.turn_in_limit(speed);
+            target = target.clamp(-limit, limit);
+        }
+        let response = 30.0 - 18.0 * self.assists.steering;
+        self.steer_angle += (target - self.steer_angle) * (dt * response).min(1.0);
+        if let Some(lock) = self.yaw_ceiling_lock(target, &loads, forward_speed, lateral_speed) {
+            let into_turn = target.signum();
+            if into_turn * self.steer_angle > lock {
+                self.steer_angle = into_turn * lock;
+            }
+        }
 
         let cg = DVec2::new(self.position.x, self.position.z);
         let cg_z = spec.cg_z();
@@ -1231,6 +1361,351 @@ mod abs_stability {
                 braking < coasting * 2.0 + 3.0,
                 "{kmh} km/h: braking turned {braking:.1} deg, coasting {coasting:.1} deg"
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod steering_stability {
+    use super::*;
+    use crate::track::oval_track;
+    use spec::test_wheels;
+
+    const DT: f64 = 1.0 / 360.0;
+
+    /// Steering and stability aid levels: the player default and Beginner
+    /// preset run the yaw ceiling; the supported AI profile retains slide
+    /// recovery below the ceiling threshold.
+    const FULL_AIDS: (f64, f64) = (1.0, 1.0);
+    const AI_AIDS: (f64, f64) = (1.0, AI_STABILITY);
+
+    fn gen22() -> CarSpec {
+        CarSpec::gen22(test_wheels(), 5.4, 1.9)
+    }
+
+    fn rb6() -> CarSpec {
+        CarSpec::rb6(test_wheels(), 5.1, 1.8)
+    }
+
+    /// A car at `kmh` on flat asphalt, kept on the straight every tick with
+    /// its heading and speed, so only the steering and the tyres act on it.
+    struct Skidpad {
+        track: Track,
+        position: DVec3,
+        car: Car,
+        kmh: f64,
+    }
+
+    impl Skidpad {
+        fn new(kmh: f64) -> Self {
+            Self::with(kmh, gen22(), AI_AIDS)
+        }
+
+        fn with(kmh: f64, spec: CarSpec, (steering, stability): (f64, f64)) -> Self {
+            let track = oval_track();
+            let (position, yaw) = track.grid_slot(0);
+            let mut car = Car::new(
+                Arc::new(spec),
+                Setup::default(),
+                Assists {
+                    automatic_gears: true,
+                    steering,
+                    stability,
+                    ..Assists::default()
+                },
+                &track,
+                position,
+                yaw,
+            );
+            car.velocity = car.forward() * (kmh / 3.6);
+            car.powertrain.gear = 7;
+            Self {
+                track,
+                position,
+                car,
+                kmh,
+            }
+        }
+
+        fn step(&mut self, steer: f64) {
+            self.car.position = self.position;
+            self.car.velocity = self.car.velocity.normalize() * (self.kmh / 3.6);
+            let input = CarInput {
+                steer,
+                throttle: 0.4,
+                ..CarInput::default()
+            };
+            self.car.step(&input, &self.track, DT);
+        }
+
+        fn hold(&mut self, steer: f64, seconds: f64) {
+            for _ in 0..(seconds / DT) as usize {
+                self.step(steer);
+            }
+        }
+
+        /// Drives `keys` (-1, 0 or 1 at each time) through the game's
+        /// keyboard ramp, 3.2/s in and 7/s back or across, and returns the
+        /// yaw rate at every tick.
+        fn keyboard(&mut self, seconds: f64, keys: impl Fn(f64) -> f64) -> Vec<f64> {
+            let mut steer: f64 = 0.0;
+            (0..(seconds / DT) as usize)
+                .map(|tick| {
+                    let key = keys(tick as f64 * DT);
+                    let rate = if key == 0.0 || key.signum() != steer.signum() {
+                        7.0
+                    } else {
+                        3.2
+                    };
+                    steer += (key - steer).clamp(-rate * DT, rate * DT);
+                    self.step(steer);
+                    self.car.yaw_rate
+                })
+                .collect()
+        }
+
+        fn front_slip(&self) -> f64 {
+            let wheels = &self.car.wheels;
+            (wheels[0].slip_angle.abs() + wheels[1].slip_angle.abs()) * 0.5
+                / self.car.spec.peak_slip_angle
+        }
+    }
+
+    /// Yaw response to the keyboard held into a turn from straight running.
+    #[derive(Debug)]
+    struct TurnIn {
+        /// Mean yaw rate 1.5–2 s in, rad/s.
+        steady: f64,
+        /// First peak over `steady`, and the lowest point after it under it.
+        overshoot: f64,
+        undershoot: f64,
+        /// Last time the yaw rate is more than 5% from `steady`, s.
+        settle: f64,
+        lateral_acceleration: f64,
+        front_slip: f64,
+    }
+
+    fn turn_in(kmh: f64, spec: CarSpec, aids: (f64, f64)) -> TurnIn {
+        let mut pad = Skidpad::with(kmh, spec, aids);
+        let yaw = pad.keyboard(2.0, |_| 1.0);
+        let from = (1.5 / DT) as usize;
+        let steady = yaw[from..].iter().sum::<f64>() / (yaw.len() - from) as f64;
+        let (peak_at, peak) =
+            yaw.iter().copied().enumerate().fold(
+                (0, 0.0),
+                |best, (i, r)| if r > best.1 { (i, r) } else { best },
+            );
+        let trough = yaw[peak_at..].iter().copied().fold(f64::MAX, f64::min);
+        let settle = yaw
+            .iter()
+            .rposition(|r| (r - steady).abs() > 0.05 * steady)
+            .map_or(0.0, |i| (i + 1) as f64 * DT);
+        TurnIn {
+            steady,
+            overshoot: peak / steady - 1.0,
+            undershoot: 1.0 - trough / steady,
+            settle,
+            lateral_acceleration: pad.car.acceleration.y,
+            front_slip: pad.front_slip(),
+        }
+    }
+
+    /// Keyboard taps left and right every 0.25 s for 1.5 s, then hands off:
+    /// the largest yaw rate during the taps and how long the car takes to
+    /// run straight (yaw rate under 0.05 rad/s for 0.1 s) after release.
+    fn weave(kmh: f64, spec: CarSpec, aids: (f64, f64)) -> (f64, f64) {
+        let mut pad = Skidpad::with(kmh, spec, aids);
+        let yaw = pad.keyboard(3.0, |t| match t {
+            t if t >= 1.5 => 0.0,
+            t if ((t / 0.25) as usize).is_multiple_of(2) => 1.0,
+            _ => -1.0,
+        });
+        let release = (1.6 / DT) as usize;
+        let peak = yaw[..release].iter().fold(0.0_f64, |m, r| m.max(r.abs()));
+        let window = (0.1 / DT) as usize;
+        let straight = (release..yaw.len() - window)
+            .find(|&i| yaw[i..i + window].iter().all(|r| r.abs() < 0.05))
+            .map_or(f64::INFINITY, |i| (i - release) as f64 * DT);
+        (peak, straight)
+    }
+
+    #[test]
+    fn full_assisted_lock_keeps_the_fronts_near_their_peak_at_speed() {
+        for kmh in [150.0, 250.0, 300.0] {
+            let mut full = Skidpad::new(kmh);
+            full.hold(1.0, 2.0);
+            let best = [0.3, 0.4, 0.5, 0.6]
+                .into_iter()
+                .map(|steer| {
+                    let mut pad = Skidpad::new(kmh);
+                    pad.hold(steer, 2.0);
+                    pad.car.acceleration.y
+                })
+                .fold(0.0, f64::max);
+            let slip = full.front_slip();
+            assert!(
+                (1.0..1.4).contains(&slip),
+                "{kmh} km/h: full lock runs the fronts at {slip:.2}x peak slip"
+            );
+            assert!(
+                full.car.acceleration.y > best * 0.94,
+                "{kmh} km/h: full lock corners at {:.1} m/s2, best {best:.1}",
+                full.car.acceleration.y
+            );
+        }
+    }
+
+    #[test]
+    fn opposite_lock_keeps_the_full_steering_limit() {
+        for aids in [AI_AIDS, FULL_AIDS] {
+            // The car yaws left throughout, as in a slide being caught.
+            let wheel = |steer: f64| {
+                let mut pad = Skidpad::with(250.0, gen22(), aids);
+                for _ in 0..180 {
+                    pad.car.yaw_rate = 0.5;
+                    pad.step(steer);
+                }
+                (pad.car.steer_angle, pad.car.steer_limit(pad.car.speed()))
+            };
+            let (into, limit) = wheel(1.0);
+            let (against, _) = wheel(-1.0);
+            assert!(into < limit * 0.7, "turn-in lock {into:.3} of {limit:.3}");
+            assert!(
+                against < -limit * 0.98,
+                "{aids:?}: opposite lock {against:.3} of {limit:.3}"
+            );
+        }
+    }
+
+    /// With both aids at full, held keyboard lock at speed brings the yaw
+    /// rate onto the grip ceiling with no swing either side of it, holds the
+    /// fronts at their peak and corners at least as hard as without the
+    /// ceiling. Without it the yaw rate overshoots by 32–59% here.
+    #[test]
+    fn full_aids_turn_in_without_yaw_overshoot() {
+        for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
+            for kmh in [150.0, 250.0, 300.0] {
+                let aided = turn_in(kmh, spec(), FULL_AIDS);
+                let plain = turn_in(kmh, spec(), AI_AIDS);
+                let label = format!("{name} {kmh} km/h: {aided:?}");
+                assert!(aided.overshoot < 0.08, "{label}");
+                assert!(aided.undershoot < 0.05, "{label}");
+                assert!(aided.settle < 0.45, "{label}");
+                assert!((0.9..1.05).contains(&aided.front_slip), "{label}");
+                assert!(plain.overshoot > 0.25, "{name} {kmh} km/h: {plain:?}");
+                assert!(
+                    aided.lateral_acceleration > plain.lateral_acceleration,
+                    "{label}; without the ceiling {plain:?}"
+                );
+            }
+        }
+    }
+
+    /// Left-right keyboard corrections at speed: with both aids at full the
+    /// yaw rate stays within the steady ceiling, and the car runs straight
+    /// as soon after release as without the aid.
+    #[test]
+    fn full_aids_keep_keyboard_weaving_within_the_ceiling() {
+        for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
+            for kmh in [150.0, 250.0, 300.0] {
+                let ceiling = turn_in(kmh, spec(), FULL_AIDS).steady;
+                let (peak, straight) = weave(kmh, spec(), FULL_AIDS);
+                let (plain_peak, plain_straight) = weave(kmh, spec(), AI_AIDS);
+                assert!(
+                    peak < ceiling * 1.06,
+                    "{name} {kmh} km/h: weave yaw {peak:.3} rad/s, ceiling {ceiling:.3}"
+                );
+                assert!(plain_peak > ceiling * 1.2, "{name} {kmh}: {plain_peak:.3}");
+                assert!(
+                    straight <= plain_straight + DT,
+                    "{name} {kmh} km/h: straight after {straight:.2} s, plain {plain_straight:.2} s"
+                );
+            }
+        }
+    }
+
+    /// Braking hard with lock on at 250 km/h: the ceiling neither costs
+    /// deceleration nor lets the yaw rate run away.
+    #[test]
+    fn yaw_ceiling_keeps_trail_braking_stable() {
+        let brake_turn = |aids: (f64, f64)| {
+            let mut pad = Skidpad::with(250.0, gen22(), aids);
+            let mut peak_yaw: f64 = 0.0;
+            for _ in 0..(1.5 / DT) as usize {
+                pad.car.position = pad.position;
+                let input = CarInput {
+                    steer: 0.6,
+                    brake: 1.0,
+                    ..CarInput::default()
+                };
+                pad.car.step(&input, &pad.track, DT);
+                peak_yaw = peak_yaw.max(pad.car.yaw_rate.abs());
+            }
+            let slip = pad.car.velocity.normalize().dot(pad.car.forward()).acos();
+            (pad.car.speed(), peak_yaw, slip)
+        };
+        let (speed, peak_yaw, slip) = brake_turn(FULL_AIDS);
+        let (plain_speed, plain_yaw, _) = brake_turn(AI_AIDS);
+        assert!(
+            speed < plain_speed + 0.5,
+            "{speed:.1} m/s after braking, plain {plain_speed:.1}"
+        );
+        assert!(
+            peak_yaw <= plain_yaw,
+            "yaw {peak_yaw:.3}, plain {plain_yaw:.3}"
+        );
+        assert!(slip < 0.1, "body slip {slip:.3} rad");
+    }
+
+    /// The ceiling needs steering above half and stability at least half:
+    /// Balanced and Beginner engage it, while unassisted driving does not.
+    #[test]
+    fn yaw_ceiling_is_off_below_stability_half() {
+        for aids in [AI_AIDS, (0.6, 0.49), (1.0, 0.0), (0.0, 1.0), (0.0, 0.0)] {
+            let mut pad = Skidpad::with(250.0, gen22(), aids);
+            pad.hold(0.5, 0.3);
+            let car = &pad.car;
+            let lock = car.yaw_ceiling_lock(
+                0.05,
+                &[5000.0; 4],
+                car.forward_speed(),
+                car.velocity.dot(car.left()),
+            );
+            assert!(lock.is_none(), "{aids:?}");
+        }
+    }
+
+    #[test]
+    fn out_of_range_steering_assist_cannot_invert_turn_in_limit() {
+        let mut pad = Skidpad::with(250.0, gen22(), (2.0, AI_STABILITY));
+        assert!(pad.car.turn_in_limit(pad.car.speed()) >= 0.0);
+        pad.step(1.0);
+    }
+
+    /// Keyboard turn-in and weaving at 150–300 km/h for both cars, with the
+    /// AI's slide-recovery aids (no yaw ceiling) and with both aids at full.
+    /// `cargo test -p racecraft-sim --lib probe_keyboard_turn_in -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn probe_keyboard_turn_in() {
+        for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
+            for (label, aids) in [("AI aids", AI_AIDS), ("full aids", FULL_AIDS)] {
+                for kmh in [150.0, 250.0, 300.0] {
+                    let r = turn_in(kmh, spec(), aids);
+                    let (weave_peak, straight) = weave(kmh, spec(), aids);
+                    println!(
+                        "{name:>5} {label:>14} {kmh:>3} km/h: yaw {:.3} rad/s, overshoot {:>4.1}%, \
+                         undershoot {:>4.1}%, settled {:.2} s, ay {:.1} m/s2, front {:.2}x peak; \
+                         weave peak {weave_peak:.3} rad/s, straight {straight:.2} s after release",
+                        r.steady,
+                        r.overshoot * 100.0,
+                        r.undershoot * 100.0,
+                        r.settle,
+                        r.lateral_acceleration,
+                        r.front_slip,
+                    );
+                }
+            }
         }
     }
 }

@@ -68,7 +68,7 @@ These are captures from the game, not concept renders.
 
 ## Multiplayer
 
-The multiplayer branch adds 16-driver host/join rooms, owner-controlled rules,
+Multiplayer supports 16-driver host/join rooms, owner-controlled rules,
 AI takeover, local prediction and a headless UDP/WebSocket server.
 [Host on Render](docs/render.md) and join with `wss://your-service.onrender.com`. See
 [setup, platform packages and verification limits](docs/multiplayer.md).
@@ -90,7 +90,7 @@ Install Rust 1.97.1 or newer and your platform's Bevy build dependencies. On Lin
 cargo run -p f1-the-game -- --assets /path/to/assets --auto-gears
 ```
 
-The generated assets are separate from this repository. [Download the complete assets ZIP](https://github.com/jR4dh3y/formula-game/releases/download/assets-68ae3a48b726ffa5/f1-racecraft-assets.zip) using this permanent link. Extract the ZIP into the repository root to create `./assets`, or point `--assets` at an existing converted asset tree:
+The generated assets are separate from this repository. [Download the complete assets ZIP](https://github.com/jR4dh3y/formula-game/releases/download/assets-68ae3a48b726ffa5/f1-racecraft-assets.zip) using this permanent link. Extract the ZIP into the repository root to create `./assets`, or point `--assets` at an existing converted asset tree; team liveries ship separately: [download the liveries ZIP](https://github.com/jR4dh3y/formula-game/releases/download/liveries-0a14081c2385c999/f1-racecraft-liveries.zip) (SHA-256 `0a14081c2385c99923169c91a1daadd8a3e28d632bde82e104bf025c29c7c911`) and extract it into the repository root as well, so it lands in `assets/cars/gen22/liveries/`. Release builds overlay it automatically. Asset tree:
 
 ```text
 assets/
@@ -101,7 +101,7 @@ assets/
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
 
-Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses one shared stock car with neutral body paint. Custom team liveries are developed in a separate branch stacked on 2.0. Team and driver selections control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
+Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses a shared car model with installed team and driver liveries. Missing artwork falls back to neutral paint. Team and driver selections also control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
@@ -109,7 +109,7 @@ The Graphics settings page offers Low, Medium, High (default) and Ultra presets,
 
 Both HUD layouts and wheel dashboards average telemetry on physics ticks. Speed and RPM use a 100 ms window, gaps and tyre/aero readouts use 250 ms, and the best-lap delta uses 200 ms. Numbers refresh at 20 Hz; gears, pedals and warning lights stay immediate. Running clocks show tenths, while completed lap and sector times retain milliseconds. The timing strip keeps all three sector splits, marking old splits LAST until replaced. Position-change notices require 300 ms of continuous change with at least one metre clearance.
 
-Game play → Driving assistance has Beginner, Balanced and Unassisted presets. Beginner is the default, including automatic gears. Steering guidance follows the racing line when you release steering; strong manual steering overrides it. Corner braking anticipates bends, adds brake pressure and reduces a held accelerator. ABS, traction and stability are separate controls. You still control acceleration. The coloured racing line previews corner speed, and STEER / BRAKE indicators light up during interventions. Pause-menu changes apply immediately. Unassisted disables all aids and automatic shifting.
+Game play → Driving assistance has Beginner, Balanced and Unassisted presets. Beginner is the default, including automatic gears. Steering guidance follows the racing line when you release steering; strong manual steering overrides it. Corner braking anticipates bends and reduces a held accelerator only while adding brake pressure. It preserves your throttle input when it is not braking, including when pulling alongside another car. ABS, traction and stability are separate controls. When steering is above 50% and stability is at least 50%, a grip-based turn-in limit also prevents yaw overshoot; this limit switches on fully rather than blending with the slider. Beginner and Balanced engage it; Unassisted does not. Opposite lock remains available to catch slides. You still control acceleration. The coloured racing line previews corner speed, and STEER / BRAKE indicators light up during interventions. Pause-menu changes apply immediately. Unassisted disables all aids and automatic shifting.
 
 Aids and per-car camera positions persist in `$XDG_CONFIG_HOME/f1-racecraft/preferences.json` (or `~/.config/f1-racecraft/preferences.json`). `F1_SETTINGS` overrides the file. Explicit CLI aid settings override saved aids; `--quick-race` and capture runs use their CLI configuration without reading or writing preferences. Start new race replaces the current session; Resume race keeps it.
 
@@ -168,7 +168,7 @@ process and report, and checks that the original race stays paused and intact.
 ## Portable Linux build
 
 `CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py` builds a single
-`dist/F1-Racecraft-0.1.0-linux-x86_64.AppImage` containing the game, both cars,
+`dist/F1-Racecraft-2.0.0-linux-x86_64.AppImage` containing the game, both cars,
 Spa, sound, fonts and runtime libraries. Send that file;
 players do not need Rust, the repository, separate assets or FUSE installed.
 They need an x86-64 Linux desktop (kernel 6.1+) and a working Vulkan GPU driver. The image
@@ -177,7 +177,7 @@ automatically extracts and runs when mounting is unavailable. See
 
 For an experimental package containing the other converted tracks, run
 `CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py --exp`. This compiles
-with `--features exp` and writes `dist/F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage`.
+with `--features exp` and writes `dist/F1-Racecraft-2.0.0-exp-linux-x86_64.AppImage`.
 Normal packaging always builds without `exp` and includes only Spa.
 
 ## Controls

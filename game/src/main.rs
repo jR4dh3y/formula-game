@@ -268,7 +268,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 graphics::apply,
                 assets::update_opponent_lods.after(graphics::apply),
                 materials::prepare,
-                assets::check_loading,
+                assets::check_loading.after(materials::prepare),
                 benchmark::advance,
                 assets::sync_cars,
                 assets::animate_controls,
@@ -379,9 +379,11 @@ fn step_race(
     let input = if scripted.is_some() {
         input
     } else {
+        let rivals = race.rivals_of(*player);
         guidance.apply(
             &race.entrants[*player].car,
             &race.track,
+            &rivals,
             input,
             *corner_braking,
             1. / PHYSICS_RATE,

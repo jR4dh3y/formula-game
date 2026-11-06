@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) struct CarSurface {
     pub lod: Option<&'static str>,
     pub compound: racecraft_sim::Compound,
+    pub entrant: usize,
 }
 
 #[derive(Component)]
@@ -30,10 +31,18 @@ pub fn prepare(
     surfaces: PendingSurfaces,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut prepared: Local<HashSet<AssetId<StandardMaterial>>>,
-    mut compounds: Local<CompoundMaterials>,
+    mut instances: Local<SurfaceMaterials>,
     server: Res<AssetServer>,
     options: Res<crate::options::Options>,
+    session: Res<crate::Session>,
+    in_use: Query<&MeshMaterial3d<StandardMaterial>>,
 ) {
+    if !surfaces.is_empty() {
+        // A new race replaced the scene: release painted instances (and their
+        // livery textures) that no remaining car uses before loading new ones.
+        let used: HashSet<_> = in_use.iter().map(|handle| handle.0.id()).collect();
+        instances.retain_used(&used);
+    }
     for (entity, name, surface, handle) in &surfaces {
         {
             let Some(mut material) = materials.get_mut(&handle.0) else {
@@ -47,11 +56,55 @@ pub fn prepare(
             let compound = surface.compound.label().to_ascii_lowercase();
             let path = tyre_texture(surface.lod, surface.compound);
             let instance =
-                compounds.instance(&compound, &handle.0, server.load(path), &mut materials);
+                instances.instance(&compound, &handle.0, server.load(path), &mut materials);
             commands.entity(entity).insert(MeshMaterial3d(instance));
+        } else if options.car == "gen22" {
+            if let Some(path) = session.identities[surface.entrant]
+                .as_ref()
+                .and_then(|identity| {
+                    livery_texture(&options.assets, identity, surface.lod, &name.0)
+                })
+            {
+                let instance =
+                    instances.instance(&path, &handle.0, server.load(path.clone()), &mut materials);
+                commands.entity(entity).insert(MeshMaterial3d(instance));
+            }
         }
         commands.entity(entity).insert(SurfaceReady);
     }
+}
+
+/// Driver artwork overrides team artwork; reduced textures fall back to full size.
+pub(crate) fn livery_texture(
+    root: &std::path::Path,
+    identity: &crate::teams::Identity,
+    lod: Option<&str>,
+    material: &str,
+) -> Option<String> {
+    let part = material
+        .strip_prefix("source_paint_")?
+        .split('.')
+        .next()?
+        .trim_end_matches("_lod");
+    let part = if part == "main_body_stickers" {
+        "main_body"
+    } else {
+        part
+    };
+    let team = format!("cars/gen22/liveries/{}", identity.team);
+    for directory in [format!("{team}/{}", identity.driver), team] {
+        if let Some(lod) = lod {
+            let path = format!("{directory}/{lod}/{part}.png");
+            if root.join(&path).is_file() {
+                return Some(path);
+            }
+        }
+        let path = format!("{directory}/{part}.png");
+        if root.join(&path).is_file() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 pub(crate) fn tyre_texture(lod: Option<&str>, compound: racecraft_sim::Compound) -> String {
@@ -61,14 +114,18 @@ pub(crate) fn tyre_texture(lod: Option<&str>, compound: racecraft_sim::Compound)
 }
 
 #[derive(Default)]
-pub(crate) struct CompoundMaterials(
+pub(crate) struct SurfaceMaterials(
     HashMap<(String, AssetId<StandardMaterial>), Handle<StandardMaterial>>,
 );
 
-impl CompoundMaterials {
+impl SurfaceMaterials {
+    fn retain_used(&mut self, used: &HashSet<AssetId<StandardMaterial>>) {
+        self.0.retain(|_, instance| used.contains(&instance.id()));
+    }
+
     fn instance(
         &mut self,
-        compound: &str,
+        key: &str,
         source: &Handle<StandardMaterial>,
         texture: Handle<Image>,
         materials: &mut Assets<StandardMaterial>,
@@ -76,9 +133,10 @@ impl CompoundMaterials {
         self.0
             .retain(|(_, source), _| materials.get(*source).is_some());
         self.0
-            .entry((compound.to_owned(), source.id()))
+            .entry((key.to_owned(), source.id()))
             .or_insert_with(|| {
                 let mut material = materials.get(source).unwrap().clone();
+                material.base_color = Color::WHITE;
                 material.base_color_texture = Some(texture);
                 material.base_color_channel = UvChannel::Uv0;
                 materials.add(material)
@@ -151,6 +209,118 @@ pub(crate) fn calibrate(name: &str, material: &mut StandardMaterial) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retain_used_releases_unreferenced_painted_instances() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let source = materials.add(StandardMaterial::default());
+        let texture = Handle::<Image>::default();
+        let mut instances = SurfaceMaterials::default();
+        let kept = instances.instance("kept", &source, texture.clone(), &mut materials);
+        let removed = instances.instance("removed", &source, texture, &mut materials);
+        let used = HashSet::from([kept.id()]);
+
+        instances.retain_used(&used);
+
+        assert!(instances.0.values().any(|handle| handle.id() == kept.id()));
+        assert!(!instances
+            .0
+            .values()
+            .any(|handle| handle.id() == removed.id()));
+    }
+
+    #[test]
+    fn driver_livery_falls_back_by_part_and_lod_without_leaking_to_other_teams() {
+        let root = std::env::temp_dir().join(format!("f1-livery-paths-{}", std::process::id()));
+        let teams =
+            crate::teams::Teams::parse(include_bytes!("../../tools/car/teams.json")).unwrap();
+        let (team, driver) = teams.selection("ferrari", "leclerc").unwrap();
+        let identity = crate::teams::Teams::identity(team, driver);
+        let base = "cars/gen22/liveries/ferrari";
+        let team_path = format!("{base}/main_body.png");
+        let driver_path = format!("{base}/leclerc/main_body.png");
+        let lod1_path = format!("{base}/leclerc/lod1/main_body.png");
+        let lod2_path = format!("{base}/leclerc/lod2/main_body.png");
+        for path in [&team_path, &driver_path, &lod1_path, &lod2_path] {
+            std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
+            std::fs::write(root.join(path), []).unwrap();
+        }
+        assert_eq!(
+            livery_texture(
+                &root,
+                &identity,
+                Some("lod2"),
+                "source_paint_main_body_stickers_lod.001"
+            ),
+            Some(lod2_path)
+        );
+        assert_eq!(
+            livery_texture(
+                &root,
+                &identity,
+                Some("lod1"),
+                "source_paint_main_body_stickers_lod"
+            ),
+            Some(lod1_path.clone())
+        );
+        std::fs::remove_file(root.join(&lod1_path)).unwrap();
+        assert_eq!(
+            livery_texture(
+                &root,
+                &identity,
+                Some("lod1"),
+                "source_paint_main_body_stickers_lod"
+            ),
+            Some(driver_path.clone())
+        );
+        std::fs::remove_file(root.join(&driver_path)).unwrap();
+        assert_eq!(
+            livery_texture(&root, &identity, None, "source_paint_main_body_stickers"),
+            Some(team_path)
+        );
+        assert!(livery_texture(&root, &identity, None, "source_paint_front_wing").is_none());
+        assert!(livery_texture(&root, &identity, None, "tyre").is_none());
+        let (team, driver) = teams.selection("mclaren", "").unwrap();
+        assert!(livery_texture(
+            &root,
+            &crate::teams::Teams::identity(team, driver),
+            None,
+            "source_paint_main_body_stickers"
+        )
+        .is_none());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn livery_instances_preserve_pbr_and_do_not_repaint_shared_materials() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let normal = Handle::<Image>::default();
+        let original = StandardMaterial {
+            base_color: Color::linear_rgb(0.32, 0.34, 0.36),
+            normal_map_texture: Some(normal.clone()),
+            perceptual_roughness: 0.3,
+            ..default()
+        };
+        let source = materials.add(original.clone());
+        let mut instances = SurfaceMaterials::default();
+        let ferrari = instances.instance("ferrari", &source, Handle::default(), &mut materials);
+        let other = instances.instance("other", &source, Handle::default(), &mut materials);
+        assert_ne!(ferrari, other);
+        assert_eq!(
+            ferrari,
+            instances.instance("ferrari", &source, Handle::default(), &mut materials)
+        );
+        let painted = materials.get(&ferrari).unwrap();
+        assert_eq!(painted.base_color, Color::WHITE);
+        assert_eq!(painted.normal_map_texture, Some(normal));
+        assert_eq!(painted.perceptual_roughness, original.perceptual_roughness);
+        assert_eq!(painted.base_color_channel, UvChannel::Uv0);
+        assert!(materials.get(&source).unwrap().base_color_texture.is_none());
+        assert_eq!(
+            materials.get(&source).unwrap().base_color,
+            original.base_color
+        );
+    }
 
     /// Inspect real compound instances, UV artwork and the BC7 path in all LODs.
     #[test]
