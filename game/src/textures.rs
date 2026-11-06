@@ -218,6 +218,7 @@ fn compress_bc7(image: &mut Image) {
 #[cfg(windows)]
 fn compress_bc7(_image: &mut Image) {}
 
+#[cfg(not(windows))]
 fn set_bc7(image: &mut Image, blocks: Vec<u8>) {
     image.data = Some(blocks);
     image.texture_descriptor.format = match image.texture_descriptor.format {
@@ -227,6 +228,7 @@ fn set_bc7(image: &mut Image, blocks: Vec<u8>) {
 }
 
 /// Content addressing invalidates cached blocks when pixels, mips or colour space change.
+#[cfg(not(windows))]
 fn compressed_cache_path(image: &Image) -> Option<std::path::PathBuf> {
     use std::hash::{Hash, Hasher};
     let root = std::env::var_os("XDG_CACHE_HOME")
