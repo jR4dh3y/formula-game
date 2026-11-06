@@ -142,6 +142,7 @@ pub fn prepare(
 }
 
 /// Encode the complete mip chain without changing its resolution or colour space.
+#[cfg(not(windows))]
 fn compress_bc7(image: &mut Image) {
     let desc = &image.texture_descriptor;
     if !desc.size.width.is_multiple_of(4) || !desc.size.height.is_multiple_of(4) {
@@ -214,6 +215,8 @@ fn compress_bc7(image: &mut Image) {
     }
     set_bc7(image, blocks);
 }
+#[cfg(windows)]
+fn compress_bc7(_image: &mut Image) {}
 
 fn set_bc7(image: &mut Image, blocks: Vec<u8>) {
     image.data = Some(blocks);
