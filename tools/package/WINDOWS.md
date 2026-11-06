@@ -1,7 +1,7 @@
 # Single-file Windows build
 
-Double-click `F1-Racecraft-0.1.0-windows-x86_64.exe`. It includes the game,
-Spa-Francorchamps, RB6/RB22, fonts, procedural audio and dependency notices.
+Double-click `F1-Racecraft-2.0.0-windows-x86_64.exe`. It includes the game,
+Spa-Francorchamps, RB6/GEN22, team liveries, fonts, procedural audio and dependency notices.
 No installer, Rust, Python, network connection or separate assets folder is
 needed to play. Requires 64-bit Windows 10/11 and a Vulkan-capable GPU with
 its current driver. This is an unsigned community build.
@@ -21,7 +21,7 @@ paths and relative environment overrides resolve there and survive cleanup.
 Arguments are forwarded to the game, including paths containing spaces:
 
 ```powershell
-.\F1-Racecraft-0.1.0-windows-x86_64.exe --graphics low --size 1280x720
+.\F1-Racecraft-2.0.0-windows-x86_64.exe --graphics low --size 1280x720
 ```
 
 Controls: W/S accelerate/brake, A/D steer, E/Q gears, C camera, R recover,
@@ -45,7 +45,7 @@ $env:CARGO_PROFILE_RELEASE_DEBUG = '0'
 python tools/package/build_windows.py
 ```
 
-Output: `dist/F1-Racecraft-0.1.0-windows-x86_64.exe` and `.exe.sha256`.
+Output: `dist/F1-Racecraft-2.0.0-windows-x86_64.exe` and `.exe.sha256`.
 The version comes from the workspace manifest. Verify the published digest
 with `Get-FileHash -Algorithm SHA256` before running a downloaded release.
 

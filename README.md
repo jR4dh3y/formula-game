@@ -68,7 +68,7 @@ These are captures from the game, not concept renders.
 
 ## Multiplayer
 
-The multiplayer branch adds 16-driver host/join rooms, owner-controlled rules,
+Multiplayer supports 16-driver host/join rooms, owner-controlled rules,
 AI takeover, local prediction and a headless UDP/WebSocket server.
 [Host on Render](docs/render.md) and join with `wss://your-service.onrender.com`. See
 [setup, platform packages and verification limits](docs/multiplayer.md).
@@ -101,7 +101,7 @@ assets/
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
 
-Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses one shared stock car with neutral body paint. Custom team liveries are developed in a separate branch stacked on 2.0. Team and driver selections control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
+Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses a shared car model with installed team and driver liveries. Missing artwork falls back to neutral paint. Team and driver selections also control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
@@ -168,7 +168,7 @@ process and report, and checks that the original race stays paused and intact.
 ## Portable Linux build
 
 `CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py` builds a single
-`dist/F1-Racecraft-0.1.0-linux-x86_64.AppImage` containing the game, both cars,
+`dist/F1-Racecraft-2.0.0-linux-x86_64.AppImage` containing the game, both cars,
 Spa, sound, fonts and runtime libraries. Send that file;
 players do not need Rust, the repository, separate assets or FUSE installed.
 They need an x86-64 Linux desktop (kernel 6.1+) and a working Vulkan GPU driver. The image
@@ -177,7 +177,7 @@ automatically extracts and runs when mounting is unavailable. See
 
 For an experimental package containing the other converted tracks, run
 `CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py --exp`. This compiles
-with `--features exp` and writes `dist/F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage`.
+with `--features exp` and writes `dist/F1-Racecraft-2.0.0-exp-linux-x86_64.AppImage`.
 Normal packaging always builds without `exp` and includes only Spa.
 
 ## Controls

@@ -2,8 +2,8 @@ F1 Racecraft — Linux x86-64 portable build
 
 Make the AppImage executable and open it:
 
-    chmod +x F1-Racecraft-0.1.0-linux-x86_64.AppImage
-    ./F1-Racecraft-0.1.0-linux-x86_64.AppImage
+    chmod +x F1-Racecraft-2.0.0-linux-x86_64.AppImage
+    ./F1-Racecraft-2.0.0-linux-x86_64.AppImage
 
 Only that AppImage needs to be sent to another player. It contains the game,
 RB6/GEN22, Spa, engine audio, fonts, runtime libraries
@@ -30,7 +30,7 @@ and COTA, use the experimental package command:
     CARGO_BUILD_JOBS=3 python3 tools/package/build_appimage.py --exp
 
 This enables Cargo's `exp` feature and creates
-F1-Racecraft-0.1.0-exp-linux-x86_64.AppImage. Experimental tracks are available
+F1-Racecraft-2.0.0-exp-linux-x86_64.AppImage. Experimental tracks are available
 only in this opt-in build. BUILD.json inside the image records the included tracks.
 
 F1_PACKAGE_ASSETS can select the converted assets directory. Build downloads
