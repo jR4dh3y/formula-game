@@ -63,9 +63,13 @@ struct Proxy {
     queue: Vec<(u64, SocketAddr, Vec<u8>)>,
     tick: u64,
     loss: bool,
+    delay_ticks: u64,
 }
 impl Proxy {
     fn new(server: SocketAddr, loss: bool) -> Self {
+        Self::with_delay(server, loss, 0)
+    }
+    fn with_delay(server: SocketAddr, loss: bool, delay_ticks: u64) -> Self {
         let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
         socket.set_nonblocking(true).unwrap();
         Self {
@@ -76,6 +80,7 @@ impl Proxy {
             queue: vec![],
             tick: 0,
             loss,
+            delay_ticks,
         }
     }
     fn addr(&self) -> SocketAddr {
@@ -95,11 +100,12 @@ impl Proxy {
             if self.loss && self.count.is_multiple_of(20) {
                 continue;
             }
-            let delay = if self.loss && self.count.is_multiple_of(7) {
-                3
-            } else {
-                0
-            };
+            let delay = self.delay_ticks
+                + if self.loss && self.count.is_multiple_of(7) {
+                    3
+                } else {
+                    0
+                };
             self.queue
                 .push((self.tick + delay, to, buf[..len].to_vec()));
             if self.loss && self.count.is_multiple_of(31) {
@@ -254,6 +260,99 @@ fn sixteen_real_udp_clients_race_with_loss_and_ai_takeover() {
         Driver::Ai(_)
     ));
 }
+#[test]
+fn two_real_udp_clients_keep_driving_at_eighty_ms_rtt() {
+    let fixture = Fixture::new();
+    let settings = RaceSettings {
+        ai_cars: 0,
+        ..RaceSettings::default()
+    };
+    let mut server =
+        Server::bind(&fixture.0, "127.0.0.1:0".parse().unwrap(), settings, None).unwrap();
+    // Fourteen 360 Hz ticks in each direction is about 78 ms RTT, with the
+    // same loss, duplication and reordering pattern as the shipped lossy test.
+    let mut proxies: Vec<_> = (0..2)
+        .map(|_| Proxy::with_delay(server.address(), true, 14))
+        .collect();
+    let mut clients: Vec<_> = (0..2)
+        .map(|i| {
+            Client::connect(
+                &fixture.0,
+                proxies[i].addr().into(),
+                format!("Latency {i}"),
+                Assists::default(),
+                None,
+            )
+            .unwrap()
+        })
+        .collect();
+    let mut races = [None, None];
+    let mut ready = [false; 2];
+    let mut started = false;
+    let dt = Duration::from_secs_f64(1. / PHYSICS_RATE);
+    for _ in 0..9000 {
+        for proxy in &mut proxies {
+            proxy.pump();
+        }
+        server.update(dt).unwrap();
+        for (i, client) in clients.iter_mut().enumerate() {
+            client.poll(dt).unwrap();
+            assert!(!client.closed, "client {i} closed: {:?}", client.error);
+            if !ready[i] && client.lobby.as_ref().is_some_and(|l| l.players.len() == 2) {
+                client.send(ClientMessage::Ready(true)).unwrap();
+                ready[i] = true;
+            }
+            if let Some(lobby) = client.load.take() {
+                races[i] = Some(load_race(&fixture.0, &lobby.settings, &lobby.players).unwrap());
+                client.loaded().unwrap();
+            }
+            if let Some(race) = &mut races[i] {
+                client.reconcile(race).unwrap();
+                client
+                    .predict(
+                        race,
+                        CarInput {
+                            throttle: 0.7,
+                            ..CarInput::default()
+                        },
+                    )
+                    .unwrap();
+            }
+            client.flush().unwrap();
+        }
+        if !started
+            && server.lobby.players.len() == 2
+            && server.lobby.players.iter().all(|p| p.ready)
+        {
+            clients
+                .iter_mut()
+                .find(|client| client.owner())
+                .unwrap()
+                .send(ClientMessage::Start)
+                .unwrap();
+            started = true;
+        }
+        if server.race.as_ref().is_some_and(|race| race.tick > 3000)
+            && clients
+                .iter()
+                .all(|client| client.authoritative_tick.is_some_and(|tick| tick > 2850))
+        {
+            break;
+        }
+        std::thread::sleep(Duration::from_micros(100));
+    }
+    assert!(started);
+    assert!(server.race.as_ref().is_some_and(|race| race.tick > 3000));
+    for client in &clients {
+        assert!(client.authoritative_tick.is_some_and(|tick| tick > 2850));
+        assert!(
+            client.resims < 700,
+            "excessive rollback count: {}",
+            client.resims
+        );
+    }
+}
+
 #[test]
 fn complete_snapshot_round_trip_replays_identically_and_rejects_wrong_field() {
     let fixture = Fixture::new();
@@ -1120,7 +1219,8 @@ fn websocket_paused_reader_recovers_without_blocking_other_drivers() {
     let mut races = vec![None, None];
     pump(&mut server, &mut clients, &mut races, &fixture.0, 100);
     assert_eq!(server.lobby.players.len(), 2);
-    // Enough ACK traffic to fill the paused client's bounded raw-packet queue.
+    // Keep ACK traffic flowing while one reader is paused. The socket handoff
+    // must preserve reliable packets until the reader catches up.
     let dt = Duration::from_millis(1);
     for _ in 0..1200 {
         server.update(dt).unwrap();

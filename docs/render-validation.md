@@ -52,8 +52,9 @@ while UDP LAN hosting and offline racing remain available.
   traversal are refused before writing a deployment bundle.
 
 During verification, the TLS crypto backend was made explicit and WebSocket
-read/write halves were separated. Raw queues stay bounded and may drop packets;
-Renet retries reliable messages. A paused-reader regression test covers recovery.
+read/write halves were separated. The socket-to-Renet handoff preserves packets;
+Renet's unreliable state channel can still supersede stale snapshots, while its
+reliable channel retries control messages. A paused-reader regression test covers recovery.
 
 ## Remaining deployment work
 

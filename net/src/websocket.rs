@@ -1,6 +1,7 @@
 //! WebSocket I/O runs off the simulation/render thread. Each peer has bounded
-//! packet queues. Full queues drop datagrams like UDP; Renet retransmits reliable
-//! messages. Independent readers/writers avoid a full-duplex backpressure deadlock.
+//! packet queues with backpressure, so a full handoff queue never silently drops
+//! a reliable Renet packet. Independent readers/writers avoid a full-duplex
+//! backpressure deadlock.
 use crate::{MAX_PLAYERS, PROTOCOL_ID, TIMEOUT};
 use axum::{
     extract::{
@@ -26,7 +27,8 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Semaphore};
 use tokio_tungstenite::tungstenite::{protocol::WebSocketConfig, Message as ClientMessage};
 
-const QUEUE: usize = 256;
+const QUEUE: usize = 2048;
+const SEND_CAPACITY_GUARD: usize = 128;
 const MAX_PACKET: usize = 2048;
 const CONNECTIONS: usize = MAX_PLAYERS + 4;
 
@@ -85,6 +87,9 @@ impl WsClient {
     pub fn connect(url: String, id: u64) -> Result<Self, String> {
         // TLS dependencies do not choose a crypto backend automatically.
         let _ = rustls::crypto::ring::default_provider().install_default();
+        // Renet has already removed packets from its send queue when this
+        // handoff happens. A bounded channel that silently drops on `Full`
+        // therefore turns reliable packets into loss under jitter.
         let (events, incoming) = mpsc::channel(QUEUE);
         let (outgoing, mut packets) = mpsc::channel::<Vec<u8>>(QUEUE);
         let worker = Worker::spawn(async move {
@@ -108,8 +113,9 @@ impl WsClient {
                     .await
                     .map_err(|e| e.to_string())?;
                 events
-                    .try_send(Received::Connected)
-                    .map_err(|_| "WebSocket receive queue is full".to_owned())?;
+                    .send(Received::Connected)
+                    .await
+                    .map_err(|_| "WebSocket receive queue is closed".to_owned())?;
                 let (mut writer, mut reader) = socket.split();
                 let sending = async {
                     while let Some(packet) = packets.recv().await {
@@ -127,9 +133,8 @@ impl WsClient {
                     while let Some(message) = reader.next().await {
                         match message.map_err(|e| e.to_string())? {
                             ClientMessage::Binary(bytes) => {
-                                match events.try_send(Received::Packet(bytes.to_vec())) {
-                                    Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => {}
-                                    Err(mpsc::error::TrySendError::Closed(_)) => return Ok(()),
+                                if events.send(Received::Packet(bytes.to_vec())).await.is_err() {
+                                    return Ok(());
                                 }
                             }
                             ClientMessage::Ping(_) | ClientMessage::Pong(_) => {}
@@ -146,7 +151,7 @@ impl WsClient {
             .await;
             if let Err(error) = session {
                 eprintln!("WebSocket client: {error}");
-                let _ = events.try_send(Received::Error(error));
+                let _ = events.send(Received::Error(error)).await;
             }
         })?;
         Ok(Self {
@@ -182,12 +187,16 @@ impl WsClient {
     }
     pub fn send_packets(&mut self, net: &mut RenetClient) -> Result<(), String> {
         if net.is_connected() {
+            // Do not pull packets out of Renet unless the socket handoff can
+            // absorb a normal transport burst. Reliable packets remain in
+            // Renet and are retried on the next pass when the writer catches
+            // up.
+            if self.outgoing.capacity() < SEND_CAPACITY_GUARD {
+                return Ok(());
+            }
             for packet in net.get_packets_to_send() {
-                match self.outgoing.try_send(packet) {
-                    Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => {}
-                    Err(mpsc::error::TrySendError::Closed(_)) => {
-                        return Err("WebSocket connection ended".into())
-                    }
+                if self.outgoing.blocking_send(packet).is_err() {
+                    return Err("WebSocket connection ended".into());
                 }
             }
         }
@@ -268,10 +277,11 @@ async fn upgrade(State(state): State<ListenerState>, ws: WebSocketUpgrade) -> Re
             let receiving = async {
                 while let Some(Ok(message)) = reader.next().await {
                     match message {
-                        Message::Binary(bytes) => match received.try_send(bytes.to_vec()) {
-                            Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => {}
-                            Err(mpsc::error::TrySendError::Closed(_)) => break,
-                        },
+                        Message::Binary(bytes) => {
+                            if received.send(bytes.to_vec()).await.is_err() {
+                                break;
+                            }
+                        }
                         Message::Ping(_) | Message::Pong(_) => {}
                         _ => break,
                     }
@@ -377,14 +387,12 @@ impl WsServer {
     pub fn send_packets(&mut self, net: &mut RenetServer) {
         self.peers.retain(|id, peer| {
             let live = net.is_connected(*id)
-                && net.get_packets_to_send(*id).is_ok_and(|packets| {
-                    packets
-                        .into_iter()
-                        .all(|packet| match peer.outgoing.try_send(packet) {
-                            Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => true,
-                            Err(mpsc::error::TrySendError::Closed(_)) => false,
-                        })
-                });
+                && (peer.outgoing.capacity() < SEND_CAPACITY_GUARD
+                    || net.get_packets_to_send(*id).is_ok_and(|packets| {
+                        packets
+                            .into_iter()
+                            .all(|packet| peer.outgoing.blocking_send(packet).is_ok())
+                    }));
             if !live {
                 if let Some(reason) = net.disconnect_reason(*id) {
                     eprintln!("WebSocket peer {id} disconnected: {reason}");
