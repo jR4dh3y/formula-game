@@ -241,12 +241,39 @@ pub fn spawn_visuals(
             Transform::default(),
         ))
         .observe(visual_ready);
-    for (index, entrant) in session.race.entrants.iter().enumerate() {
-        let scene = if index == session.player {
-            car.clone()
+    // 2026 cars race in their own team's model: full detail for the player,
+    // the lighter LOD for opponents. Teams without one use the base car.
+    let team_scene = |index: usize| {
+        if options.car != "gen26" {
+            return None;
+        }
+        let team = session.identities.get(index)?.as_ref()?.team.as_str();
+        // Racing Bulls share Red Bull's chassis.
+        let team = if team == "racingbulls" {
+            "redbull"
         } else {
-            opponent.clone()
+            team
         };
+        let file = if index == session.player {
+            "car.glb"
+        } else {
+            "car_lod1.glb"
+        };
+        let path = format!("cars/gen26/teams/{team}/{file}");
+        options
+            .assets
+            .join(&path)
+            .is_file()
+            .then(|| server.load(GltfAssetLabel::Scene(0).from_asset(path)))
+    };
+    for (index, entrant) in session.race.entrants.iter().enumerate() {
+        let scene = team_scene(index).unwrap_or_else(|| {
+            if index == session.player {
+                car.clone()
+            } else {
+                opponent.clone()
+            }
+        });
         commands
             .spawn((
                 Name::new(format!("car-{index}")),
