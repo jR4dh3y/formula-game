@@ -64,7 +64,16 @@ impl Guidance {
             input.steer += (reference.steer - raw.steer) * strength;
             let braking = corner_braking.clamp(0., 1.);
             if braking > 0. {
-                input.brake = raw.brake.max(reference.brake * braking);
+                // Brake for the track, and for a car ahead only when contact
+                // is imminent. The AI's cautious following distance feathered
+                // the pedal in the tow, cutting full power and closing DRS
+                // just as the driver pulled out to pass.
+                let assist_brake = if imminent_contact(car, rivals) {
+                    reference.brake
+                } else {
+                    self.driver.corner_brake()
+                };
+                input.brake = raw.brake.max(assist_brake * braking);
                 // Corner assistance owns braking, not the accelerator. The AI's
                 // coasting and traction trims otherwise hold back a held pedal.
                 if input.brake > raw.brake {
@@ -80,6 +89,22 @@ impl Guidance {
         };
         input
     }
+}
+
+/// Seconds to contact below which corner assistance also brakes for a car
+/// in our lane. Reaction plus a hard stop's worth of closing at racing gaps.
+const CONTACT_HORIZON: f64 = 0.6;
+
+/// A car ahead in our lane that we will hit within `CONTACT_HORIZON` at the
+/// current closing speed.
+fn imminent_contact(car: &Car, rivals: &[Rival]) -> bool {
+    let speed = car.speed();
+    rivals.iter().any(|rival| {
+        let in_lane = (rival.lateral - car.track_position.lateral).abs() < car.spec.width + 0.3;
+        let room = rival.gap - car.spec.length;
+        let closing = speed - rival.speed;
+        in_lane && rival.gap > 0. && closing > 0.5 && room < closing * CONTACT_HORIZON
+    })
 }
 
 /// Green well under the target speed, amber near it and red over it,
@@ -280,6 +305,128 @@ mod tests {
             passing_samples >= 10,
             "only {passing_samples} passing samples"
         );
+    }
+
+    /// A stadium: two 800 m straights joined by 90 m radius hairpins.
+    fn stadium() -> crate::Session {
+        use racecraft_sim::track::{Station, STATION_SPACING};
+        let mut session = crate::tests::session();
+        let (straight, radius) = (800., 90.);
+        let bend = std::f64::consts::PI * radius;
+        let length = 2. * (straight + bend);
+        let stations: Vec<_> = (0..(length / STATION_SPACING) as usize)
+            .map(|i| {
+                let s = i as f64 * STATION_SPACING;
+                let (position, heading) = if s < straight {
+                    (glam::DVec2::new(0., s), 0.)
+                } else if s < straight + bend {
+                    let a = (s - straight) / radius;
+                    (
+                        glam::DVec2::new(radius - radius * a.cos(), straight + radius * a.sin()),
+                        a,
+                    )
+                } else if s < 2. * straight + bend {
+                    (
+                        glam::DVec2::new(2. * radius, straight - (s - straight - bend)),
+                        std::f64::consts::PI,
+                    )
+                } else {
+                    let a = (s - 2. * straight - bend) / radius;
+                    (
+                        glam::DVec2::new(radius + radius * a.cos(), -radius * a.sin()),
+                        std::f64::consts::PI + a,
+                    )
+                };
+                Station {
+                    s,
+                    position: glam::DVec3::new(position.x, 0., position.y),
+                    tangent: glam::DVec2::new(heading.sin(), heading.cos()),
+                    half_width: 7.,
+                }
+            })
+            .collect();
+        let track = std::sync::Arc::new(Track {
+            name: "Stadium".into(),
+            source: String::new(),
+            length: stations.len() as f64 * STATION_SPACING,
+            racing_line: racecraft_sim::track::racing_line::RacingLine::compute(&stations),
+            passing_lines: None,
+            stations,
+            corners: vec![],
+            collision: racecraft_sim::track::collision::CollisionWorld::from_bytes(
+                b"F1CL\x01\0\0\0\0\0\0\0\0\0\0\0",
+            )
+            .unwrap(),
+            sun_direction: glam::DVec3::new(-0.3, -0.8, -0.5),
+        });
+        let config = racecraft_sim::EntrantConfig {
+            name: "You".into(),
+            spec: session.race.entrants[0].car.spec.clone(),
+            setup: session.race.entrants[0].car.setup,
+            assists: racecraft_sim::Assists::default(),
+            ai: None,
+            human_slot: 0,
+            livery: [1.; 3],
+        };
+        session.race = Race::new(track, vec![config], 1, 5);
+        session
+    }
+
+    /// Sweep of tow gaps and closing speeds on a straight: a car ahead is
+    /// never braked for unless contact is imminent, so full throttle (and
+    /// with it DRS) survives the run up to a pass.
+    #[test]
+    fn corner_assist_does_not_feather_the_brake_in_a_tow() {
+        let mut session = stadium();
+        let mut guide = Guidance::new(&session.race, 0);
+        let track = session.race.track.clone();
+        let car = &mut session.race.entrants[0].car;
+        let s = 200.;
+        let frame = track.frame_at(s);
+        let lateral = track.racing_line.lateral_at(s);
+        *car = Car::new(
+            car.spec.clone(),
+            car.setup,
+            car.assists,
+            &track,
+            frame.point_at(lateral),
+            frame.tangent.x.atan2(frame.tangent.y),
+        );
+        car.powertrain.gear = 7;
+        let (mut tow, mut imminent) = (0, 0);
+        for speed in [50., 60., 70.] {
+            car.velocity = car.forward() * speed;
+            for gap in (8..=60).step_by(2).map(f64::from) {
+                for closing in (0..=20).map(f64::from) {
+                    let ahead = track.frame_at(s + gap).point_at(lateral);
+                    let rival = Rival {
+                        gap,
+                        lateral,
+                        speed: speed - closing,
+                        position: glam::DVec2::new(ahead.x, ahead.z),
+                    };
+                    let raw = CarInput {
+                        throttle: 1.,
+                        ..Default::default()
+                    };
+                    let alone = guide.apply(car, &track, &[], raw, 1., 1. / 360.);
+                    let input = guide.apply(car, &track, &[rival], raw, 1., 1. / 360.);
+                    let room = gap - car.spec.length;
+                    if closing > 0.5 && room < closing * CONTACT_HORIZON {
+                        imminent += 1;
+                        assert!(input.brake > 0., "{speed} {gap} {closing}: {input:?}");
+                    } else {
+                        tow += 1;
+                        assert_eq!(
+                            (input.brake, input.throttle),
+                            (alone.brake, alone.throttle),
+                            "feathered at {speed} m/s, gap {gap}, closing {closing}"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(tow > 1000 && imminent > 20, "{tow} {imminent}");
     }
 
     #[test]

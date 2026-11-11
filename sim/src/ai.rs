@@ -79,6 +79,10 @@ pub struct AiDriver {
     /// The attacker has left the tow for the passing lane and stays there
     /// until the move is completed or abandoned.
     pulled_out: bool,
+    /// Brake the last tick would have used for the track alone: corners,
+    /// dirty air and the line actually driven, but not cars ahead. Corner
+    /// assistance brakes with this so it never feathers a pass on a straight.
+    corner_brake: f64,
     /// Tyre grip the current speed profile was planned for.
     planned_grip: f64,
     /// Set while the race holds the car on the grid.
@@ -228,6 +232,7 @@ impl AiDriver {
             moved_for_corner: None,
             held_up: 0.0,
             pulled_out: false,
+            corner_brake: 0.0,
             // Not a grip: the first `set_plan` always plans.
             planned_grip: f64::NAN,
             on_grid: false,
@@ -302,6 +307,12 @@ impl AiDriver {
                     .rem_euclid(track.length)
                     .total_cmp(&track.delta(s, b.apex_s).rem_euclid(track.length))
             })
+    }
+
+    /// Brake demand from the track alone on the last `drive` tick, ignoring
+    /// traffic. See the field of the same name.
+    pub fn corner_brake(&self) -> f64 {
+        self.corner_brake
     }
 
     /// Seconds the car has been nearly stationary while it should be racing.
@@ -690,6 +701,7 @@ impl AiDriver {
                 }
             }
         }
+        self.corner_brake = pedals(target_speed - speed).1;
         // Boxed in between a car alongside and the edge of the road: the car
         // further back gives way rather than leaning on the other one.
         if squeezed && beside_speed.is_finite() {
@@ -766,13 +778,7 @@ impl AiDriver {
             (self.held_up - dt * 0.5).max(0.0)
         };
         let error = target_speed - speed;
-        let (throttle, brake) = if error > 0.0 {
-            ((error * 0.35 + 0.35).clamp(0.0, 1.0), 0.0)
-        } else if error > -1.5 {
-            (0.15, 0.0)
-        } else {
-            (0.0, ((-error - 1.5) * 0.22).clamp(0.0, 1.0))
-        };
+        let (throttle, brake) = pedals(error);
         // Feed the throttle in as the steering unwinds where traction is the
         // limit; at high speed the engine cannot overpower the rears, so fast
         // bends such as Eau Rouge stay flat. Back off if the rear slides.
@@ -1221,6 +1227,17 @@ fn signed_curvature(a: DVec2, b: DVec2, c: DVec2) -> f64 {
 /// Whether the passing lane at `lateral` is worth pulling into: no other car
 /// in it ahead within range, which would just hold us up there instead, and
 /// no faster car coming up behind in it that we would pull out in front of.
+/// Throttle and brake for a speed error (target minus current), m/s.
+fn pedals(error: f64) -> (f64, f64) {
+    if error > 0.0 {
+        ((error * 0.35 + 0.35).clamp(0.0, 1.0), 0.0)
+    } else if error > -1.5 {
+        (0.15, 0.0)
+    } else {
+        (0.0, ((-error - 1.5) * 0.22).clamp(0.0, 1.0))
+    }
+}
+
 fn lane_is_free(car: &Car, rivals: &[Rival], target: &Rival, lateral: f64) -> bool {
     let speed = car.speed();
     !rivals.iter().any(|rival| {
