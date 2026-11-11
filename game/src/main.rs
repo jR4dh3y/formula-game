@@ -7,6 +7,7 @@ mod camera;
 mod canvas;
 mod controls;
 mod driving;
+mod effects;
 mod graphics;
 mod hud;
 mod materials;
@@ -16,6 +17,8 @@ mod online;
 mod options;
 mod pose;
 mod preferences;
+mod race_loop;
+mod road;
 mod sky;
 mod teams;
 #[cfg(test)]
@@ -23,6 +26,8 @@ mod tests;
 mod textures;
 #[cfg(test)]
 mod track_probe;
+#[cfg(test)]
+mod visual_review;
 mod wheel_dash;
 
 use bevy::{
@@ -58,7 +63,17 @@ pub struct Session {
     pub poses: pose::Poses,
     /// Round-trip time per entrant slot in an online race; empty offline.
     pub pings: Vec<Option<u16>>,
+    /// The player's recent collision impulse (N·s), held and decayed on
+    /// physics ticks. The car reports an impact only on the tick it happens,
+    /// and a frame spans several ticks: reading the car each frame misses
+    /// most collisions.
+    pub impact: f64,
+    /// Strongest collision since the audio update, consumed once per frame.
+    pub pending_impact: f64,
 }
+
+/// Seconds for a collision's camera jolt to fade to about a third.
+const IMPACT_FADE: f64 = 0.12;
 
 fn main() -> ExitCode {
     let options = match Options::parse(std::env::args().skip(1)) {
@@ -163,6 +178,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
         telemetry: default(),
         ready: false,
         pings: Vec::new(),
+        impact: 0.,
+        pending_impact: 0.,
         screen: if quick_race {
             menu::Screen::Racing
         } else {
@@ -230,6 +247,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
             auto_create_primary_context: false,
             ..default()
         })
+        .add_systems(Startup, (effects::setup, road::setup))
         .add_plugins(graphics::StaticSkyLighting)
         .add_plugins(wheel_dash::WheelDashPlugin)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
@@ -258,6 +276,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
+        .init_resource::<race_loop::Run>()
+        .add_systems(
+            Update,
+            race_loop::update
+                .before(assets::sync_cars)
+                .after(menu::apply),
+        )
         .add_systems(FixedUpdate, step_race)
         .add_systems(
             Update,
@@ -276,6 +301,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 wheel_dash::lights,
                 sky::update,
                 camera::update,
+                effects::update,
+                graphics::speed_blur,
                 menu::car_preview::update,
                 assets::helmet_visibility,
                 audio::update,
@@ -283,7 +310,16 @@ fn build_app(mut options: Options) -> Result<App, String> {
             )
                 .chain(),
         )
-        .add_systems(EguiPrimaryContextPass, (hud::update, menu::ui).chain())
+        .add_systems(
+            Update,
+            (road::prepare, road::rubber_line, materials::finishes)
+                .chain()
+                .after(materials::prepare),
+        )
+        .add_systems(
+            EguiPrimaryContextPass,
+            (hud::update, menu::ui, race_loop::ui).chain(),
+        )
         .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(
             PostUpdate,
@@ -324,11 +360,19 @@ fn pause_on_focus_loss(
 }
 
 fn step_race(
+    mut rewards: Option<ResMut<race_loop::Run>>,
+    options: Option<Res<Options>>,
+    frontend: Option<Res<menu::Frontend>>,
     mut session: ResMut<Session>,
     benchmark: Option<Res<benchmark::Run>>,
     mut online: Option<ResMut<online::Online>>,
 ) {
     if benchmark.is_some() {
+        return;
+    }
+    if !online.as_ref().is_some_and(|o| o.client.is_some())
+        && rewards.as_ref().is_some_and(|r| r.resuming())
+    {
         return;
     }
     let Session { poses, race, .. } = &mut *session;
@@ -396,7 +440,17 @@ fn step_race(
     } else {
         race.step(&[input]);
     }
+    let hit = session.race.entrants[session.player].car.impact;
+    session.pending_impact = session.pending_impact.max(hit);
+    session.impact = (session.impact * (-1. / (PHYSICS_RATE * IMPACT_FADE)).exp()).max(hit);
     session.sample_hud();
+    if !connected {
+        if let (Some(rewards), Some(options), Some(frontend)) =
+            (rewards.as_mut(), options, frontend)
+        {
+            rewards.sample(&session, &options, frontend.rewind);
+        }
+    }
 }
 
 #[derive(Resource, Default)]

@@ -36,7 +36,7 @@ impl Pose {
             yaw: car.yaw,
             pitch: car.pitch,
             roll: car.roll,
-            steer: car.steer_angle,
+            steer: car.visual_steer,
             wheels: std::array::from_fn(|index| car.wheels[index].rotation),
             ground: std::array::from_fn(|index| car.wheels[index].ground_height),
         }

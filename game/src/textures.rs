@@ -252,7 +252,7 @@ fn compressed_cache_path(image: &Image) -> Option<std::path::PathBuf> {
     )
 }
 
-fn generate_mips(image: &mut Image) -> bool {
+pub(crate) fn generate_mips(image: &mut Image) -> bool {
     let desc = &image.texture_descriptor;
     if desc.dimension != TextureDimension::D2
         || desc.size.depth_or_array_layers != 1
@@ -391,6 +391,8 @@ mod tests {
     }
 
     #[test]
+    // Windows builds ship uncompressed textures (`compress_bc7` is a no-op).
+    #[cfg(not(windows))]
     fn bc7_preserves_resolution_colour_space_and_the_complete_mip_tail() {
         for (format, compressed) in [
             (

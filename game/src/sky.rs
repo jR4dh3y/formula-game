@@ -71,7 +71,7 @@ pub(crate) struct Skies([[Handle<Image>; 3]; 2]);
 /// Visual lightning and delayed thunder share the same paused race clock.
 #[derive(Resource)]
 pub(crate) struct Storm {
-    selected: Option<(Weather, usize, Vec3)>,
+    selected: Option<(Weather, usize, Vec3, bool)>,
     elapsed: f32,
     next_strike: f32,
     flash: f32,
@@ -209,7 +209,7 @@ pub fn update(
     mut storm: ResMut<Storm>,
     mut sun: Query<&mut DirectionalLight, With<Sun>>,
     mut cameras: Query<
-        (Entity, &mut Skybox, &mut AmbientLight),
+        (Entity, &mut Skybox, &mut AmbientLight, &mut Exposure),
         With<bevy_egui::PrimaryEguiContext>,
     >,
 ) {
@@ -221,7 +221,12 @@ pub fn update(
     };
     let direction = session.race.track.sun_direction;
     let direction = Vec3::new(direction.x as f32, direction.y as f32, direction.z as f32);
-    let selected = (weather, quality, direction);
+    let selected = (
+        weather,
+        quality,
+        direction,
+        frontend.video.cinematic_lighting,
+    );
     if storm.selected != Some(selected) {
         storm.selected = Some(selected);
         storm.elapsed = 0.;
@@ -232,17 +237,17 @@ pub fn update(
         // The pinned clear panorama's sun azimuth is 0.6289321 radians.
         // Rotate both the visible sky and its reflection map with the track sun.
         let rotation = Quat::from_rotation_y((-direction.x).atan2(-direction.z) - 0.628_932_1);
-        for (entity, mut skybox, _) in &mut cameras {
+        for (entity, mut skybox, _, _) in &mut cameras {
             skybox.image = Some(handle.clone());
             skybox.rotation = rotation;
             commands
                 .entity(entity)
                 .insert(GeneratedEnvironmentMapLight {
                     environment_map: handle.clone(),
-                    intensity: match weather {
-                        Weather::Clear => 12_000.,
-                        Weather::Storm => 4_500.,
-                    },
+                    // Reflections must be no brighter than the visible sky,
+                    // or dark glossy parts (carbon, tyres) mirror a sky
+                    // brighter than the real one and turn grey.
+                    intensity: weather.brightness(),
                     rotation,
                     ..default()
                 });
@@ -254,14 +259,30 @@ pub fn update(
     );
     let flash = (storm.flash / 0.18).min(1.);
     let (illuminance, ambient_brightness, color) = match weather {
-        Weather::Clear => (65_000., 650., Color::WHITE),
+        Weather::Clear => {
+            if frontend.video.cinematic_lighting {
+                (70_000., 650., Color::WHITE)
+            } else {
+                (65_000., 650., Color::WHITE)
+            }
+        }
+        // Ambient light also lights reflections, so it stays low: a strong
+        // flat fill puts a white sheen on every glossy panel and turns dark
+        // carbon light grey and Ferrari red pink.
         Weather::Storm => (7_000. + flash * 18_000., 500., Color::srgb(0.72, 0.79, 1.)),
     };
     for mut light in &mut sun {
         light.illuminance = illuminance;
         light.color = color;
     }
-    for (_, mut skybox, mut ambient) in &mut cameras {
+    for (_, mut skybox, mut ambient, mut exposure) in &mut cameras {
+        // A brighter storm exposure pushes saturated paint into the
+        // tonemapper's shoulder, where Ferrari red turns pink.
+        exposure.ev100 = if weather == Weather::Storm {
+            11.9
+        } else {
+            12.6
+        };
         ambient.brightness = ambient_brightness;
         skybox.brightness = weather.brightness() * (1. + flash * 1.5);
     }

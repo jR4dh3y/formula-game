@@ -56,8 +56,8 @@ impl Quality {
         match self {
             Self::Low => "Basic shadows and FXAA. For integrated graphics.",
             Self::Medium => "Temporal antialiasing, no screen-space effects.",
-            Self::High => "Ambient occlusion and contact shadows at balanced resolution.",
-            Self::Ultra => "Highest shadow resolution and filtering.",
+            Self::High => "Bloom, motion blur, contact shadows and asphalt detail.",
+            Self::Ultra => "Ambient occlusion, sharpest shadows and the richest sky.",
         }
     }
 
@@ -78,10 +78,10 @@ impl Quality {
             },
             shadow_cascades: match self {
                 Low => 2,
-                Medium | High => 3,
+                Medium | High => 2,
                 Ultra => 4,
             },
-            shadow_distance: 90.,
+            shadow_distance: if self == High { 70. } else { 90. },
             shadow_filter: if self == Low {
                 ShadowFilter::Hard
             } else {
@@ -90,7 +90,7 @@ impl Quality {
             contact_shadows: self >= High,
             ambient_occlusion: match self {
                 Low | Medium => Level::Off,
-                High => Level::Medium,
+                High => Level::Off,
                 Ultra => Level::High,
             },
             sky: if self == Ultra {
@@ -98,17 +98,32 @@ impl Quality {
             } else {
                 Level::Medium
             },
-            // Texture compression retains full-resolution Ultra maps on 4 GB GPUs.
+            // Full-resolution maps add about 800 MB and push Ultra past a 4 GB
+            // card once a desktop is using it; they stay a manual choice.
             texture: match self {
                 Low => TextureDetail::Quarter,
-                Medium | High => TextureDetail::Half,
-                Ultra => TextureDetail::Full,
+                Medium | High | Ultra => TextureDetail::Half,
             },
             ai_detail: match self {
                 Low => Level::Low,
                 Medium | High => Level::Medium,
                 Ultra => Level::High,
             },
+            saturation: if self >= Medium { 1.05 } else { 1. },
+            surface_detail: self >= Medium,
+            cinematic_lighting: self >= Medium,
+            camera_motion: self >= Medium,
+            effects: if self >= High {
+                Level::High
+            } else if self == Medium {
+                Level::Low
+            } else {
+                Level::Off
+            },
+            bloom: if self >= High { 0.08 } else { 0. },
+            haze: if self >= Medium { 0.018 } else { 0. },
+            contrast: if self >= Medium { 1.01 } else { 1. },
+            motion_blur: if self >= High { 0.18 } else { 0. },
             ..Video::default()
         }
     }
@@ -188,7 +203,7 @@ impl TextureDetail {
     pub const ALL: [Self; 3] = [Self::Full, Self::Half, Self::Quarter];
     pub fn label(self) -> &'static str {
         match self {
-            Self::Full => "Full",
+            Self::Full => "Full (6 GB+ video memory)",
             Self::Half => "Half",
             Self::Quarter => "Quarter",
         }
@@ -281,6 +296,10 @@ pub struct Video {
     pub focus_distance: f32,
     /// Atmospheric haze density, 0..1.
     pub haze: f32,
+    pub effects: Level,
+    pub surface_detail: bool,
+    pub cinematic_lighting: bool,
+    pub camera_motion: bool,
 }
 
 impl Default for Video {
@@ -310,6 +329,10 @@ impl Default for Video {
             bokeh: false,
             focus_distance: 30.,
             haze: 0.,
+            effects: Level::Off,
+            surface_detail: false,
+            cinematic_lighting: false,
+            camera_motion: true,
         }
     }
 }
@@ -441,11 +464,11 @@ pub fn apply(
     shadow_map.size = video.shadow_resolution;
     for (entity, mut light) in &mut lights {
         light.contact_shadows_enabled =
-            video.contact_shadows && video.ambient_occlusion().is_some();
+            video.contact_shadows && video.anti_alias != AntiAlias::Msaa4;
         commands.entity(entity).insert(
             CascadeShadowConfigBuilder {
                 num_cascades: video.shadow_cascades,
-                first_cascade_far_bound: (video.shadow_distance * 0.22).min(20.0),
+                first_cascade_far_bound: (video.shadow_distance * 0.12).min(10.0),
                 maximum_distance: video.shadow_distance,
                 ..default()
             }
@@ -519,19 +542,18 @@ pub fn apply(
                 radius: 0.32,
                 constant_object_thickness: 0.12,
             });
-            if video.contact_shadows {
-                camera.insert(ContactShadows {
-                    // Fewer depth samples on short rays; preserve their reach
-                    // and thickness around tyres and bodywork.
-                    linear_steps: if video.ambient_occlusion >= Level::High {
-                        12
-                    } else {
-                        8
-                    },
-                    ..default()
-                });
-            }
         }
+        if video.contact_shadows && video.anti_alias != AntiAlias::Msaa4 {
+            camera.insert(ContactShadows {
+                linear_steps: if video.ambient_occlusion >= Level::High {
+                    12
+                } else {
+                    6
+                },
+                ..default()
+            });
+        }
+
         if video.bloom > 0. {
             camera.insert(Bloom {
                 intensity: 0.05 + video.bloom * 0.3,
@@ -596,6 +618,9 @@ pub struct StaticSkyLighting;
 impl Plugin for StaticSkyLighting {
     fn build(&self, app: &mut App) {
         let settled = PipelinesSettled::default();
+        if std::env::var_os("F1_VISUAL_TRACE").is_some() {
+            app.add_systems(Last, trace_frames);
+        }
         app.insert_resource(settled.clone())
             .add_systems(Update, freeze_sky_lighting.after(apply));
         if let Some(render_app) = app.get_sub_app_mut(bevy::render::RenderApp) {
@@ -659,9 +684,68 @@ fn freeze_sky_lighting(
     }
 }
 
+/// Optional hitch evidence; enabled only for a separate diagnostic run.
+fn trace_frames(
+    settled: Res<PipelinesSettled>,
+    time: Res<Time<Real>>,
+    session: Res<crate::Session>,
+    particles: Query<(), With<crate::effects::Particle>>,
+    mut images: MessageReader<AssetEvent<Image>>,
+    mut file: Local<Option<std::fs::File>>,
+) {
+    use std::io::Write;
+    let uploads = images
+        .read()
+        .filter(|event| {
+            matches!(
+                event,
+                AssetEvent::Added { .. } | AssetEvent::Modified { .. }
+            )
+        })
+        .count();
+    let frames_ready = settled.0.load(std::sync::atomic::Ordering::Relaxed);
+    let file = file.get_or_insert_with(|| {
+        std::fs::File::create(std::env::var_os("F1_VISUAL_TRACE").unwrap()).unwrap()
+    });
+    let value = serde_json::json!({"elapsed":time.elapsed_secs_f64(),"dt_ms":time.delta_secs_f64()*1000.,"pipelines_settled_frames":frames_ready,"image_events":uploads,"particles":particles.iter().count(),"race_time":session.race.time});
+    writeln!(file, "{value}").unwrap();
+}
+
+/// Reduce the shutter at low speeds; the chased car's motion vectors remain near zero.
+pub fn speed_blur(
+    session: Res<crate::Session>,
+    frontend: Res<crate::menu::Frontend>,
+    mut cameras: Query<&mut MotionBlur, With<bevy_egui::PrimaryEguiContext>>,
+) {
+    let speed = session.race.entrants[session.player].car.speed() as f32;
+    for mut blur in &mut cameras {
+        blur.shutter_angle = frontend.video.motion_blur * ((speed - 15.) / 60.).clamp(0., 1.);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn verification_configs_match_real_presets() {
+        let output = std::process::Command::new("python3")
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .args(["-c", "import runpy,json; v=runpy.run_path('../tools/verify_visuals.py')['video']; print(json.dumps([v(p,True) for p in ['low','high','ultra']]))"])
+            .output().unwrap();
+        assert!(output.status.success());
+        let configs: Vec<Video> = serde_json::from_slice(&output.stdout).unwrap();
+        for (config, preset) in configs
+            .iter()
+            .zip([Quality::Low, Quality::High, Quality::Ultra])
+        {
+            assert_eq!(
+                *config,
+                preset.video(),
+                "verification settings drifted for {preset:?}"
+            );
+        }
+    }
 
     #[test]
     fn presets_round_trip_and_tweaks_become_custom() {

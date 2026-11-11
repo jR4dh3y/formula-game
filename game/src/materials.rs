@@ -145,13 +145,36 @@ impl SurfaceMaterials {
     }
 }
 
+const SATIN_ROUGHNESS: f32 = 0.72;
+const TYRE_TINT: f32 = 0.7;
+const SATIN_REFLECTANCE: f32 = 0.25;
+
+/// Livery surfaces that are bare or satin carbon on a real car: floor, wings,
+/// wheel covers and cockpit padding. Their liveries are mostly black, and a
+/// glossy clearcoat makes them mirror the sky and read grey instead.
+fn satin_paint(name: &str) -> bool {
+    let name = name.to_ascii_lowercase();
+    ["floor", "wing", "covers", "cockpit_foam"]
+        .iter()
+        .any(|part| name.contains(part))
+}
+
 pub(crate) fn calibrate(name: &str, material: &mut StandardMaterial) {
+    if name.starts_with("source_paint_") && satin_paint(name) {
+        material.base_color_texture = None;
+        material.base_color = Color::linear_rgb(0.32, 0.34, 0.36);
+        material.perceptual_roughness = SATIN_ROUGHNESS;
+        material.reflectance = SATIN_REFLECTANCE;
+        material.clearcoat = 0.;
+        return;
+    }
     if name.starts_with("source_paint_") {
         // Neutral stock paint also handles older assets with embedded artwork.
         material.base_color_texture = None;
         material.base_color = Color::linear_rgb(0.32, 0.34, 0.36);
         material.reflectance = 0.4;
-        material.clearcoat = 0.;
+        material.clearcoat = 0.12;
+        material.clearcoat_perceptual_roughness = 0.2;
         return;
     }
     // Other Gen22 PBR values and texture maps are authored by the exporter.
@@ -170,7 +193,7 @@ pub(crate) fn calibrate(name: &str, material: &mut StandardMaterial) {
         .any(|part| name.contains(part))
     {
         material.metallic = 0.;
-        material.perceptual_roughness = 0.7;
+        material.perceptual_roughness = 0.85;
         material.reflectance = 0.5;
         material.clearcoat = 0.;
     } else if matches!(name.as_str(), "suit" | "rubber" | "brake") {
@@ -203,6 +226,52 @@ pub(crate) fn calibrate(name: &str, material: &mut StandardMaterial) {
     } else {
         material.perceptual_roughness = material.perceptual_roughness.max(0.4);
         material.reflectance = material.reflectance.clamp(0.2, 0.5);
+    }
+}
+
+/// Reapply the finish control to both shared sources and per-entrant livery instances.
+pub fn finishes(
+    frontend: Res<crate::menu::Frontend>,
+    surfaces: Query<(&GltfMaterialName, Ref<MeshMaterial3d<StandardMaterial>>), With<CarSurface>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut applied: Local<Option<bool>>,
+) {
+    let enabled = frontend.video.cinematic_lighting;
+    let changed = *applied != Some(enabled);
+    *applied = Some(enabled);
+    for (name, handle) in &surfaces {
+        if !changed && !handle.is_changed() {
+            continue;
+        }
+        let Some(mut material) = materials.get_mut(&handle.0) else {
+            continue;
+        };
+        let name = name.0.to_ascii_lowercase();
+        if name.starts_with("source_paint_") && satin_paint(&name) {
+            material.clearcoat = 0.;
+            material.perceptual_roughness = SATIN_ROUGHNESS;
+            material.reflectance = SATIN_REFLECTANCE;
+        } else if name.starts_with("source_paint_") {
+            // Current liveries are mostly satin paint over carbon: a light
+            // lacquer, not a road car's mirror clearcoat that washes the
+            // colours out to pastel under a bright sky.
+            material.clearcoat = if enabled { 0.12 } else { 0. };
+            material.clearcoat_perceptual_roughness = 0.2;
+            material.perceptual_roughness = if enabled { 0.34 } else { 0.36 };
+            material.reflectance = if enabled { 0.5 } else { 0.4 };
+        } else if name == "tyre" {
+            // Rubber is matte; a glossy tyre mirrors the sky and reads grey.
+            material.perceptual_roughness = 0.85;
+            // The baked rubber (about 0.04 linear) reads charcoal next to the
+            // asphalt; take it to about 0.028 while the compound stripe stays
+            // clearly yellow, white or red.
+            material.base_color = Color::linear_rgb(TYRE_TINT, TYRE_TINT, TYRE_TINT);
+        } else if name.starts_with("source_carbon") {
+            // The authored roughness map (about 0.32) is already a satin
+            // carbon. Any multiplier below 1 turns the floor and wings into
+            // sky-coloured mirrors, which reads as grey rather than black.
+            material.perceptual_roughness = 1.;
+        }
     }
 }
 
@@ -391,10 +460,13 @@ mod tests {
                     continue;
                 }
                 let material = materials.get(&handle.0).unwrap();
-                assert_eq!(material.perceptual_roughness, 0.7);
+                assert_eq!(material.perceptual_roughness, 0.85);
                 assert_eq!(material.reflectance, 0.5);
                 assert_eq!(material.metallic, 0.);
-                assert_eq!(material.base_color, Color::WHITE);
+                assert_eq!(
+                    material.base_color,
+                    Color::linear_rgb(TYRE_TINT, TYRE_TINT, TYRE_TINT)
+                );
                 let texture = material.base_color_texture.as_ref().unwrap();
                 let image = images.get(texture).unwrap();
                 assert!(image.texture_descriptor.mip_level_count > 1);
@@ -515,7 +587,7 @@ mod tests {
         assert_eq!(paint.base_color, Color::linear_rgb(0.32, 0.34, 0.36));
         assert!(paint.base_color_texture.is_none());
         assert_eq!(paint.perceptual_roughness, 0.3);
-        assert_eq!(paint.clearcoat, 0.);
+        assert_eq!(paint.clearcoat, 0.12);
         assert_eq!(paint.reflectance, 0.4);
     }
 
@@ -540,7 +612,7 @@ mod tests {
             let rubber = tyre.base_color;
             calibrate(name, &mut tyre);
             assert_eq!(tyre.base_color, rubber);
-            assert_eq!(tyre.perceptual_roughness, 0.7);
+            assert_eq!(tyre.perceptual_roughness, 0.85);
             assert_eq!(tyre.reflectance, 0.5);
             assert_eq!(tyre.metallic, 0.);
         }

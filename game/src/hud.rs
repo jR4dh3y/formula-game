@@ -218,8 +218,12 @@ pub fn update(
     time: Res<Time>,
     diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
     mut initialized: Local<bool>,
-    frontend: Res<crate::menu::Frontend>,
+    presentation: (
+        Res<crate::menu::Frontend>,
+        Option<Res<crate::race_loop::Run>>,
+    ),
 ) -> Result {
+    let (frontend, rewards) = presentation;
     let context = contexts.ctx_mut()?;
     if !*initialized {
         context.set_fonts(fonts());
@@ -238,6 +242,7 @@ pub fn update(
         },
     };
     if session.ready
+        && !(session.pings.is_empty() && rewards.as_ref().is_some_and(|r| r.summary()))
         && matches!(
             session.screen,
             crate::menu::Screen::Racing | crate::menu::Screen::CameraEditor
@@ -385,29 +390,63 @@ fn draw_map(hud: &Hud, _style: &HudStyle, session: &Session, mode: MapMode, scal
     };
     let points = &session.minimap.points;
     let ink = hud.finish.colors().ink;
-    for index in 0..points.len() {
-        let a = map(points[index]);
-        let b = map(points[(index + 1) % points.len()]);
-        // Nearby: the compressed far road recedes so the road ahead reads first.
-        let near = match mode {
-            MapMode::FullCircuit => 1.,
-            MapMode::Nearby => {
-                let distance = session.minimap.distance(points[index], player);
-                (1. - ((distance - 250.) / 700.).clamp(0., 1.) * 0.75) as f32
+    let at = |point| {
+        let (x, y) = map(point);
+        egui::pos2(x, y)
+    };
+    // The outline is a few long paths. One shape per four-metre segment was
+    // some 3,500 shapes for egui to tessellate every frame, most of them a
+    // fraction of a pixel long.
+    let mut runs: Vec<(f32, Vec<egui::Pos2>)> = Vec::new();
+    match mode {
+        MapMode::FullCircuit => {
+            let mut outline: Vec<_> = points.iter().step_by(4).map(|&point| at(point)).collect();
+            outline.push(at(points[0]));
+            runs.push((1., outline));
+        }
+        MapMode::Nearby => {
+            // The compressed far road recedes, in eight steps of width and
+            // opacity, so the road ahead reads first.
+            let mut level = None;
+            for (index, &point) in points.iter().enumerate() {
+                let distance = session.minimap.distance(point, player);
+                let near = 1. - ((distance - 250.) / 700.).clamp(0., 1.) * 0.75;
+                let step = (near * 8.).round() as u8;
+                let position = at(point);
+                if level != Some(step) {
+                    // Adjoining runs share their boundary point.
+                    if let Some((_, run)) = runs.last_mut() {
+                        run.push(position);
+                    }
+                    runs.push((step as f32 / 8., vec![position]));
+                    level = Some(step);
+                } else if step == 8 || index % 4 == 0 {
+                    // Full detail around the car; distant road is a few pixels long.
+                    runs.last_mut().expect("a run is open").1.push(position);
+                }
             }
-        };
-        hud.line(
-            a,
-            b,
-            (3. + 3. * near) * scale,
-            Color::from_black_alpha((150. * near) as u8),
-        );
-        hud.line(
-            a,
-            b,
-            (1.5 + 1.5 * near) * scale,
-            ink.gamma_multiply(0.4 + 0.6 * near),
-        );
+            if let Some((_, run)) = runs.last_mut() {
+                run.push(at(points[0]));
+            }
+        }
+    }
+    for (near, run) in &runs {
+        hud.painter.add(egui::Shape::line(
+            run.clone(),
+            egui::Stroke::new(
+                (3. + 3. * near) * scale,
+                Color::from_black_alpha((150. * near) as u8),
+            ),
+        ));
+    }
+    for (near, run) in runs {
+        hud.painter.add(egui::Shape::line(
+            run,
+            egui::Stroke::new(
+                (1.5 + 1.5 * near) * scale,
+                ink.gamma_multiply(0.4 + 0.6 * near),
+            ),
+        ));
     }
 
     let start = map(points[0]);
@@ -483,6 +522,10 @@ pub struct Delta {
 }
 
 impl Delta {
+    #[cfg(test)]
+    pub(crate) fn is_reset(&self) -> bool {
+        self.current.is_none() && self.previous.is_none()
+    }
     fn record_to(&mut self, distance: f64, elapsed: f64, spacing: f64) {
         let (before, time) = self.previous.unwrap_or((0., 0.));
         if distance > before && distance - before < 50. {
@@ -1040,7 +1083,7 @@ pub fn draw(hud: &mut Hud, style: &HudStyle, session: &mut Session, display: Set
 
     // ---- Results: provisional as soon as the player takes the flag.
     let final_results = race.phase == Phase::Finished;
-    if final_results || player.timing.finish_time.is_some() {
+    if !session.pings.is_empty() && (final_results || player.timing.finish_time.is_some()) {
         let panel_w = 560.0 * scale;
         // Clear the timing tower, its control strip and the minimap.
         let left = (width * 0.5 - panel_w * 0.5).max(tower_x + tower_w + 16.0 * scale);

@@ -637,7 +637,7 @@ fn publish(feed: &Feed, id: u32, car: &racecraft_sim::Car, throttle: f32, brake:
 }
 
 pub fn update(
-    session: Res<Session>,
+    mut session: ResMut<Session>,
     keys: Res<ButtonInput<KeyCode>>,
     options: Res<Options>,
     time: Res<Time>,
@@ -672,6 +672,7 @@ pub fn update(
     s.effects.set(settings.effects * settings.effects);
     s.opponents.set(settings.opponents * settings.opponents);
 
+    let impact = std::mem::take(&mut session.pending_impact);
     let race = &session.race;
     let car = &race.entrants[session.player].car;
     let (eye, look) = session.camera.listener();
@@ -734,8 +735,8 @@ pub fn update(
     s.wheel_rps
         .set((car.forward_speed().abs() / (radius * std::f64::consts::TAU)) as f32);
     audio.impact_cooldown = (audio.impact_cooldown - dt as f32).max(0.);
-    if car.impact > 300. && audio.impact_cooldown == 0. && !session.paused {
-        s.impact.set((car.impact / 4000.).min(1.) as f32);
+    if impact > 300. && audio.impact_cooldown == 0. && !session.paused {
+        s.impact.set((impact / 4000.).min(1.) as f32);
         s.impacts.fetch_add(1, Ordering::Relaxed);
         audio.impact_cooldown = 0.15;
     }

@@ -105,17 +105,35 @@ Normal launches open Game play with the Track tab selected. Choose the circuit, 
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
+High keeps temporal anti-aliasing, two sun-shadow cascades with a close first cascade,
+contact shadows, bloom, speed-scaled motion blur, runtime asphalt grain/roughness,
+faint rubber on the racing line, and wheel smoke, grass/gravel dust, skid marks and
+compression sparks. Medium drops bloom and motion blur and uses smaller effect
+budgets. Low disables the new material and surface effects. Ultra adds SSAO, 4096
+shadow maps and four shadow cascades. Full-resolution textures are a separate
+Texture detail choice: they add about 800 MB of video memory and exhaust a 4 GB
+card that a desktop is also using. Motion blur scales with speed and
+remains individually adjustable on every preset. At 1920x1080 on an RTX 3050 laptop
+the moving benchmark measures about 112 fps on High and 200 fps on Low.
+
+Graphics → Asphalt detail, Daylight balance, Camera motion and Surface effects can
+be toggled separately. Camera → Chase dynamics controls speed pullback, FOV expansion,
+load sway and corner lead, saved per car. Vibration stays separately adjustable.
+Sparks use high-speed kerb load or suspension/ground lag as a compression proxy;
+the sim does not expose physical plank clearance. Effects use race time and bounded
+budgets, including nearby AI. Source assets are not rewritten.
+
 The Graphics settings page offers Low, Medium, High (default) and Ultra presets, applied immediately and saved with your preferences; `--graphics low|medium|high|ultra` sets one from the command line. Leaving the window during a race opens the pause menu, and rendering is throttled while the window is unfocused.
 
 Both HUD layouts and wheel dashboards average telemetry on physics ticks. Speed and RPM use a 100 ms window, gaps and tyre/aero readouts use 250 ms, and the best-lap delta uses 200 ms. Numbers refresh at 20 Hz; gears, pedals and warning lights stay immediate. Running clocks show tenths, while completed lap and sector times retain milliseconds. The timing strip keeps all three sector splits, marking old splits LAST until replaced. Position-change notices require 300 ms of continuous change with at least one metre clearance.
 
-Game play → Driving assistance has Beginner, Balanced and Unassisted presets. Beginner is the default, including automatic gears. Steering guidance follows the racing line when you release steering; strong manual steering overrides it. Corner braking anticipates bends and reduces a held accelerator only while adding brake pressure. It preserves your throttle input when it is not braking, including when pulling alongside another car. ABS, traction and stability are separate controls. When steering is above 50% and stability is at least 50%, a grip-based turn-in limit also prevents yaw overshoot; this limit switches on fully rather than blending with the slider. Beginner and Balanced engage it; Unassisted does not. Opposite lock remains available to catch slides. You still control acceleration. The coloured racing line previews corner speed, and STEER / BRAKE indicators light up during interventions. Pause-menu changes apply immediately. Unassisted disables all aids and automatic shifting.
+Game play → Driving assistance has Beginner, Balanced and Unassisted presets. Beginner is the default, including automatic gears. Steering assistance works in two stages. Up to 50% it steadies the wheel and limits steering lock with speed, and you do all the steering; Balanced sits at 50%. Above 50% it also guides the car along the racing line when you release steering; strong manual steering overrides it. Corner braking anticipates bends and reduces a held accelerator only while adding brake pressure. It preserves your throttle input when it is not braking, including when pulling alongside another car. ABS, traction and stability are separate controls. When steering and stability are both at least 50%, a grip-based turn-in limit also prevents yaw overshoot; this limit switches on fully rather than blending with the slider. Beginner and Balanced engage it; Unassisted does not. Opposite lock remains available to catch slides. Above 50% stability, near-limit steering on racing surfaces builds low-speed yaw more gradually while retaining full steady cornering grip. At those settings, aided steering returns and countersteers faster than it turns in, reducing the delay when releasing the wheel or catching a slide. A centred gamepad stick releases its command immediately; keyboard steering retains its return ramp. You still control acceleration. The coloured racing line previews corner speed, and STEER / BRAKE indicators light up during interventions. Pause-menu changes apply immediately. Unassisted disables all aids and automatic shifting.
 
 Aids and per-car camera positions persist in `$XDG_CONFIG_HOME/f1-racecraft/preferences.json` (or `~/.config/f1-racecraft/preferences.json`). `F1_SETTINGS` overrides the file. Explicit CLI aid settings override saved aids; `--quick-race` and capture runs use their CLI configuration without reading or writing preferences. Start new race replaces the current session; Resume race keeps it.
 
 ## Performance
 
-On Linux with the NVIDIA driver under Wayland, the game presents through XWayland: NVIDIA's native Wayland presentation waits for each frame to finish before returning, which serialized CPU and GPU work (set `F1_WAYLAND=1` to keep native Wayland). Sky lighting is generated once per circuit rather than every frame. Together these took the High preset from 115 to 236 fps uncapped on an RTX 3050 laptop with unchanged output. Vertical sync is on by default; turn it off in Graphics or with `--no-vsync`.
+On Linux with the NVIDIA driver under Wayland, the game presents through XWayland: NVIDIA's native Wayland presentation waits for each frame to finish before returning, which serialized CPU and GPU work (set `F1_WAYLAND=1` to keep native Wayland). Sky lighting is generated once per circuit rather than every frame. The historical 115-to-236 fps comparison predates the current GEN22 graphics settings; it is not a current performance guarantee. Vertical sync is on by default; turn it off in Graphics or with `--no-vsync`.
 
 - `--benchmark DIR` runs the comparison workload: the selected field, including an automated player,
   already moving and separated on the racing line, for 20 seconds. It checks the
@@ -137,7 +155,7 @@ On Linux with the NVIDIA driver under Wayland, the game presents through XWaylan
 - `--frames N --capture FILE` remains a capture utility. Its old FPS log is
   diagnostic, not the repeatable moving benchmark.
 - `F1_DETERMINISTIC=1` with a capture run advances exactly 1/60 s per frame and restarts temporal jitter with the race, so captures from different builds can be compared pixel by pixel.
-- Settings → Graphics has presets plus detailed video settings (anti-aliasing, sharpening, shadows, ambient occlusion, sky, haze, texture detail, AI car detail and Bevy post-processing). Texture detail applies from the next race. Imported textures use BC7 on supported GPUs, keeping Ultra maps at full resolution. The first load encodes and caches blocks in `$XDG_CACHE_HOME/f1-racecraft/bc7-v1`, or `~/.cache/f1-racecraft/bc7-v1`; later loads reuse them. `F1_VIDEO` takes a JSON `graphics::Video` and overrides the settings, including for `--frames` captures and benchmarks.
+- Settings → Graphics has presets plus detailed video settings (anti-aliasing, sharpening, shadows, ambient occlusion, sky, haze, texture detail, AI car detail and Bevy post-processing). Texture detail applies from the next race. Imported textures use BC7 on supported GPUs. The first load encodes and caches blocks in `$XDG_CACHE_HOME/f1-racecraft/bc7-v1`, or `~/.cache/f1-racecraft/bc7-v1`; later loads reuse them. `F1_VIDEO` takes a JSON `graphics::Video` and overrides the settings, including for `--frames` captures and benchmarks.
 - `F1_PROFILE=1` logs per-pass CPU and GPU timings; `--features profile` writes a Chrome trace for ui.perfetto.dev.
 - F3 shows frame rate and frame times in game.
 
@@ -159,6 +177,19 @@ native Vulkan benchmarks on an isolated Weston display and verifies the
 reports, screenshot files and repeated drive hashes. It requires Weston and
 a Vulkan-capable GPU. Frame times can differ with GPU load and clock speed;
 the repeatability check compares the workload, not a performance threshold.
+
+`tools/verify_visuals.py perf OUTPUT` compares explicit `F1_VIDEO` effects-off and
+preset settings at High and Low, twice each. Run it inside a 1920×1080 Weston
+XWayland session, using the same options as `tools/verify_benchmark.sh`; the script
+waits for other builds/game processes, records process/GPU evidence and video JSON,
+and rejects a run if another build/game starts during measurement. `profile` adds
+per-pass timing and pipeline/image-event traces; `ultra` checks the full preset.
+`captures OUTPUT --replay-binary PATH` uses the compiled ignored
+`visual_review::scripted_captures` test to save matched grid, 320 km/h, corner,
+cockpit, braking, lock-up, grass excursion, compression-spark and storm scenes.
+Build that test with `cargo test --release -p f1-the-game --no-run` and use the
+printed `f1_the_game-*` executable. The replay uses real `Race::step` inputs and
+writes wheel telemetry, effect kinds and camera bounds beside the PNGs.
 
 `tools/verify_settings.sh ASSETS NEW_OUTPUT_DIRECTORY` checks all ten menu
 tabs, pause and camera-editor layouts at 1920×1080, 958×1078 and 640×600. It
@@ -315,3 +346,19 @@ benchmarks. Interactive launches remember the selected weather; an explicit
 CLI choice overrides it. The CC0 Poly Haven cubemaps are embedded in the
 executable, including packaged builds. Sources, credit and conversion steps
 are in [game/sky/CREDITS.md](game/sky/CREDITS.md).
+
+### Offline driver progression
+
+Clean driving builds a points chain up to ×5. Passes use the HUD's confirmed
+position changes; tow, close racing, speed marks, clean sectors/laps and personal
+bests also score. Four quiet seconds bank the chain. Contact, recovery and leaving
+the track lose the pending chain. Finished races award XP and driver levels,
+without locking any cars or circuits. Driver records live beside preferences in
+`progress.json`; quick races, captures, benchmarks and `F1_SETTINGS` overrides
+never read or write records.
+
+Press Z or click the right stick to return to a recent snapshot, losing the chain,
+then wait for the two-second resume pause. Graphics settings can disable rewind.
+Hold T or the left stick for 1.5 seconds to restart. Pause and finish panels offer
+Restart and Next: one more lap, reusing the loaded scene. These controls and rewards
+are offline only. Rewind is disabled for capture and benchmark runs.

@@ -39,7 +39,11 @@ pub struct CarInput {
 /// deliberately a little worse than perfect technique.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Assists {
-    /// Steering smoothing and a speed-sensitive lock limit, 0..1.
+    /// Steering help, 0..1, in two stages. The first half is how the wheel
+    /// is driven ([`Self::steering_filter`]): smoothing and a speed-sensitive
+    /// lock limit, complete at 0.5. The second half is the game's guidance
+    /// toward the racing line ([`Self::steering_guidance`]), which the
+    /// simulation itself does not apply.
     pub steering: f64,
     /// Partial anti-lock, 0..1.
     pub braking: f64,
@@ -61,6 +65,25 @@ pub struct Assists {
 
 fn enabled() -> bool {
     true
+}
+
+impl Assists {
+    /// Share of the steering smoothing and speed-sensitive lock limit in use.
+    ///
+    /// A stick or a key asks for full lock at any speed, so this is what makes
+    /// the car drivable rather than an aid that drives it. It used to share
+    /// one strength with the racing-line guidance: a driver who wanted to
+    /// steer alone had to give up the lock limit too, and any setting between
+    /// left the front tyres past their peak while the guidance pulled against
+    /// the wheel.
+    pub fn steering_filter(&self) -> f64 {
+        (self.steering * 2.0).clamp(0.0, 1.0)
+    }
+
+    /// Strength of the guidance that steers toward the racing line.
+    pub fn steering_guidance(&self) -> f64 {
+        (self.steering * 2.0 - 1.0).clamp(0.0, 1.0)
+    }
 }
 
 impl Default for Assists {
@@ -182,6 +205,12 @@ pub struct Car {
     suspension: [Suspension; 3],
     /// Road wheel angle, rad, positive left.
     pub steer_angle: f64,
+    /// Road wheel angle to draw, rad: [`Self::steer_angle`] through a
+    /// critically damped follower. The physics angle can buzz a few tenths of
+    /// a degree at 10-25 Hz while the steering aid trims lock; drawn directly
+    /// the front tyres and steering wheel twitch.
+    pub visual_steer: f64,
+    visual_steer_rate: f64,
     pub powertrain: Powertrain,
     /// Front and rear axle tyres.
     pub tyres: [AxleTyres; 2],
@@ -197,6 +226,11 @@ pub struct Car {
     /// Strongest impact this tick (N·s), for camera shake and damage later.
     pub impact: f64,
 }
+
+/// Visual body pitch per m/s² of longitudinal acceleration, rad.
+pub const BODY_PITCH_PER_ACCELERATION: f64 = 0.00036;
+/// Visual body roll per m/s² of lateral acceleration, rad.
+pub const BODY_ROLL_PER_ACCELERATION: f64 = 0.00036;
 
 /// Visual suspension: an alpha-beta tracker that follows steady slopes without
 /// lag but filters the facet-to-facet noise of the collision mesh, which would
@@ -255,6 +289,8 @@ impl Car {
                 Suspension::at(0.0),
             ],
             steer_angle: 0.0,
+            visual_steer: 0.0,
+            visual_steer_rate: 0.0,
             tyres: [AxleTyres::default(); 2],
             wheels: [WheelState {
                 ground_height: position.y,
@@ -269,6 +305,16 @@ impl Car {
             vertical_acceleration: 0.0,
             impact: 0.0,
         }
+    }
+
+    fn follow_visual_steer(&mut self, dt: f64) {
+        // About 50 ms of lag: invisible at the wheel, but it removes the aid's
+        // buzz (a twentieth of it at 25 Hz) and rounds off its quick pulls.
+        const FREQUENCY: f64 = 40.0;
+        let accel = FREQUENCY * FREQUENCY * (self.steer_angle - self.visual_steer)
+            - 2.0 * FREQUENCY * self.visual_steer_rate;
+        self.visual_steer_rate += accel * dt;
+        self.visual_steer += self.visual_steer_rate * dt;
     }
 
     pub fn forward(&self) -> DVec2 {
@@ -347,7 +393,7 @@ impl Car {
     fn assisted_lock(&self, angle: f64) -> f64 {
         const FULL_LOCK: f64 = 0.36;
         // Car::assists is mutable and can be restored from a host snapshot.
-        let steering = self.assists.steering.clamp(0.0, 1.0);
+        let steering = self.assists.steering_filter();
         FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * steering
     }
 
@@ -366,12 +412,14 @@ impl Car {
     /// the tyre curve about the direction the front axle travels, never
     /// past the peak. It only takes lock away, and never into opposite lock.
     ///
-    /// The ceiling requires steering above half and stability at least half.
-    /// Blending the lock limit leaves the fronts beyond their peak and causes
-    /// sustained yaw wobble. Lower settings retain slide recovery only.
+    /// The ceiling requires the whole steering filter (steering at least
+    /// half) and stability at least half. Blending the lock limit leaves the
+    /// fronts beyond their peak and causes sustained yaw wobble. Lower
+    /// settings retain slide recovery only.
     fn yaw_ceiling_lock(
         &self,
         target: f64,
+        effort: f64,
         loads: &[f64; 4],
         forward_speed: f64,
         lateral_speed: f64,
@@ -384,7 +432,7 @@ impl Car {
         // grip; faster lets the yaw rate overshoot again.
         const CLOSING_RATE: f64 = 15.0;
         let into_turn = target.signum();
-        if self.assists.steering <= 0.5
+        if self.assists.steering < 0.5
             || self.assists.stability < 0.5
             || forward_speed <= 5.0
             || target == 0.0
@@ -413,9 +461,25 @@ impl Car {
         let b = wheelbase - a;
         let ceiling = (front / b).min(rear / a) * wheelbase / spec.mass / forward_speed * MARGIN;
         let rear_force = into_turn * (self.wheels[2].lateral_force + self.wheels[3].lateral_force);
-        let wanted = (b * rear_force
-            + spec.yaw_inertia * CLOSING_RATE * (ceiling - into_turn * self.yaw_rate))
-            / a;
+        // Soften a held low-speed lock on the road. Partial corrections and
+        // loose-ground recovery retain their response; Balanced/AI are unchanged.
+        let on_road = self.wheels.iter().all(|wheel| {
+            matches!(
+                wheel.surface,
+                Surface::Asphalt | Surface::Kerb | Surface::Concrete
+            )
+        });
+        let demand = effort.abs() * self.steer_limit(forward_speed)
+            / self.turn_in_limit(forward_speed).max(1e-6);
+        let player = if on_road {
+            ((self.assists.stability - 0.5) * 2.0).clamp(0.0, 1.0)
+                * ((demand - 0.5) * 2.0).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let rate = CLOSING_RATE * (1.0 - player * (1.0 - (forward_speed / 42.0).clamp(0.45, 1.0)));
+        let wanted =
+            (b * rear_force + spec.yaw_inertia * rate * (ceiling - into_turn * self.yaw_rate)) / a;
         let slip = if wanted > 0.0 {
             lateral_shape_inverse(wanted / front.max(1.0)) * spec.peak_slip_angle
         } else {
@@ -515,14 +579,18 @@ impl Car {
             let limit = self.turn_in_limit(speed);
             target = target.clamp(-limit, limit);
         }
-        let response = 30.0 - 18.0 * self.assists.steering;
+        let response = 30.0 - 18.0 * self.assists.steering_filter();
         self.steer_angle += (target - self.steer_angle) * (dt * response).min(1.0);
-        if let Some(lock) = self.yaw_ceiling_lock(target, &loads, forward_speed, lateral_speed) {
+        if let Some(lock) =
+            self.yaw_ceiling_lock(target, input.steer, &loads, forward_speed, lateral_speed)
+        {
             let into_turn = target.signum();
             if into_turn * self.steer_angle > lock {
                 self.steer_angle = into_turn * lock;
             }
         }
+
+        self.follow_visual_steer(dt);
 
         let cg = DVec2::new(self.position.x, self.position.z);
         let cg_z = spec.cg_z();
@@ -789,14 +857,17 @@ impl Car {
         let right_height = (heights[1] + heights[3]) * 0.5;
         let [height, pitch, roll] = &mut self.suspension;
         self.body_height = height.track(ground, dt);
-        // Dive, squat and body roll go through the same suspension.
+        // Dive, squat and body roll go through the same suspension. A
+        // ground-effect car runs very stiff: about 1 degree of dive at 5 g of
+        // braking and about 1 degree of roll at 5 g of cornering.
         self.pitch = pitch.track(
-            ((front_height - rear_height) / wheelbase).atan() + self.acceleration.x * 0.0016,
+            ((front_height - rear_height) / wheelbase).atan()
+                + self.acceleration.x * BODY_PITCH_PER_ACCELERATION,
             dt,
         );
         self.roll = roll.track(
             ((left_height - right_height) / ((front_track + rear_track) * 0.5)).atan()
-                + self.acceleration.y * 0.0022,
+                + self.acceleration.y * BODY_ROLL_PER_ACCELERATION,
             dt,
         );
 
@@ -1667,6 +1738,7 @@ mod steering_stability {
             let car = &pad.car;
             let lock = car.yaw_ceiling_lock(
                 0.05,
+                1.0,
                 &[5000.0; 4],
                 car.forward_speed(),
                 car.velocity.dot(car.left()),
@@ -1680,6 +1752,99 @@ mod steering_stability {
         let mut pad = Skidpad::with(250.0, gen22(), (2.0, AI_STABILITY));
         assert!(pad.car.turn_in_limit(pad.car.speed()) >= 0.0);
         pad.step(1.0);
+    }
+
+    #[test]
+    fn full_player_aids_keep_hairpin_turn_in_progressive() {
+        for spec in [gen22 as fn() -> CarSpec, rb6] {
+            let result = turn_in(80.0, spec(), FULL_AIDS);
+            assert!(result.overshoot < 0.08, "{result:?}");
+            assert!(result.undershoot < 0.04, "{result:?}");
+            assert!(result.settle < 0.65, "{result:?}");
+            assert!((0.98..1.02).contains(&result.front_slip), "{result:?}");
+        }
+    }
+
+    #[test]
+    #[ignore = "prints keyboard authority measurements"]
+    fn probe_keyboard_authority() {
+        for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
+            for kmh in [80.0, 160.0, 240.0, 300.0] {
+                let result = turn_in(kmh, spec(), FULL_AIDS);
+                let mut best = 0.0_f64;
+                for step in 1..=20 {
+                    let mut pad = Skidpad::with(kmh, spec(), FULL_AIDS);
+                    pad.hold(step as f64 / 20.0, 2.0);
+                    best = best.max(pad.car.acceleration.y);
+                }
+                let mut pad = Skidpad::with(kmh, spec(), FULL_AIDS);
+                let tap = pad.keyboard(1.0, |t| if t < 0.05 { 1.0 } else { 0.0 });
+                let tap_peak = tap.iter().copied().fold(0.0_f64, f64::max);
+                println!("{name} {kmh}: {result:?}, best_g={:.3}, held_share={:.3}, tap_yaw={tap_peak:.4}",
+                    best / GRAVITY, result.lateral_acceleration / best);
+            }
+        }
+    }
+
+    /// Controlled flat-asphalt disturbances. Position is held on the skidpad;
+    /// velocity, yaw, tyres, weight transfer and pedals evolve normally.
+    #[test]
+    fn clumsy_input_recovery() {
+        for (name, spec) in [("GEN22", gen22 as fn() -> CarSpec), ("RB6", rb6)] {
+            for aids in [FULL_AIDS, (0.0, 0.0)] {
+                for case in ["step", "lift", "exit", "brake", "touch"] {
+                    let speed = if case == "exit" { 80.0 } else { 250.0 };
+                    let mut pad = Skidpad::with(speed, spec(), aids);
+                    if aids == (0.0, 0.0) {
+                        pad.car.assists.braking = 0.0;
+                        pad.car.assists.traction = 0.0;
+                    }
+                    if matches!(case, "lift" | "exit" | "brake") {
+                        pad.hold(0.7, 0.5);
+                    }
+                    let mut slip = 0.0_f64;
+                    let mut yaw = 0.0_f64;
+                    let mut recovered = 0.0;
+                    for tick in 0..1080 {
+                        let t = tick as f64 * DT;
+                        pad.car.position = pad.position;
+                        let steer = if t < 0.5 { 0.7 } else { 0.0 };
+                        if case == "touch" && tick == 100 {
+                            let point = DVec2::new(pad.car.position.x, pad.car.position.z)
+                                + pad.car.forward() * 1.5;
+                            pad.car.apply_impulse(point, pad.car.left() * 250.0);
+                        }
+                        pad.car.step(
+                            &CarInput {
+                                steer,
+                                throttle: if case == "exit" { 1.0 } else { 0.0 },
+                                brake: if case == "brake" && t < 0.5 { 1.0 } else { 0.0 },
+                                ..Default::default()
+                            },
+                            &pad.track,
+                            DT,
+                        );
+                        let beta = pad
+                            .car
+                            .velocity
+                            .dot(pad.car.left())
+                            .atan2(pad.car.forward_speed())
+                            .abs();
+                        slip = slip.max(beta);
+                        yaw = yaw.max(pad.car.yaw_rate.abs());
+                        if t >= 0.5 && (beta > 0.02 || pad.car.yaw_rate.abs() > 0.05) {
+                            recovered = t - 0.5;
+                        }
+                    }
+                    println!("{name} {aids:?} {case}: slip={:.2}deg yaw={yaw:.3} recovery={recovered:.3}s",
+                        slip.to_degrees());
+                    if aids == FULL_AIDS {
+                        assert!(slip < 0.25, "{name} {case}: spin");
+                        assert!(recovered < 0.32, "{name} {case}: slow recovery {recovered}");
+                    }
+                }
+            }
+        }
     }
 
     /// Keyboard turn-in and weaving at 150–300 km/h for both cars, with the
@@ -1778,6 +1943,8 @@ impl Car {
         self.body_height = state.body_height;
         self.suspension = state.suspension;
         self.steer_angle = state.steer_angle;
+        self.visual_steer = state.steer_angle;
+        self.visual_steer_rate = 0.0;
         self.powertrain = state.powertrain;
         self.tyres = state.tyres;
         self.wheels = state.wheels;

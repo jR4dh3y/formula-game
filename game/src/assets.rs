@@ -593,6 +593,20 @@ fn pose_transform(pose: &Pose) -> Transform {
         ))
 }
 
+/// Chassis-local roll that takes a wheel from the body's roll to its own
+/// axle's road plane. Tyres stay square to the road while the sprung body
+/// rolls on its springs; without this they lean with the chassis, and the
+/// front and rear pairs disagree on a twisting road.
+fn axle_counter_roll(pose: &Pose, wheels: &[racecraft_sim::WheelSpec; 4], wheel: usize) -> f32 {
+    let (left, right) = if wheel < 2 { (0, 1) } else { (2, 3) };
+    let track = wheels[left].position.x - wheels[right].position.x;
+    if track.abs() < 1e-3 {
+        return 0.;
+    }
+    let road = ((pose.ground[left] - pose.ground[right]) / track).atan();
+    (road - pose.roll) as f32
+}
+
 /// Keep unsprung wheel geometry on its road contact while the chassis pitches,
 /// rolls and heaves. The tyre is a cylinder: its axle tilt also changes the
 /// distance from hub to its lowest point.
@@ -660,11 +674,14 @@ pub fn sync_cars(
             0.0
         };
         *transform = visual.rest;
-        transform.rotation = Quat::from_rotation_y(steer)
-            * visual.rest.rotation
-            * Quat::from_rotation_x(pose.wheels[visual.wheel] as f32);
+        let spec = &session.race.entrants[visual.entrant].car.spec;
+        transform.rotation =
+            Quat::from_rotation_z(axle_counter_roll(pose, &spec.wheels, visual.wheel))
+                * Quat::from_rotation_y(steer)
+                * visual.rest.rotation
+                * Quat::from_rotation_x(pose.wheels[visual.wheel] as f32);
         let chassis = pose_transform(pose);
-        let wheel = &session.race.entrants[visual.entrant].car.spec.wheels[visual.wheel];
+        let wheel = &spec.wheels[visual.wheel];
         transform.translation = grounded_hub(
             &chassis,
             visual.rest.translation,
@@ -695,20 +712,24 @@ pub fn sync_cars(
                     * session.race.entrants[part.entrant].car.drs.flap as f32,
             ),
         };
+        transform.rotation = part.rest.rotation * rotation;
         if matches!(part.kind, RigKind::Upright) {
             let car = &session.race.entrants[part.entrant].car;
             let index = if part.rest.translation.x > 0. { 0 } else { 1 };
             let wheel = &car.spec.wheels[index];
+            // Like the wheels: square to the axle's road, not the rolled body.
+            transform.rotation =
+                Quat::from_rotation_z(axle_counter_roll(pose, &car.spec.wheels, index))
+                    * transform.rotation;
             transform.translation = grounded_hub(
                 &pose_transform(pose),
                 part.rest.translation,
-                part.rest.rotation * rotation,
+                transform.rotation,
                 pose.ground[index] as f32,
                 wheel.radius as f32,
                 wheel.width as f32,
             );
         }
-        transform.rotation = part.rest.rotation * rotation;
     }
     for (driver, mut weights) in &mut drivers {
         // Same wheel angle as `RigKind::Steering`, so the hands stay on the grips.
@@ -1024,6 +1045,33 @@ mod rig_tests {
             *app.world().get::<Transform>(paddle).unwrap(),
             Transform::IDENTITY
         );
+    }
+
+    #[test]
+    fn wheels_stay_square_to_their_axle_road_while_the_body_rolls() {
+        let session = crate::tests::session();
+        let car = &session.race.entrants[0].car;
+        let mut pose = Pose::of(car);
+        pose.pitch = 0.02;
+        pose.roll = 0.03;
+        // Front axle on a flat road, rear axle on a 2-degree camber.
+        let rear_track = car.spec.wheels[2].position.x - car.spec.wheels[3].position.x;
+        let camber = 2_f64.to_radians();
+        pose.ground = [0., 0., rear_track * camber.tan(), 0.];
+        let chassis = pose_transform(&pose);
+        for (wheel, road) in [(0, 0.), (1, 0.), (2, camber), (3, camber)] {
+            let local = Quat::from_rotation_z(axle_counter_roll(&pose, &car.spec.wheels, wheel));
+            let axle = chassis.rotation * local * Vec3::X;
+            // Roll of the axle about the car's heading, independent of pitch.
+            let heading = chassis.rotation * Vec3::Z;
+            let flat = Vec3::new(heading.x, 0., heading.z).normalize();
+            let side = Vec3::Y.cross(flat).normalize();
+            let tilt = axle.dot(Vec3::Y).atan2(axle.dot(side));
+            assert!(
+                (tilt - road as f32).abs() < 1e-3,
+                "wheel {wheel}: {tilt} vs {road}"
+            );
+        }
     }
 
     #[test]

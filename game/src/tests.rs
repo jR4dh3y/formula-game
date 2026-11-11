@@ -73,6 +73,8 @@ pub(super) fn session() -> Session {
         telemetry: default(),
         ready: false,
         pings: Vec::new(),
+        impact: 0.,
+        pending_impact: 0.,
         screen: menu::Screen::Racing,
     }
 }
@@ -88,6 +90,7 @@ fn bevy_fixed_schedule_waits_for_assets_and_pauses_and_resumes() {
         .insert_resource(session())
         .init_resource::<ButtonInput<KeyCode>>()
         .add_message::<AppExit>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(PreUpdate, controls::update)
         .add_systems(FixedUpdate, step_race);
     let initial_time = app.world().resource::<Session>().race.time;
@@ -143,6 +146,7 @@ fn cockpit_steering_tracks_both_directions_and_returns_to_rest() {
     for angle in [-0.3, 0.3, 0.0] {
         let mut session = app.world_mut().resource_mut::<Session>();
         session.race.entrants[0].car.steer_angle = angle;
+        session.race.entrants[0].car.visual_steer = angle;
         let Session { poses, race, .. } = &mut *session;
         poses.record(race);
         app.update();
@@ -164,6 +168,7 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
     state.rig.drs.open_angle = -0.25;
     state.race.entrants[0].car.drs.flap = 1.0;
     state.race.entrants[0].car.steer_angle = 0.2;
+    state.race.entrants[0].car.visual_steer = 0.2;
     state.race.entrants[0].car.wheels[0].rotation = 1.7;
     state.race.entrants[0].car.wheels[0].ground_height = 0.1;
     state.race.entrants[0].car.wheels[1].ground_height = 0.35;
@@ -235,9 +240,17 @@ fn gen22_rig_uses_local_axes_and_keeps_uprights_free_of_wheel_spin() {
             }
             assert!((lowest - car.wheels[wheel_index].ground_height as f32).abs() < 1e-4);
         }
-        assert!(transform
-            .rotation
-            .abs_diff_eq(rest.rotation * rotation, 1e-5));
+        // Uprights stay square to the front axle's road: the left contact
+        // sits 0.25 m below the right while the body is level.
+        let expected = if *entity == entities[1] || *entity == entities[3] {
+            let state = app.world().resource::<Session>();
+            let wheels = &state.race.entrants[0].car.spec.wheels;
+            let road = ((0.1 - 0.35) / (wheels[0].position.x - wheels[1].position.x)).atan();
+            Quat::from_rotation_z(road as f32) * rest.rotation * rotation
+        } else {
+            rest.rotation * rotation
+        };
+        assert!(transform.rotation.abs_diff_eq(expected, 1e-5));
     }
     app.world_mut().resource_mut::<Session>().race.entrants[0]
         .car
@@ -254,6 +267,7 @@ fn bevy_transforms_preserve_wheel_pivots_and_camera_cycle() {
     car.yaw = 0.6;
     car.pitch = 0.1;
     car.steer_angle = 0.2;
+    car.visual_steer = 0.2;
     car.wheels[0].rotation = 1.4;
     let Session { poses, race, .. } = &mut session;
     poses.record(race);
@@ -325,6 +339,7 @@ fn drs_key_requests_the_flap_only_while_racing() {
     app.add_plugins(MinimalPlugins)
         .insert_resource(state)
         .init_resource::<ButtonInput<KeyCode>>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(Update, controls::update);
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()
@@ -357,6 +372,7 @@ fn camera_shortcuts_pause_menu_and_menu_input_isolation() {
         .insert_resource(session())
         .init_resource::<ButtonInput<KeyCode>>()
         .add_message::<AppExit>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(PreUpdate, controls::update);
     for (key, expected) in [
         (KeyCode::Digit1, camera::Mode::Cockpit),
@@ -1727,6 +1743,7 @@ fn cockpit_lock_review(
     });
     let player = session.player;
     session.race.entrants[player].car.steer_angle = angle;
+    session.race.entrants[player].car.visual_steer = angle;
     session.poses = pose::Poses::new(&session.race);
     if *frame % 60 == 45 {
         let output = std::path::PathBuf::from(std::env::var("F1_TEST_OUTPUT").unwrap());

@@ -38,6 +38,12 @@ pub struct Tuning {
     pub chase: View,
     pub shake: f64,
     pub horizon: f64,
+    #[serde(default = "default_dynamics")]
+    pub dynamics: f64,
+}
+
+fn default_dynamics() -> f64 {
+    0.65
 }
 
 impl Tuning {
@@ -64,6 +70,7 @@ impl Tuning {
             },
             shake: 0.25,
             horizon: 0.65,
+            dynamics: default_dynamics(),
         }
     }
     pub fn view(&self, mode: Mode) -> View {
@@ -106,6 +113,11 @@ impl Tuning {
             view.pitch = view.pitch.clamp(-10., 20.);
             view.fov = view.fov.clamp(40., 95.);
         }
+        self.dynamics = if self.dynamics.is_finite() {
+            self.dynamics.clamp(0., 1.)
+        } else {
+            default_dynamics()
+        };
         self.shake = if self.shake.is_finite() {
             self.shake.clamp(0., 1.)
         } else {
@@ -123,11 +135,20 @@ pub struct ChaseCamera {
     pub mode: Mode,
     pub tuning: Tuning,
     position: DVec3,
+    rendered_eye: DVec3,
     target: DVec3,
     yaw: f64,
     fov: f32,
     cut: bool,
+    load: glam::DVec2,
+    speed: f64,
+    /// Share of the boom kept clear of a wall, and metres lifted over ground.
+    boom: f64,
+    lift: f64,
     cockpit_eye: Option<DVec3>,
+    /// The player's held collision impulse (N·s), for the jolt.
+    pub impact: f64,
+    pub motion_enabled: bool,
 }
 
 impl ChaseCamera {
@@ -137,11 +158,18 @@ impl ChaseCamera {
             mode: Mode::Chase,
             tuning: Tuning::for_car(&car.spec.name),
             position: car.position,
+            rendered_eye: car.position,
             target: car.position,
             yaw: car.yaw,
             fov: 54.,
             cut: true,
+            load: glam::DVec2::ZERO,
+            speed: 0.,
+            boom: 1.,
+            lift: 0.,
             cockpit_eye: None,
+            impact: 0.,
+            motion_enabled: true,
         };
         camera.snap(&Pose::of(car));
         camera
@@ -177,7 +205,20 @@ impl ChaseCamera {
         let direction = DVec3::new(0., -pitch.sin(), pitch.cos());
         if self.mode == Mode::Chase {
             let forward = DVec3::new(self.yaw.sin(), 0., self.yaw.cos());
-            let eye = origin + forward * view.fore_aft + DVec3::Y * view.height;
+            let strength = if self.motion_enabled {
+                self.tuning.dynamics
+            } else {
+                0.
+            };
+            // The rig only breathes along the car's axis: back with speed and
+            // under power, closer under braking. Sideways motion comes from the
+            // yaw lag alone, so the car turns in the frame and the horizon stays put.
+            let eye = origin
+                + forward
+                    * (view.fore_aft
+                        - self.speed * strength * 0.6
+                        - self.load.x * strength * 0.012)
+                + DVec3::Y * view.height;
             (
                 eye,
                 eye + forward * (30. * pitch.cos()) - DVec3::Y * (30. * pitch.sin()),
@@ -203,10 +244,11 @@ impl ChaseCamera {
     }
     /// Eye position and look-at point; the audio listener follows them.
     pub fn listener(&self) -> (DVec3, DVec3) {
-        (self.position, self.target)
+        (self.rendered_eye, self.target)
     }
     fn snap(&mut self, pose: &Pose) {
         (self.position, self.target) = self.desired(pose);
+        self.rendered_eye = self.position;
     }
     pub fn update(
         &mut self,
@@ -219,30 +261,87 @@ impl ChaseCamera {
     ) -> bool {
         let dt = dt as f64;
         let car = &race.entrants[player].car;
-        let cut = self.cut;
+        let cut = self.cut || self.position.distance(pose.origin) > 25.;
+        let response = if cut { 1. } else { 1. - (-dt * 2.5).exp() };
+        let load = glam::DVec2::new(car.acceleration.x.clamp(-45., 15.), 0.);
+        self.load += (load - self.load) * response;
+        self.speed += ((car.speed() / 90.).clamp(0., 1.) - self.speed) * response;
+        if cut {
+            self.boom = 1.;
+            self.lift = 0.;
+        }
         if cut {
             self.yaw = pose.yaw;
             self.snap(pose);
             self.cut = false;
         }
-        let delta = (pose.yaw - self.yaw + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU)
-            - std::f64::consts::PI;
-        self.yaw += delta * (1. - (-dt * 8.).exp());
+        let wrap = |angle: f64| {
+            (angle + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI
+        };
+        // At speed the chase view leans toward where the car is going rather
+        // than where it points, so yaw wobble and slides turn the car in the
+        // frame instead of swinging the whole world.
+        let course = car.velocity.x.atan2(car.velocity.y);
+        let lean = if self.mode == Mode::Chase && self.motion_enabled && !cut {
+            0.6 * ((car.speed() - 10.) / 20.).clamp(0., 1.)
+        } else {
+            0.
+        };
+        let aim = pose.yaw + wrap(course - pose.yaw).clamp(-0.6, 0.6) * lean;
+        let delta = wrap(aim - self.yaw);
+        self.yaw += delta * if cut { 1. } else { 1. - (-dt * 7.).exp() };
         let (position, target) = self.desired(pose);
         if self.mode != Mode::Chase {
             self.position = position;
             self.target = target;
         } else {
-            // Follow steady velocity without the several-metre lag of a plain lerp.
-            let advance = DVec3::new(car.velocity.x, 0., car.velocity.y) * dt;
-            self.position += advance;
-            self.target += advance;
-            let follow = 1. - (-dt * 12.).exp();
-            self.position += (position - self.position) * follow;
-            self.target += (target - self.target) * follow;
-            if let Some(ground) = race.track.collision.ground(self.position + DVec3::Y * 3.) {
-                self.position.y = self.position.y.max(ground.height + 0.6);
+            if cut {
+                self.position = position;
+                self.target = target;
+            } else {
+                // Predict the translation before smoothing the load-dependent framing.
+                let advance = DVec3::new(car.velocity.x, 0., car.velocity.y) * dt;
+                self.position += advance;
+                self.target += advance;
+                let follow = 1. - (-dt * 12.).exp();
+                self.position += (position - self.position) * follow;
+                self.target += (target - self.target) * follow;
             }
+        }
+        let mut eye = self.position;
+        if self.mode == Mode::Chase {
+            // Ease the boom in where it would cross a barrier, and ride over
+            // rising ground. Both are smoothed: neither cuts nor lifts the view.
+            let anchor = glam::DVec2::new(pose.origin.x, pose.origin.z);
+            let boom = glam::DVec2::new(self.position.x, self.position.z) - anchor;
+            let mut clear = 1_f64;
+            for wall in race.track.collision.walls_near(anchor, boom.length() + 1.) {
+                let edge = wall.b - wall.a;
+                let denominator = boom.perp_dot(edge);
+                if denominator.abs() < 1e-9 {
+                    continue;
+                }
+                let offset = wall.a - anchor;
+                let t = offset.perp_dot(edge) / denominator;
+                let u = offset.perp_dot(boom) / denominator;
+                if (0. ..=1.).contains(&t) && (0. ..=1.).contains(&u) {
+                    clear = clear.min((t - 0.4 / boom.length().max(0.4)).max(0.));
+                }
+            }
+            self.boom = if clear < self.boom {
+                clear
+            } else {
+                self.boom + (clear - self.boom) * (1. - (-dt * 8.).exp())
+            };
+            eye.x = anchor.x + boom.x * self.boom;
+            eye.z = anchor.y + boom.y * self.boom;
+            let needed = race
+                .track
+                .collision
+                .ground(eye + DVec3::Y * 3.)
+                .map_or(0., |ground| (ground.height + 0.6 - eye.y).max(0.));
+            self.lift = needed.max(self.lift * (-dt * 4.).exp());
+            eye.y += self.lift;
         }
         let kerb = car
             .wheels
@@ -253,8 +352,9 @@ impl ChaseCamera {
             * kerb
             * (car.speed() / 50.).min(1.)
             * 0.12;
-        let shake = (vibration + (car.impact / 8000.).min(0.12)) * self.tuning.shake;
-        *transform = Transform::from_translation(to_vec3(self.position + DVec3::Y * shake))
+        let shake = (vibration + (self.impact / 8000.).min(0.12)) * self.tuning.shake;
+        self.rendered_eye = eye + DVec3::Y * shake;
+        *transform = Transform::from_translation(to_vec3(self.rendered_eye))
             .looking_at(to_vec3(self.target), Vec3::Y);
         if let Projection::Perspective(lens) = projection {
             lens.near = if self.mode == Mode::Cockpit {
@@ -269,7 +369,13 @@ impl ChaseCamera {
             };
             let target = self.tuning.view(self.mode).fov
                 + if self.mode == Mode::Chase {
-                    (car.speed() as f32 / 90.).min(1.) * 3.
+                    self.speed as f32
+                        * (3.
+                            + if self.motion_enabled {
+                                self.tuning.dynamics as f32 * 6.
+                            } else {
+                                0.
+                            })
                 } else {
                     0.
                 };
@@ -304,6 +410,7 @@ pub fn update(
     mut cameras: CameraQuery,
     time: Res<Time>,
     fixed: Res<Time<Fixed>>,
+    frontend: Res<crate::menu::Frontend>,
 ) {
     let dt = if session.paused {
         0.
@@ -315,11 +422,14 @@ pub fn update(
         player,
         camera: rig,
         poses,
+        impact,
         ..
     } = &mut *session;
     let pose = poses.at(race, *player, fixed.overstep_fraction_f64());
     for (mut transform, mut lens, taa) in &mut cameras {
         let previous = transform.translation;
+        rig.impact = *impact;
+        rig.motion_enabled = frontend.video.camera_motion;
         let cut = rig.update(&mut transform, &mut lens, race, *player, &pose, dt);
         if let Some(mut taa) = taa {
             taa.reset |= cut || transform.translation.distance(previous) > 15.;
@@ -330,6 +440,62 @@ pub fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn moving_camera_is_frame_rate_stable_and_teleports_cut_cleanly() {
+        let mut offsets = Vec::new();
+        for hz in [30, 60, 144, 240] {
+            let mut session = crate::tests::session();
+            let mut camera = ChaseCamera::new(&session.race, 0);
+            let mut transform = Transform::default();
+            let mut projection = Projection::Perspective(PerspectiveProjection::default());
+            for frame in 0..=hz * 2 {
+                let car = &mut session.race.entrants[0].car;
+                car.position = DVec3::new(0., 0., frame as f64 / hz as f64 * 88.89);
+                car.velocity = glam::DVec2::new(0., 88.89);
+                let pose = Pose::of(car);
+                camera.update(
+                    &mut transform,
+                    &mut projection,
+                    &session.race,
+                    0,
+                    &pose,
+                    1. / hz as f32,
+                );
+            }
+            offsets.push(transform.translation.z as f64 - session.race.entrants[0].car.position.z);
+            session.race.entrants[0].car.position.z += 100.;
+            let pose = Pose::of(&session.race.entrants[0].car);
+            assert!(camera.update(
+                &mut transform,
+                &mut projection,
+                &session.race,
+                0,
+                &pose,
+                1. / hz as f32
+            ));
+            let expected = camera.desired(&pose).0;
+            assert!(transform.translation.as_dvec3().distance(expected) < 0.001);
+        }
+        let min = offsets.iter().copied().fold(f64::INFINITY, f64::min);
+        let max = offsets.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        assert!(
+            max - min < 0.05,
+            "steady-speed framing differs: {offsets:?}"
+        );
+    }
+
+    #[test]
+    fn old_tuning_loads_and_dynamics_are_clamped() {
+        let original = Tuning::for_car("gen22");
+        let mut json = serde_json::to_value(&original).unwrap();
+        json.as_object_mut().unwrap().remove("dynamics");
+        let mut loaded: Tuning = serde_json::from_value(json).unwrap();
+        assert_eq!(loaded, original);
+        loaded.dynamics = f64::NAN;
+        loaded.sanitize();
+        assert_eq!(loaded.dynamics, default_dynamics());
+    }
+
     #[test]
     fn paused_camera_preview_updates_without_drifting_with_car_velocity() {
         let mut session = crate::tests::session();
