@@ -6,6 +6,7 @@ Python, curl, tar/zstd and mksquashfs. Players need none of these tools.
 Official Arch package signatures and the pinned runtime digest are verified.
 """
 import argparse
+from drift_assets import copy_drift_assets
 import hashlib
 import json
 import os
@@ -158,6 +159,11 @@ def main():
             destination.mkdir(parents=True)
             for filename in files:
                 shutil.copy2(assets / category / item / filename, destination / filename)
+
+    if copy_drift_assets(assets, APP / "usr/share/f1-racecraft/assets"):
+        tracks.append("driftpark")
+
+    shutil.copy2(ROOT / "README.md", APP / "usr/share/licenses/f1-racecraft/ASSET-CREDITS.md")
 
     # Include installed artwork with the car that uses it.
     for car in ["gen22", "rb6", "gen26"]:

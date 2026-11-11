@@ -55,8 +55,7 @@ fn slip_degrees(car: &Car) -> f64 {
 #[ignore = "requires the generated drift park and converted Thar"]
 fn thar_drift_envelope() {
     let Some((track, spec)) = load() else {
-        eprintln!("skipping: driftpark or thar assets missing");
-        return;
+        panic!("driftpark or thar assets missing; set F1_TEST_ASSETS");
     };
     let dt = 1.0 / PHYSICS_RATE;
 
@@ -82,6 +81,11 @@ fn thar_drift_envelope() {
         "0-100 km/h {:?} s, speed after 40 s {:.0} km/h",
         to_100,
         car.speed() * 3.6
+    );
+
+    assert!(
+        to_100.is_some_and(|t| t < 12.0),
+        "Thar failed to reach 100 km/h in 12 s"
     );
 
     // Power slide: full lock and full throttle from 50 km/h, then hold for 6 s.
@@ -125,8 +129,7 @@ fn thar_drift_envelope() {
 #[ignore = "requires the generated drift park and converted Thar"]
 fn thar_holds_a_controlled_drift() {
     let Some((track, spec)) = load() else {
-        eprintln!("skipping: driftpark or thar assets missing");
-        return;
+        panic!("driftpark or thar assets missing; set F1_TEST_ASSETS");
     };
     let dt = 1.0 / PHYSICS_RATE;
     let target: f64 = std::env::var("DRIFT_TARGET")
@@ -178,6 +181,11 @@ fn thar_holds_a_controlled_drift() {
     let mean = held.iter().sum::<f64>() / held.len() as f64;
     let spread = held.iter().map(|s| (s - mean).abs()).fold(0.0, f64::max);
     println!("held slip {mean:.1} deg (+/- {spread:.1})");
+    assert!(
+        (12.0..75.0).contains(&mean),
+        "held slip outside scoring band: {mean}"
+    );
+    assert!(spread < 20.0, "unstable held drift: {spread}");
 }
 
 /// The generated track works with the race code: an AI Thar laps it.
@@ -185,8 +193,7 @@ fn thar_holds_a_controlled_drift() {
 #[ignore = "requires the generated drift park and converted Thar"]
 fn ai_thar_laps_the_drift_park() {
     let Some((track, spec)) = load() else {
-        eprintln!("skipping: driftpark or thar assets missing");
-        return;
+        panic!("driftpark or thar assets missing; set F1_TEST_ASSETS");
     };
     let config = racecraft_sim::EntrantConfig {
         name: "AI".into(),
@@ -218,4 +225,5 @@ fn ai_thar_laps_the_drift_park() {
     }
     println!("drift park AI laps {laps:?}, worst distance off the course {worst_off:.1} m");
     assert_eq!(laps.len(), 2, "AI did not complete two laps");
+    assert!(worst_off < 3.0, "AI left the course by {worst_off} m");
 }
