@@ -97,6 +97,7 @@ pub struct PackedInput {
     pub flags: u8,
 }
 const DRS_FLAG: u8 = 1;
+const HARVEST_FLAG: u8 = 2;
 impl PackedInput {
     pub fn pack(input: &CarInput) -> Self {
         let unit = |x: f64| (x.clamp(0., 1.) * u16::MAX as f64).round() as u16;
@@ -104,7 +105,8 @@ impl PackedInput {
             steer: (input.steer.clamp(-1., 1.) * i16::MAX as f64).round() as i16,
             throttle: unit(input.throttle),
             brake: unit(input.brake),
-            flags: if input.drs { DRS_FLAG } else { 0 },
+            flags: if input.drs { DRS_FLAG } else { 0 }
+                | if input.harvest { HARVEST_FLAG } else { 0 },
         }
     }
     pub fn unpack(&self) -> CarInput {
@@ -113,11 +115,12 @@ impl PackedInput {
             throttle: self.throttle as f64 / u16::MAX as f64,
             brake: self.brake as f64 / u16::MAX as f64,
             drs: self.flags & DRS_FLAG != 0,
+            harvest: self.flags & HARVEST_FLAG != 0,
             ..CarInput::default()
         }
     }
     pub fn valid(&self) -> bool {
-        self.steer != i16::MIN && self.flags & !DRS_FLAG == 0
+        self.steer != i16::MIN && self.flags & !(DRS_FLAG | HARVEST_FLAG) == 0
     }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -251,4 +254,29 @@ pub fn valid_input(input: &CarInput) -> bool {
             .all(|x| x.is_finite() && (0. ..=1.).contains(x))
         && !input.shift_up
         && !input.shift_down
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packed_buttons_round_trip_and_unknown_flags_are_invalid() {
+        for (drs, harvest) in [(false, false), (true, false), (false, true), (true, true)] {
+            let input = CarInput {
+                drs,
+                harvest,
+                ..CarInput::default()
+            };
+            let packed = PackedInput::pack(&input);
+            assert!(packed.valid());
+            let back = packed.unpack();
+            assert_eq!((back.drs, back.harvest), (drs, harvest));
+        }
+        let unknown = PackedInput {
+            flags: 4,
+            ..PackedInput::default()
+        };
+        assert!(!unknown.valid());
+    }
 }

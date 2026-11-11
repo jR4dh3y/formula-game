@@ -1672,7 +1672,8 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
         (
             "Automatic overtake mode",
             "Engages overtake mode as soon as it is earned. F (gamepad B) still \
-             toggles boost elsewhere; the wings open and close by themselves.",
+             toggles boost elsewhere and H (D-pad down) toggles harvest mode; the \
+             wings open and close by themselves.",
             "Overtake mode anywhere",
             "Overtake mode is available all lap, not only within a second of the car \
              ahead in an overtake zone. AI cars keep to the race rules.",

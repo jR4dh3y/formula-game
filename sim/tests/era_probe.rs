@@ -159,6 +159,18 @@ fn era_laps() {
                 charge_min: 1.0,
                 ..Lap::default()
             };
+            // ERA_START_SOC=0.05 starts the battery nearly empty, to watch recovery.
+            if let (Some(hybrid), Some(soc)) = (
+                &spec.hybrid,
+                std::env::var("ERA_START_SOC")
+                    .ok()
+                    .and_then(|v| v.parse::<f64>().ok()),
+            ) {
+                race.entrants[0].car.battery.energy = hybrid.capacity * soc;
+            }
+            if std::env::var_os("ERA_ANYWHERE").is_some() {
+                race.entrants[0].car.assists.drs_anywhere = true;
+            }
             let mut done = 0;
             let limit = (laps as f64 * 260.0 * PHYSICS_RATE) as u64;
             while done < laps && race.tick < limit {
@@ -239,7 +251,7 @@ fn era_racecraft() {
                     match entrant.car.battery.mode {
                         DeployMode::Boost => boost += dt,
                         DeployMode::Overtake => overtake += dt,
-                        DeployMode::Normal => {}
+                        DeployMode::Normal | DeployMode::Harvest => {}
                     }
                 }
                 for event in race.events.drain(..) {

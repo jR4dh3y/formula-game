@@ -30,9 +30,13 @@ pub struct CarInput {
     pub brake: f64,
     pub shift_up: bool,
     pub shift_down: bool,
-    /// Asks to open DRS; it opens only where the race allows it.
+    /// Asks to open DRS; it opens only where the race allows it. On a 2026
+    /// car it is the overtake / boost button.
     #[serde(default)]
     pub drs: bool,
+    /// 2026 cars: toggles harvest (recharge) mode.
+    #[serde(default)]
+    pub harvest: bool,
 }
 
 /// Driving aids. They help with control, never with racecraft, and are
@@ -548,6 +552,7 @@ impl Car {
                     hybrid,
                     &crate::hybrid::BatteryTick {
                         button: input.drs,
+                        harvest_button: input.harvest,
                         overtake_available: self.drs.available,
                         auto_overtake: self.assists.auto_drs,
                         throttle,

@@ -802,6 +802,8 @@ impl AiDriver {
                     self.wants_boost(car, hybrid, rivals, corner, track) != boosting
                 }
             },
+            // Normal deployment already recovers the AI's battery within a lap.
+            harvest: false,
         }
     }
 

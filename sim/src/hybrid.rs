@@ -117,7 +117,13 @@ pub enum DeployMode {
     Normal,
     Boost,
     Overtake,
+    /// Driver-selected recharge: no deployment, and the MGU-K clips the
+    /// engine at full throttle from `HARVEST_MIN_SPEED`. Ends when full.
+    Harvest,
 }
+
+/// Harvest mode clips the engine above this road speed, m/s.
+pub const HARVEST_MIN_SPEED: f64 = 120.0 / 3.6;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Battery {
@@ -132,6 +138,8 @@ pub struct Battery {
     pub lap_harvest: f64,
     /// Button level last tick, so a held or repeated request acts once.
     button: bool,
+    #[serde(default)]
+    harvest_button: bool,
     /// Overtake already used in the current availability window.
     overtake_used: bool,
 }
@@ -139,6 +147,8 @@ pub struct Battery {
 /// Inputs to one battery tick.
 pub(crate) struct BatteryTick {
     pub button: bool,
+    /// The harvest-mode toggle.
+    pub harvest_button: bool,
     /// The race grants overtake mode here (earned and inside the zone).
     pub overtake_available: bool,
     /// Engage overtake mode as soon as it is available.
@@ -176,6 +186,15 @@ impl Battery {
     pub(crate) fn update(&mut self, spec: &HybridSpec, tick: &BatteryTick) -> f64 {
         let press = tick.button && !self.button;
         self.button = tick.button;
+        let harvest_press = tick.harvest_button && !self.harvest_button;
+        self.harvest_button = tick.harvest_button;
+        if harvest_press {
+            self.mode = if self.mode == DeployMode::Harvest {
+                DeployMode::Normal
+            } else {
+                DeployMode::Harvest
+            };
+        }
         if !tick.overtake_available {
             self.overtake_used = false;
             if self.mode == DeployMode::Overtake {
@@ -183,15 +202,17 @@ impl Battery {
             }
             self.bonus = 0.0;
         }
-        let engage =
-            tick.overtake_available && !self.overtake_used && (press || tick.auto_overtake);
+        // Harvesting is a deliberate choice: automatic overtake waits for it.
+        let engage = tick.overtake_available
+            && !self.overtake_used
+            && (press || tick.auto_overtake && self.mode != DeployMode::Harvest);
         if engage {
             self.mode = DeployMode::Overtake;
             self.bonus = spec.overtake_energy;
             self.overtake_used = true;
         } else if press {
             self.mode = match self.mode {
-                DeployMode::Normal => DeployMode::Boost,
+                DeployMode::Normal | DeployMode::Harvest => DeployMode::Boost,
                 DeployMode::Boost => DeployMode::Normal,
                 // Overtake runs to the end of its zone.
                 DeployMode::Overtake => DeployMode::Overtake,
@@ -207,13 +228,23 @@ impl Battery {
         } else {
             spec.corner_power
         };
+        let normal = ((self.charge(spec) - spec.reserve) / (spec.full_deploy - spec.reserve))
+            .clamp(0.0, 1.0);
         let level = match self.mode {
-            DeployMode::Normal => ((self.charge(spec) - spec.reserve)
-                / (spec.full_deploy - spec.reserve))
-                .clamp(0.0, 1.0),
-            DeployMode::Boost | DeployMode::Overtake => 1.0,
+            DeployMode::Normal => normal,
+            DeployMode::Boost => 1.0,
+            // Overtake mode spends its own allowance at full power, then
+            // deploys as normal: it must not drain the driver's battery.
+            DeployMode::Overtake if self.bonus > 0.0 => 1.0,
+            DeployMode::Overtake => normal,
+            DeployMode::Harvest => 0.0,
         };
-        let available = (self.energy + self.bonus) / tick.dt;
+        // Full-power overtake deployment draws on the allowance alone.
+        let available = if overtake && self.bonus > 0.0 {
+            self.bonus / tick.dt
+        } else {
+            (self.energy + self.bonus) / tick.dt
+        };
         let deploy = if tick.driving && tick.throttle > 0.0 {
             (limit * spec.taper(tick.speed, overtake) * level * tick.throttle).min(available)
         } else {
@@ -233,16 +264,17 @@ impl Battery {
         } else {
             0.0
         };
-        let clip = if self.mode == DeployMode::Normal
-            && tick.driving
-            && tick.throttle >= 0.99
-            && self.charge(spec) < spec.full_deploy
-        {
-            spec.clip_power
-                * ((tick.speed - spec.taper_start) / (spec.taper_end - spec.taper_start))
-                    .clamp(0.0, 1.0)
-        } else {
-            0.0
+        let full_throttle = tick.driving && tick.throttle >= 0.99;
+        let clip = match self.mode {
+            DeployMode::Normal if full_throttle && self.charge(spec) < spec.full_deploy => {
+                spec.clip_power
+                    * ((tick.speed - spec.taper_start) / (spec.taper_end - spec.taper_start))
+                        .clamp(0.0, 1.0)
+            }
+            DeployMode::Harvest if full_throttle && tick.speed > HARVEST_MIN_SPEED => {
+                spec.clip_power
+            }
+            _ => 0.0,
         };
         let room = (spec.capacity - self.energy)
             .min(spec.lap_harvest - self.lap_harvest)
@@ -253,6 +285,9 @@ impl Battery {
         self.energy += harvest;
         self.lap_harvest += harvest;
         self.power = deploy - harvest / tick.dt;
+        if self.mode == DeployMode::Harvest && self.charge(spec) >= 0.995 {
+            self.mode = DeployMode::Normal;
+        }
         deploy - clipped
     }
 }
@@ -268,6 +303,7 @@ mod tests {
     fn tick(button: bool, available: bool, throttle: f64, brake: f64, speed: f64) -> BatteryTick {
         BatteryTick {
             button,
+            harvest_button: false,
             overtake_available: available,
             auto_overtake: false,
             throttle,
@@ -336,6 +372,52 @@ mod tests {
         battery.update(&spec, &tick(false, false, 1.0, 0.0, 80.0));
         assert_eq!(battery.mode, DeployMode::Normal);
         assert_eq!(battery.bonus, 0.0);
+    }
+
+    #[test]
+    fn overtake_spends_only_its_allowance_at_full_power() {
+        let spec = spec();
+        let mut battery = Battery::full(&spec);
+        battery.energy = spec.capacity * 0.2;
+        let before = battery.energy;
+        // A whole lap of overtake mode at full throttle on a straight.
+        for i in 0..360 * 60 {
+            battery.update(&spec, &tick(i == 0, true, 1.0, 0.0, 70.0));
+        }
+        assert_eq!(battery.mode, DeployMode::Overtake);
+        // Below the reserve, normal deployment is off: only the allowance was spent.
+        assert!(
+            battery.energy >= before - 1.0,
+            "{} < {before}",
+            battery.energy
+        );
+    }
+
+    #[test]
+    fn harvest_mode_recharges_at_full_throttle_and_ends_when_full() {
+        let spec = spec();
+        let mut battery = Battery::full(&spec);
+        battery.energy = spec.capacity * 0.1;
+        let mut press = tick(false, false, 1.0, 0.0, 70.0);
+        press.harvest_button = true;
+        battery.update(&spec, &press);
+        assert_eq!(battery.mode, DeployMode::Harvest);
+        let mut electric = 0.0;
+        for _ in 0..360 * 5 {
+            electric = battery.update(&spec, &tick(false, false, 1.0, 0.0, 70.0));
+        }
+        assert!(electric < -spec.clip_power * 0.99, "clipping: {electric}");
+        assert!(battery.charge(&spec) > 0.4, "{}", battery.charge(&spec));
+        for _ in 0..360 * 30 {
+            battery.update(&spec, &tick(false, false, 1.0, 0.0, 70.0));
+        }
+        assert_eq!(battery.mode, DeployMode::Normal);
+        // The toggle switches it off again too.
+        battery.energy = spec.capacity * 0.5;
+        battery.update(&spec, &press);
+        battery.update(&spec, &tick(false, false, 1.0, 0.0, 70.0));
+        battery.update(&spec, &press);
+        assert_eq!(battery.mode, DeployMode::Normal);
     }
 
     #[test]

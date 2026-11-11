@@ -93,6 +93,7 @@ impl EnergyLamp {
         match self.mode {
             DeployMode::Overtake => "OVERTAKE".into(),
             DeployMode::Boost => "BOOST".into(),
+            DeployMode::Harvest => format!("HARVEST {:.0}%", self.charge * 100.),
             DeployMode::Normal if self.overtake_ready => "OVT READY".into(),
             DeployMode::Normal => format!("ERS {:.0}%", self.charge * 100.),
         }
@@ -128,6 +129,7 @@ fn energy_lamp(hud: &Hud, style: &HudStyle, rect: egui::Rect, text: f32, lamp: E
         DeployMode::Normal => ENERGY_BLUE,
         DeployMode::Boost => AMBER,
         DeployMode::Overtake => OVERTAKE_PURPLE,
+        DeployMode::Harvest => GREEN,
     };
     let filled =
         (w * lamp.charge.clamp(0., 1.)).max(if lamp.charge > 0. { radius * 2. } else { 0. });
