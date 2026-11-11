@@ -57,7 +57,7 @@ impl Preferences {
             racing_line: options.assist_level > 0.,
             ai_power: options.ai_power,
             camera: options.camera,
-            views: ["rb6", "gen22"]
+            views: racecraft_sim::CarSpec::ERAS
                 .map(|id| (id.into(), Tuning::for_car(id)))
                 .into(),
             graphics: options.graphics,
@@ -76,7 +76,7 @@ impl Preferences {
         if let Some(old) = self.views.remove("rb22") {
             self.views.entry("gen22".into()).or_insert(old);
         }
-        for id in ["rb6", "gen22"] {
+        for id in racecraft_sim::CarSpec::ERAS {
             self.views
                 .entry(id.into())
                 .or_insert_with(|| Tuning::for_car(id));

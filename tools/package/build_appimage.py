@@ -160,7 +160,10 @@ def main():
                 shutil.copy2(assets / category / item / filename, destination / filename)
 
     # Include installed artwork with the car that uses it.
-    for car in ["gen22", "rb6"]:
+    for car in ["gen22", "rb6", "gen26"]:
+        # The 2026 car is optional: the menu only offers installed cars.
+        if car == "gen26" and not (assets / "cars" / car).is_dir():
+            continue
         shutil.copytree(assets / "cars" / car,
                         APP / "usr/share/f1-racecraft/assets/cars" / car)
 

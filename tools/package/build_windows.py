@@ -151,6 +151,13 @@ def main():
             destination = package / "assets" / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(assets / path, destination)
+        # The 2026 car is optional: the menu only offers installed cars.
+        for name in ("car.json", "car.glb"):
+            source = assets / "cars/gen26" / name
+            if source.is_file():
+                destination = package / "assets/cars/gen26" / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
         liveries = assets / "cars/gen22/liveries"
         if liveries.is_dir():
             shutil.copytree(liveries, package / "assets/cars/gen22/liveries")

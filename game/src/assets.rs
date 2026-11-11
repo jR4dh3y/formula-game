@@ -708,8 +708,15 @@ pub fn sync_cars(
             RigKind::Upright => Quat::from_rotation_y(pose.steer as f32),
             // Every car's flap follows its own simulated DRS actuator.
             RigKind::Drs => Quat::from_rotation_x(
-                session.rig.drs.open_angle
-                    * session.race.entrants[part.entrant].car.drs.flap as f32,
+                session.rig.drs.open_angle * {
+                    // A 2026 car's flap follows its active aero instead.
+                    let car = &session.race.entrants[part.entrant].car;
+                    if car.spec.aero.active.is_some() {
+                        car.active_aero.position as f32
+                    } else {
+                        car.drs.flap as f32
+                    }
+                },
             ),
         };
         transform.rotation = part.rest.rotation * rotation;
@@ -848,15 +855,15 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     }
     let track = Arc::new(Track::load(&track_dir)?);
     let geometry = CarGeometry::load(root.join(format!("cars/{}/car.json", options.car)))?;
-    let field_spec = Arc::new(if options.car == "rb6" {
-        CarSpec::rb6_with(&geometry)
-    } else {
-        CarSpec::gen22_with(&geometry)
-    });
-    let teams = if options.car == "gen22" {
-        crate::teams::Teams::load(root)?
-    } else {
-        default()
+    let field_spec = Arc::new(
+        CarSpec::for_era(&options.car, &geometry)
+            .ok_or_else(|| format!("unknown car {}", options.car))?,
+    );
+    let teams = match options.car.as_str() {
+        "gen22" => crate::teams::Teams::load(root)?,
+        // The 2026 field races under the current roster's names and colours.
+        "gen26" => crate::teams::Teams::load(root).unwrap_or_default(),
+        _ => default(),
     };
     let identities = teams.field(options)?;
     // Grid: the player starts in the requested slot among the AI field.

@@ -63,7 +63,7 @@ impl Options {
   --assets DIR        asset directory (default: ./assets)
   --track NAME        circuit (default: spa; other circuits require an exp build)
   --weather clear|storm   sky and thunder; track always stays dry
-  --car gen22|rb6     car (default: gen22; rb22 is a deprecated alias)
+  --car gen22|gen26|rb6  car era (default: gen22; rb22 is a deprecated alias)
   --team ID           2022 team (default: first team in teams.json)
   --driver ID         driver in that team (default: its first driver)
   --laps N            race length (default: 3)
@@ -180,8 +180,8 @@ impl Options {
                     if options.car == "rb22" {
                         options.car = "gen22".into();
                     }
-                    if !matches!(options.car.as_str(), "rb6" | "gen22") {
-                        return Err("car must be rb6 or gen22".into());
+                    if !racecraft_sim::CarSpec::ERAS.contains(&options.car.as_str()) {
+                        return Err("car must be rb6, gen22 or gen26".into());
                     }
                 }
                 "--team" => options.team = value()?,

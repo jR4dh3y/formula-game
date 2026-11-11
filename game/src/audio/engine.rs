@@ -44,7 +44,7 @@ impl EngineChoice {
     }
     pub fn resolve(self, car: &str) -> Kind {
         match self {
-            Self::MatchCar if car == "gen22" => Kind::V6Hybrid,
+            Self::MatchCar if car == "gen22" || car == "gen26" => Kind::V6Hybrid,
             Self::MatchCar => Kind::V8,
             Self::V6Hybrid => Kind::V6Hybrid,
             Self::V8 => Kind::V8,

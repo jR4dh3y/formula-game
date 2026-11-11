@@ -15,7 +15,7 @@ import zipfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--assets', type=Path, help='Include converted assets for the chosen track/car')
-    parser.add_argument('--car', choices=['rb6', 'gen22'], default='rb6')
+    parser.add_argument('--car', choices=['rb6', 'gen22', 'gen26'], default='rb6')
     parser.add_argument('--track', default='spa')
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()

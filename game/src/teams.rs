@@ -135,7 +135,9 @@ impl Teams {
         &self,
         options: &crate::options::Options,
     ) -> Result<Vec<Option<Identity>>, String> {
-        if options.car == "rb6" {
+        // The RB6 races as itself; the 2026 car borrows the roster when it
+        // is installed and races anonymously otherwise.
+        if options.car == "rb6" || options.car == "gen26" && self.teams.is_empty() {
             return Ok(vec![None; options.opponents + 1]);
         }
         let (team, driver) = self.selection(&options.team, &options.driver)?;

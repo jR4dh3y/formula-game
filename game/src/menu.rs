@@ -221,6 +221,11 @@ impl Catalog {
                 "2022 ground effect",
                 "V6 hybrid / 8-speed / shared team model",
             ),
+            (
+                "gen26",
+                "2026 active aero",
+                "50/50 hybrid / active wings / overtake mode",
+            ),
         ] {
             let car = root.join("cars").join(id);
             if car.join("car.glb").is_file()
@@ -1315,10 +1320,10 @@ fn car_model_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
                 .radio_value(
                     &mut draft.car,
                     car.id.clone(),
-                    if car.id == "gen22" {
-                        "2022 car"
-                    } else {
-                        car.name
+                    match car.id.as_str() {
+                        "gen22" => "2022 car",
+                        "gen26" => "2026 car",
+                        _ => car.name,
                     },
                 )
                 .on_hover_text(car.description);
@@ -1388,7 +1393,7 @@ fn setup_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
 fn driver_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let draft = &mut frontend.draft;
     let teams = &frontend.teams;
-    if draft.car != "gen22" {
+    if draft.car == "rb6" {
         ui.heading("Red Bull Racing");
         ui.label(
             "The 2010 RB6 races in its own livery. Pick the 2022 car under Car to choose a team.",
@@ -1595,17 +1600,33 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
     setting_row(ui, "Racing line", |ui| {
         ui.checkbox(&mut frontend.show_racing_line, "Enabled");
     });
-    setting_row(ui, "Automatic DRS", |ui| {
-        ui.checkbox(&mut aids.auto_drs, "Enabled").on_hover_text(
+    // The 2026 car has active aero and overtake mode on the same button.
+    let modern = frontend.draft.car == "gen26";
+    let (auto_label, auto_help, anywhere_label, anywhere_help) = if modern {
+        (
+            "Automatic overtake mode",
+            "Engages overtake mode as soon as it is earned. F (gamepad B) still \
+             toggles boost elsewhere; the wings open and close by themselves.",
+            "Overtake mode anywhere",
+            "Overtake mode is available all lap, not only within a second of the car \
+             ahead in an overtake zone. AI cars keep to the race rules.",
+        )
+    } else {
+        (
+            "Automatic DRS",
             "Opens the flap as soon as DRS is available. Braking or the end of the zone closes it.",
-        );
-    });
-    setting_row(ui, "DRS anywhere", |ui| {
-        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
-            .on_hover_text(
-                "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
+            "DRS anywhere",
+            "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
              AI cars keep to the race rules.",
-            );
+        )
+    };
+    setting_row(ui, auto_label, |ui| {
+        ui.checkbox(&mut aids.auto_drs, "Enabled")
+            .on_hover_text(auto_help);
+    });
+    setting_row(ui, anywhere_label, |ui| {
+        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
+            .on_hover_text(anywhere_help);
     });
     ui.add_space(6.);
     if ui.available_width() >= 760. {

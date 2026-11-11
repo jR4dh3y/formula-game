@@ -48,7 +48,7 @@ fn default_dynamics() -> f64 {
 
 impl Tuning {
     pub fn for_car(car: &str) -> Self {
-        let modern = car.eq_ignore_ascii_case("gen22");
+        let modern = car.eq_ignore_ascii_case("gen22") || car.eq_ignore_ascii_case("gen26");
         Self {
             cockpit: View {
                 height: if modern { 1.00 } else { 0.96 },

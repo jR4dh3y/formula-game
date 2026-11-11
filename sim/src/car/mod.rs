@@ -217,6 +217,10 @@ pub struct Car {
     pub wheels: [WheelState; 4],
     pub aero: AeroInfluence,
     pub drs: Drs,
+    /// 2026 wings; idle on cars without active aero.
+    pub active_aero: crate::hybrid::ActiveAero,
+    /// 2026 energy store; idle on cars without a hybrid spec.
+    pub battery: crate::hybrid::Battery,
     pub downforce: f64,
     pub track_position: TrackPosition,
     /// Smoothed body-frame acceleration (forward, left), m/s².
@@ -271,7 +275,14 @@ impl Car {
         yaw: f64,
     ) -> Self {
         let track_position = track.project(position, None);
+        let battery = spec
+            .hybrid
+            .as_ref()
+            .map(crate::hybrid::Battery::full)
+            .unwrap_or_default();
         Self {
+            battery,
+            active_aero: crate::hybrid::ActiveAero::default(),
             powertrain: Powertrain::new(&spec.engine),
             spec,
             setup: setup.clamped(),
@@ -530,22 +541,62 @@ impl Car {
             self.powertrain
                 .drive_force(&spec.engine, throttle, forward_speed, rear_radius, dt);
 
+        // The MGU-K adds power at the wheels whenever the engine drives them.
+        let drive = match &spec.hybrid {
+            Some(hybrid) => {
+                let electric = self.battery.update(
+                    hybrid,
+                    &crate::hybrid::BatteryTick {
+                        button: input.drs,
+                        overtake_available: self.drs.available,
+                        auto_overtake: self.assists.auto_drs,
+                        throttle,
+                        brake,
+                        speed: forward_speed.max(0.0),
+                        straight_zone: self.active_aero.allowed,
+                        driving: drive > 0.0 && throttle > 0.0,
+                        max_brake_force: spec.max_brake_force,
+                        dt,
+                    },
+                );
+                drive + electric / forward_speed.max(5.0)
+            }
+            None => drive,
+        };
         // Preserve engine braking; scale only delivered propulsion.
         let drive = if drive > 0. { drive * power } else { drive };
 
-        // Aerodynamics. An open DRS flap stalls part of the rear wing.
-        self.drs
-            .update(input.drs || self.assists.auto_drs, brake, dt);
+        // Aerodynamics. An open DRS flap stalls part of the rear wing; 2026
+        // wings open into straight mode by themselves.
+        if spec.hybrid.is_none() {
+            self.drs
+                .update(input.drs || self.assists.auto_drs, brake, dt);
+        }
+        let (active_drag, active_front, active_rear) = match &spec.aero.active {
+            Some(active) => {
+                self.active_aero
+                    .update(throttle, brake, self.acceleration.y, forward_speed, dt);
+                let position = self.active_aero.position;
+                (
+                    active.drag * position,
+                    active.front_lift * position,
+                    active.rear_lift * position,
+                )
+            }
+            None => (0.0, 0.0, 0.0),
+        };
         let dynamic_pressure = 0.5 * AIR_DENSITY * speed * speed;
         let front_downforce = dynamic_pressure
-            * self.setup.front_lift_area(&spec.aero)
+            * (self.setup.front_lift_area(&spec.aero) - active_front)
             * self.aero.front_downforce_scale;
         let rear_downforce = dynamic_pressure
-            * (self.setup.rear_lift_area(&spec.aero) - spec.aero.drs_lift * self.drs.flap)
+            * (self.setup.rear_lift_area(&spec.aero)
+                - spec.aero.drs_lift * self.drs.flap
+                - active_rear)
             * self.aero.rear_downforce_scale;
         self.downforce = front_downforce + rear_downforce;
         let drag = dynamic_pressure
-            * (self.setup.drag_area(&spec.aero) - spec.aero.drs_drag * self.drs.flap)
+            * (self.setup.drag_area(&spec.aero) - spec.aero.drs_drag * self.drs.flap - active_drag)
             * self.aero.drag_scale;
 
         // Vertical loads with quasi-static weight transfer.
@@ -1897,6 +1948,10 @@ pub struct CarState {
     wheels: [WheelState; 4],
     aero: AeroInfluence,
     drs: Drs,
+    #[serde(default)]
+    active_aero: crate::hybrid::ActiveAero,
+    #[serde(default)]
+    battery: crate::hybrid::Battery,
     downforce: f64,
     track_position: TrackPosition,
     acceleration: DVec2,
@@ -1923,6 +1978,8 @@ impl Car {
             wheels: self.wheels,
             aero: self.aero,
             drs: self.drs,
+            active_aero: self.active_aero,
+            battery: self.battery,
             downforce: self.downforce,
             track_position: self.track_position,
             acceleration: self.acceleration,
@@ -1950,6 +2007,8 @@ impl Car {
         self.wheels = state.wheels;
         self.aero = state.aero;
         self.drs = state.drs;
+        self.active_aero = state.active_aero;
+        self.battery = state.battery;
         self.downforce = state.downforce;
         self.track_position = state.track_position;
         self.acceleration = state.acceleration;

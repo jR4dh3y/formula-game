@@ -125,6 +125,8 @@ pub struct AeroSpec {
     /// CdA and rear ClA removed by a fully open DRS flap; zero without DRS.
     pub drs_drag: f64,
     pub drs_lift: f64,
+    /// 2026 active aerodynamics; `None` for fixed wings.
+    pub active: Option<crate::hybrid::ActiveAeroSpec>,
 }
 
 impl AeroSpec {
@@ -242,6 +244,9 @@ pub struct CarSpec {
     /// Maximum total brake force, N.
     pub max_brake_force: f64,
     pub brake_bias: f64,
+    /// 2026 battery and MGU-K; `None` when `engine.max_power` already
+    /// includes any hybrid deployment.
+    pub hybrid: Option<crate::hybrid::HybridSpec>,
 }
 
 impl CarSpec {
@@ -257,6 +262,24 @@ impl CarSpec {
     /// Shared 2022 ground-effect car; handling is tuned for simcade racing.
     pub fn gen22_with(geometry: &CarGeometry) -> Self {
         Self::gen22(geometry.wheels, geometry.length, geometry.width)
+    }
+
+    /// 2026-regulation car: active aero and a 50/50 hybrid power unit.
+    pub fn gen26_with(geometry: &CarGeometry) -> Self {
+        Self::gen26(geometry.wheels, geometry.length, geometry.width)
+    }
+
+    /// Car eras by ID, as named on the command line and in `assets/cars/`.
+    pub const ERAS: [&'static str; 3] = ["rb6", "gen22", "gen26"];
+
+    /// The car for an era ID, or `None` for an unknown one.
+    pub fn for_era(id: &str, geometry: &CarGeometry) -> Option<Self> {
+        match id {
+            "rb6" => Some(Self::rb6_with(geometry)),
+            "gen22" => Some(Self::gen22_with(geometry)),
+            "gen26" => Some(Self::gen26_with(geometry)),
+            _ => None,
+        }
     }
 
     pub fn rb6_with(geometry: &CarGeometry) -> Self {
@@ -309,13 +332,53 @@ impl CarSpec {
                 // About 10% of the car's drag: roughly +12 km/h at the end of Kemmel.
                 drs_drag: 0.13,
                 drs_lift: 0.57,
+                active: None,
             },
             tyre_friction: 1.72,
             peak_slip_angle: 0.095,
             rear_grip: 1.1,
             max_brake_force: 52_000.0,
             brake_bias: 0.57,
+            hybrid: None,
         }
+    }
+
+    /// 2026 rules: 768 kg minimum, smaller and with less downforce than a
+    /// 2022 car (about 17% here; 30% was the FIA's starting target and made
+    /// the car 8 s a lap slower at Spa in `tests/era_probe.rs`). The ICE gives roughly half the power; the MGU-K the
+    /// rest, limited by the battery. Wings switch between corner mode (the
+    /// coefficients below) and straight mode by themselves.
+    pub fn gen26(wheels: [WheelSpec; 4], length: f64, width: f64) -> Self {
+        let mut car = Self::gen22(wheels, length, width);
+        car.name = "GEN26".to_string();
+        // 768 kg minimum with driver plus a race-average fuel load.
+        car.mass = 805.0;
+        car.yaw_inertia = 1080.0;
+        car.cg_height = 0.27;
+        car.front_weight = 0.455;
+        // Wheel power from the V6 alone; the MGU-K adds up to 350 kW.
+        car.engine.max_power = 390_000.0;
+        car.aero = AeroSpec {
+            front_lift_area: 2.3,
+            rear_lift_area: 2.95,
+            front_wing_lift: 0.13,
+            rear_wing_lift: 0.17,
+            drag_area: 0.86,
+            front_wing_drag: 0.02,
+            rear_wing_drag: 0.04,
+            drs_drag: 0.0,
+            drs_lift: 0.0,
+            active: Some(crate::hybrid::ActiveAeroSpec {
+                drag: 0.40,
+                front_lift: 0.9,
+                rear_lift: 1.5,
+            }),
+        };
+        // Narrower tyres.
+        car.tyre_friction = 1.70;
+        car.max_brake_force = 50_000.0;
+        car.hybrid = Some(gen26_hybrid());
+        car
     }
 
     /// Red Bull RB6-style 2010 V8 car: lighter, screaming V8, high downforce.
@@ -350,17 +413,37 @@ impl CarSpec {
                 // DRS arrived in 2011.
                 drs_drag: 0.0,
                 drs_lift: 0.0,
+                active: None,
             },
             tyre_friction: 1.75,
             peak_slip_angle: 0.09,
             rear_grip: 1.1,
             max_brake_force: 48_000.0,
             brake_bias: 0.56,
+            hybrid: None,
         }
     }
 }
 
-/// Overall ratios from `first` to `top`, slightly closer together at the top.
+/// The 2026 battery and MGU-K.
+pub fn gen26_hybrid() -> crate::hybrid::HybridSpec {
+    crate::hybrid::HybridSpec {
+        mguk_power: 350_000.0,
+        corner_power: 250_000.0,
+        taper_start: 290.0 / 3.6,
+        taper_end: 355.0 / 3.6,
+        overtake_taper_start: 337.0 / 3.6,
+        capacity: 4.0e6,
+        lap_harvest: 7.0e6,
+        regen_power: 350_000.0,
+        coast_power: 250_000.0,
+        clip_power: 250_000.0,
+        overtake_energy: 0.5e6,
+        reserve: 0.35,
+        full_deploy: 0.75,
+    }
+}
+
 /// Overall ratios from `first` to `top`, spaced so each gear adds a similar
 /// slice of road speed, the way race gearboxes are stacked: low gears are not
 /// bunched together and the top gears are not left with big rpm drops.
