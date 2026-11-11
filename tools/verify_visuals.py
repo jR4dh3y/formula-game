@@ -47,7 +47,7 @@ def video(preset, enabled):
 
 def run(args, name, command, settings, extra=None):
     folder = args.output / name
-    if (folder / ('telemetry.json' if args.mode == 'captures' else 'benchmark.json')).exists():
+    if (folder / 'validated').exists():
         return
     while competitors():
         print('Waiting for', competitors(), flush=True)
@@ -64,11 +64,20 @@ def run(args, name, command, settings, extra=None):
     memory = []
     with (args.output / f'{name}.log').open('w') as log:
         child = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT)
-        while child.poll() is None:
-            contamination.extend(competitors((child.pid,)))
-            reading = subprocess.run(['nvidia-smi', '--query-gpu=memory.used,utilization.gpu', '--format=csv,noheader,nounits'], capture_output=True, text=True, check=True).stdout.strip()
-            memory.append(dict(monotonic=time.monotonic(), reading=reading))
-            time.sleep(2)
+        try:
+            while child.poll() is None:
+                contamination.extend(competitors((child.pid,)))
+                reading = subprocess.run(['nvidia-smi', '--query-gpu=memory.used,utilization.gpu', '--format=csv,noheader,nounits'], capture_output=True, text=True, check=True).stdout.strip()
+                memory.append(dict(monotonic=time.monotonic(), reading=reading))
+                time.sleep(2)
+        finally:
+            if child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
     (args.output / f'{name}-runtime.json').write_text(json.dumps(dict(contamination=contamination, gpu_samples=memory), indent=2))
     if child.returncode:
         raise RuntimeError(f'{name} exited {child.returncode}; read its log')
@@ -80,7 +89,11 @@ def run(args, name, command, settings, extra=None):
         assert report['preflight_matches_measured']
         print(name, report['metrics'], flush=True)
     else:
+        assert len(report) == 9
+        for frame in report:
+            assert (folder / f"{frame['name']}.png").is_file()
         print(name, len(report), 'scripted frames', flush=True)
+    (folder / 'validated').touch()
 
 
 def main():

@@ -33,6 +33,7 @@ impl Progress {
 #[derive(Clone, Default)]
 pub struct Score {
     pub banked: u64,
+    seen_events: usize,
     chain: u64,
     feats: u64,
     last: u64,
@@ -119,7 +120,7 @@ impl Score {
             self.sector = e.timing.sector;
             self.clean_sector = !dirty;
         }
-        for event in &race.events {
+        for event in &race.events[self.seen_events.min(race.events.len())..] {
             if let RaceEvent::LapCompleted { entrant, time, .. } = event {
                 if *entrant == session.player {
                     if self.clean_lap {
@@ -134,6 +135,7 @@ impl Score {
                 }
             }
         }
+        self.seen_events = race.events.len();
         if !dirty {
             if let Some(until) = session
                 .telemetry
@@ -291,6 +293,7 @@ fn jump(session: &mut Session, race: Race) {
     session.delta = default();
     session.telemetry = default();
     session.impact = 0.;
+    session.pending_impact = 0.;
     session.screen = Screen::Racing;
 }
 pub fn update(
@@ -332,6 +335,7 @@ pub fn update(
         {
             if let Some(snapshot) = run.history.pop_front() {
                 jump(&mut session, snapshot.race);
+                run.last_tick = session.race.tick;
                 run.score = snapshot.score;
                 run.score.lose();
                 run.history.clear();
@@ -356,7 +360,9 @@ pub fn update(
             if run.next {
                 race.laps += 1;
             }
+            race.entrants[session.player].car.assists = frontend.aids;
             jump(&mut session, race.clone());
+            run.last_tick = session.race.tick;
             session.paused = false;
             run.initial = Some(race);
             run.history.clear();
@@ -471,6 +477,25 @@ pub fn ui(
                 if let Some(best) = session.race.entrants[session.player].timing.best_lap {
                     ui.label(format!("Best lap {}", crate::hud::format_time(best)));
                 }
+                ui.separator();
+                ui.label(if session.race.phase == Phase::Finished {
+                    "RESULTS"
+                } else {
+                    "PROVISIONAL: others still finishing"
+                });
+                egui::ScrollArea::vertical()
+                    .max_height(240.)
+                    .show(ui, |ui| {
+                        for (rank, &index) in session.race.order().iter().enumerate() {
+                            let entrant = &session.race.entrants[index];
+                            let best = entrant
+                                .timing
+                                .best_lap
+                                .map(crate::hud::format_time)
+                                .unwrap_or_else(|| "-:--.---".into());
+                            ui.label(format!("P{}  {}  {}", rank + 1, entrant.name, best));
+                        }
+                    });
                 ui.separator();
                 ui.heading(format!(
                     "+{} XP • Level {}",
@@ -693,6 +718,34 @@ mod proof {
 #[cfg(test)]
 mod scoring_tests {
     use super::*;
+    #[test]
+    fn lap_events_are_consumed_once_and_cursor_rewinds_with_score() {
+        let mut session = crate::tests::session();
+        session.race.phase = Phase::Racing;
+        session.race.events.push(RaceEvent::LapCompleted {
+            entrant: session.player,
+            lap: 1,
+            time: 100.,
+        });
+        let mut score = Score {
+            clean_lap: true,
+            ..default()
+        };
+        score.tick(&session);
+        let snapshot = score.clone();
+        let chain = score.chain;
+        score.tick(&session);
+        assert_eq!(score.clean_laps, 1);
+        assert_eq!(score.chain, chain);
+        score = snapshot;
+        session.race.events.push(RaceEvent::LapCompleted {
+            entrant: session.player,
+            lap: 2,
+            time: 101.,
+        });
+        score.tick(&session);
+        assert_eq!(score.clean_laps, 2);
+    }
     #[test]
     fn quiet_banks_and_off_track_breaks_clean_credit() {
         let mut session = crate::tests::session();

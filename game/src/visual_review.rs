@@ -285,7 +285,7 @@ fn capture_review(
         println!("REVIEW {value}");
         replay.manifest.push(value);
         commands.spawn(Screenshot::primary_window()).observe(
-            move |event: On<ScreenshotCaptured>| {
+            move |event: On<ScreenshotCaptured>, mut replay: ResMut<Replay>| {
                 event
                     .image
                     .clone()
@@ -294,9 +294,13 @@ fn capture_review(
                     .to_rgb8()
                     .save(&path)
                     .unwrap();
+                replay.captured += 1;
             },
         );
-        replay.captured += 1;
+    }
+    if replay.stage == NAMES.len() - 1 && replay.frame >= at + 15 && replay.captured < NAMES.len() {
+        assert!(replay.frame < at + 3600, "screenshot saves timed out");
+        return;
     }
     if replay.frame >= at + 15 {
         replay.frame = 0;

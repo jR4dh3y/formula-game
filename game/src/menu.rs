@@ -495,6 +495,7 @@ pub fn apply(
         ready: false,
         pings: Vec::new(),
         impact: 0.,
+        pending_impact: 0.,
         screen: Screen::Loading,
     };
     *options = selected;
@@ -1155,6 +1156,10 @@ fn render_settings_page(
             }
             Tab::Setup => setup_choice(ui, frontend),
             Tab::Aids => {
+                ui.checkbox(
+                    &mut frontend.rewind,
+                    "Allow offline rewind (Z / right stick click)",
+                );
                 let presets = aids_panel(ui, frontend);
                 #[cfg(test)]
                 for (name, rect) in ["beginner", "balanced", "unassisted"]
@@ -1651,7 +1656,7 @@ fn car_control_sliders(ui: &mut egui::Ui, aids: &mut Assists) {
         (
             &mut aids.stability,
             "Stability assistance",
-            "Helps recover a developing slide. With steering above 50% and stability at least 50%, also steadies turn-in at the grip limit.",
+            "Helps recover a developing slide. With steering at least 50% and stability at least 50%, also steadies turn-in at the grip limit.",
         ),
     ] {
         setting_row(ui, label, |ui| {
@@ -1809,10 +1814,6 @@ fn video_choice<T: Copy + PartialEq>(
 
 fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Session) {
     use crate::graphics::{AntiAlias, Level, ShadowFilter, TextureDetail};
-    ui.checkbox(
-        &mut frontend.rewind,
-        "Allow offline rewind (Z / right stick click)",
-    );
     section(ui, "Quality preset");
     ui.horizontal_wrapped(|ui| {
         for quality in crate::graphics::Quality::ALL {

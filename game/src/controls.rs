@@ -84,7 +84,10 @@ fn active_pad<'a>(
 }
 
 pub fn update(
-    keys: Res<ButtonInput<KeyCode>>,
+    input: (
+        Res<ButtonInput<KeyCode>>,
+        MessageReader<bevy::input::gamepad::GamepadEvent>,
+    ),
     pads: Query<(Entity, &Gamepad)>,
     mut active: Local<Option<Entity>>,
     time: Res<Time>,
@@ -92,9 +95,25 @@ pub fn update(
     benchmark: Option<Res<crate::benchmark::Run>>,
     mut online: Option<ResMut<crate::online::Online>>,
 ) {
+    let (keys, mut pad_events) = input;
     if benchmark.is_some() {
         session.controls = Controls::default();
         return;
+    }
+    for event in pad_events.read() {
+        use bevy::input::gamepad::GamepadEvent;
+        let entity = match event {
+            GamepadEvent::Axis(e)
+                if e.axis == GamepadAxis::LeftStickX && e.value.abs() > STICK_DEADZONE =>
+            {
+                Some(e.entity)
+            }
+            GamepadEvent::Button(e) if e.value > 0.1 => Some(e.entity),
+            _ => None,
+        };
+        if let Some(entity) = entity.filter(|entity| pads.get(*entity).is_ok()) {
+            *active = Some(entity);
+        }
     }
     let pad = active_pad(&pads, &mut active);
     session.controls.speed = session.race.entrants[session.player].car.speed();

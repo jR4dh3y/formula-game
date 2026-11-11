@@ -135,6 +135,7 @@ pub struct ChaseCamera {
     pub mode: Mode,
     pub tuning: Tuning,
     position: DVec3,
+    rendered_eye: DVec3,
     target: DVec3,
     yaw: f64,
     fov: f32,
@@ -157,6 +158,7 @@ impl ChaseCamera {
             mode: Mode::Chase,
             tuning: Tuning::for_car(&car.spec.name),
             position: car.position,
+            rendered_eye: car.position,
             target: car.position,
             yaw: car.yaw,
             fov: 54.,
@@ -242,10 +244,11 @@ impl ChaseCamera {
     }
     /// Eye position and look-at point; the audio listener follows them.
     pub fn listener(&self) -> (DVec3, DVec3) {
-        (self.position, self.target)
+        (self.rendered_eye, self.target)
     }
     fn snap(&mut self, pose: &Pose) {
         (self.position, self.target) = self.desired(pose);
+        self.rendered_eye = self.position;
     }
     pub fn update(
         &mut self,
@@ -279,7 +282,7 @@ impl ChaseCamera {
         // than where it points, so yaw wobble and slides turn the car in the
         // frame instead of swinging the whole world.
         let course = car.velocity.x.atan2(car.velocity.y);
-        let lean = if self.mode == Mode::Chase && !cut {
+        let lean = if self.mode == Mode::Chase && self.motion_enabled && !cut {
             0.6 * ((car.speed() - 10.) / 20.).clamp(0., 1.)
         } else {
             0.
@@ -322,10 +325,14 @@ impl ChaseCamera {
                 let t = offset.perp_dot(edge) / denominator;
                 let u = offset.perp_dot(boom) / denominator;
                 if (0. ..=1.).contains(&t) && (0. ..=1.).contains(&u) {
-                    clear = clear.min((t - 0.4 / boom.length().max(0.4)).max(0.55));
+                    clear = clear.min((t - 0.4 / boom.length().max(0.4)).max(0.));
                 }
             }
-            self.boom += (clear - self.boom) * (1. - (-dt * 8.).exp());
+            self.boom = if clear < self.boom {
+                clear
+            } else {
+                self.boom + (clear - self.boom) * (1. - (-dt * 8.).exp())
+            };
             eye.x = anchor.x + boom.x * self.boom;
             eye.z = anchor.y + boom.y * self.boom;
             let needed = race
@@ -346,7 +353,8 @@ impl ChaseCamera {
             * (car.speed() / 50.).min(1.)
             * 0.12;
         let shake = (vibration + (self.impact / 8000.).min(0.12)) * self.tuning.shake;
-        *transform = Transform::from_translation(to_vec3(eye + DVec3::Y * shake))
+        self.rendered_eye = eye + DVec3::Y * shake;
+        *transform = Transform::from_translation(to_vec3(self.rendered_eye))
             .looking_at(to_vec3(self.target), Vec3::Y);
         if let Projection::Perspective(lens) = projection {
             lens.near = if self.mode == Mode::Cockpit {

@@ -463,7 +463,10 @@ mod tests {
                 assert_eq!(material.perceptual_roughness, 0.85);
                 assert_eq!(material.reflectance, 0.5);
                 assert_eq!(material.metallic, 0.);
-                assert_eq!(material.base_color, Color::WHITE);
+                assert_eq!(
+                    material.base_color,
+                    Color::linear_rgb(TYRE_TINT, TYRE_TINT, TYRE_TINT)
+                );
                 let texture = material.base_color_texture.as_ref().unwrap();
                 let image = images.get(texture).unwrap();
                 assert!(image.texture_descriptor.mip_level_count > 1);

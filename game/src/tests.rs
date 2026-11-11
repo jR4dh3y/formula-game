@@ -74,6 +74,7 @@ pub(super) fn session() -> Session {
         ready: false,
         pings: Vec::new(),
         impact: 0.,
+        pending_impact: 0.,
         screen: menu::Screen::Racing,
     }
 }
@@ -89,6 +90,7 @@ fn bevy_fixed_schedule_waits_for_assets_and_pauses_and_resumes() {
         .insert_resource(session())
         .init_resource::<ButtonInput<KeyCode>>()
         .add_message::<AppExit>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(PreUpdate, controls::update)
         .add_systems(FixedUpdate, step_race);
     let initial_time = app.world().resource::<Session>().race.time;
@@ -337,6 +339,7 @@ fn drs_key_requests_the_flap_only_while_racing() {
     app.add_plugins(MinimalPlugins)
         .insert_resource(state)
         .init_resource::<ButtonInput<KeyCode>>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(Update, controls::update);
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()
@@ -369,6 +372,7 @@ fn camera_shortcuts_pause_menu_and_menu_input_isolation() {
         .insert_resource(session())
         .init_resource::<ButtonInput<KeyCode>>()
         .add_message::<AppExit>()
+        .add_message::<bevy::input::gamepad::GamepadEvent>()
         .add_systems(PreUpdate, controls::update);
     for (key, expected) in [
         (KeyCode::Digit1, camera::Mode::Cockpit),

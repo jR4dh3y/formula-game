@@ -132,8 +132,6 @@ pub(crate) struct GameAudio {
     slots: [Option<usize>; RIVALS],
     listener: Option<DVec3>,
     impact_cooldown: f32,
-    /// The held impulse last frame, to tell a new collision from its fade.
-    heard_impact: f64,
 }
 
 /// The single continuous stereo stream the game plays.
@@ -589,7 +587,6 @@ pub fn setup(mut commands: Commands, mut sources: ResMut<Assets<Soundscape>>) {
         slots: [None; RIVALS],
         listener: None,
         impact_cooldown: 0.,
-        heard_impact: 0.,
     });
 }
 
@@ -640,7 +637,7 @@ fn publish(feed: &Feed, id: u32, car: &racecraft_sim::Car, throttle: f32, brake:
 }
 
 pub fn update(
-    session: Res<Session>,
+    mut session: ResMut<Session>,
     keys: Res<ButtonInput<KeyCode>>,
     options: Res<Options>,
     time: Res<Time>,
@@ -675,6 +672,7 @@ pub fn update(
     s.effects.set(settings.effects * settings.effects);
     s.opponents.set(settings.opponents * settings.opponents);
 
+    let impact = std::mem::take(&mut session.pending_impact);
     let race = &session.race;
     let car = &race.entrants[session.player].car;
     let (eye, look) = session.camera.listener();
@@ -737,18 +735,11 @@ pub fn update(
     s.wheel_rps
         .set((car.forward_speed().abs() / (radius * std::f64::consts::TAU)) as f32);
     audio.impact_cooldown = (audio.impact_cooldown - dt as f32).max(0.);
-    // The held impulse only rises on a new collision.
-    let impact = session.impact;
-    if impact > 300.
-        && impact > audio.heard_impact
-        && audio.impact_cooldown == 0.
-        && !session.paused
-    {
+    if impact > 300. && audio.impact_cooldown == 0. && !session.paused {
         s.impact.set((impact / 4000.).min(1.) as f32);
         s.impacts.fetch_add(1, Ordering::Relaxed);
         audio.impact_cooldown = 0.15;
     }
-    audio.heard_impact = impact;
 
     // Keep each nearby rival in a stable voice slot so its engine never jumps.
     let mut nearest: Vec<(usize, Placement)> = race

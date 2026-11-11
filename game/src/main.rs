@@ -68,6 +68,8 @@ pub struct Session {
     /// and a frame spans several ticks: reading the car each frame misses
     /// most collisions.
     pub impact: f64,
+    /// Strongest collision since the audio update, consumed once per frame.
+    pub pending_impact: f64,
 }
 
 /// Seconds for a collision's camera jolt to fade to about a third.
@@ -177,6 +179,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         ready: false,
         pings: Vec::new(),
         impact: 0.,
+        pending_impact: 0.,
         screen: if quick_race {
             menu::Screen::Racing
         } else {
@@ -438,6 +441,7 @@ fn step_race(
         race.step(&[input]);
     }
     let hit = session.race.entrants[session.player].car.impact;
+    session.pending_impact = session.pending_impact.max(hit);
     session.impact = (session.impact * (-1. / (PHYSICS_RATE * IMPACT_FADE)).exp()).max(hit);
     session.sample_hud();
     if !connected {
