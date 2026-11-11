@@ -58,8 +58,10 @@ impl Preferences {
             ai_power: options.ai_power,
             camera: options.camera,
             views: racecraft_sim::CarSpec::ERAS
-                .map(|id| (id.into(), Tuning::for_car(id)))
-                .into(),
+                .iter()
+                .chain(&racecraft_sim::CarSpec::DRIFT_CARS)
+                .map(|id| ((*id).into(), Tuning::for_car(id)))
+                .collect(),
             graphics: options.graphics,
             video: None,
             vsync: options.vsync,
@@ -76,9 +78,12 @@ impl Preferences {
         if let Some(old) = self.views.remove("rb22") {
             self.views.entry("gen22".into()).or_insert(old);
         }
-        for id in racecraft_sim::CarSpec::ERAS {
+        for id in racecraft_sim::CarSpec::ERAS
+            .iter()
+            .chain(&racecraft_sim::CarSpec::DRIFT_CARS)
+        {
             self.views
-                .entry(id.into())
+                .entry((*id).into())
                 .or_insert_with(|| Tuning::for_car(id));
         }
         for value in [

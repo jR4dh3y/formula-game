@@ -244,6 +244,8 @@ pub struct CarSpec {
     /// Maximum total brake force, N.
     pub max_brake_force: f64,
     pub brake_bias: f64,
+    /// Road-wheel angle at full lock, rad.
+    pub steer_lock: f64,
     /// 2026 battery and MGU-K; `None` when `engine.max_power` already
     /// includes any hybrid deployment.
     pub hybrid: Option<crate::hybrid::HybridSpec>,
@@ -271,6 +273,8 @@ impl CarSpec {
 
     /// Car eras by ID, as named on the command line and in `assets/cars/`.
     pub const ERAS: [&'static str; 3] = ["rb6", "gen22", "gen26"];
+    /// Cars that race in drift mode only.
+    pub const DRIFT_CARS: [&'static str; 1] = ["thar"];
 
     /// The car for an era ID, or `None` for an unknown one.
     pub fn for_era(id: &str, geometry: &CarGeometry) -> Option<Self> {
@@ -278,6 +282,7 @@ impl CarSpec {
             "rb6" => Some(Self::rb6_with(geometry)),
             "gen22" => Some(Self::gen22_with(geometry)),
             "gen26" => Some(Self::gen26_with(geometry)),
+            "thar" => Some(Self::thar_with(geometry)),
             _ => None,
         }
     }
@@ -339,6 +344,7 @@ impl CarSpec {
             rear_grip: 1.1,
             max_brake_force: 52_000.0,
             brake_bias: 0.57,
+            steer_lock: 0.36,
             hybrid: None,
         }
     }
@@ -381,6 +387,59 @@ impl CarSpec {
         car
     }
 
+    /// Mahindra Thar Roxx-style SUV for drift mode: rear drive, road tyres,
+    /// a tall body and no downforce. Tuned to hold a power slide on throttle.
+    pub fn thar_with(geometry: &CarGeometry) -> Self {
+        Self::thar(geometry.wheels, geometry.length, geometry.width)
+    }
+
+    pub fn thar(wheels: [WheelSpec; 4], length: f64, width: f64) -> Self {
+        Self {
+            name: "THAR".to_string(),
+            // A drift build: lighter and far stronger than the 150 kW road car,
+            // which cannot keep its rear tyres spinning once moving.
+            mass: 1_700.0,
+            // A box of 4.4 x 1.9 m: m (L^2 + W^2) / 12.
+            yaw_inertia: 3_400.0,
+            cg_height: 0.62,
+            front_weight: 0.54,
+            wheels,
+            length,
+            width,
+            engine: EngineSpec {
+                max_power: 260_000.0,
+                peak_power_rpm: 5_000.0,
+                rev_limit: 6_200.0,
+                idle_rpm: 850.0,
+                gear_ratios: gear_set(15.5, 4.2, 6),
+                reverse_ratio: 16.0,
+                upshift_time: 0.18,
+                downshift_time: 0.2,
+            },
+            aero: AeroSpec {
+                front_lift_area: 0.0,
+                rear_lift_area: 0.0,
+                front_wing_lift: 0.0,
+                rear_wing_lift: 0.0,
+                drag_area: 1.25,
+                front_wing_drag: 0.0,
+                rear_wing_drag: 0.0,
+                drs_drag: 0.0,
+                drs_lift: 0.0,
+                active: None,
+            },
+            tyre_friction: 1.0,
+            peak_slip_angle: 0.14,
+            // Same tyres all round: no wider rears to hold the slide back.
+            rear_grip: 1.0,
+            max_brake_force: 19_000.0,
+            brake_bias: 0.66,
+            // A road car's lock: enough to catch a big slide.
+            steer_lock: 0.65,
+            hybrid: None,
+        }
+    }
+
     /// Red Bull RB6-style 2010 V8 car: lighter, screaming V8, high downforce.
     pub fn rb6(wheels: [WheelSpec; 4], length: f64, width: f64) -> Self {
         Self {
@@ -420,6 +479,7 @@ impl CarSpec {
             rear_grip: 1.1,
             max_brake_force: 48_000.0,
             brake_bias: 0.56,
+            steer_lock: 0.36,
             hybrid: None,
         }
     }

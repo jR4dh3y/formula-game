@@ -6,6 +6,7 @@ mod benchmark;
 mod camera;
 mod canvas;
 mod controls;
+mod drift;
 mod driving;
 mod effects;
 mod graphics;
@@ -264,6 +265,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
         .init_resource::<textures::TextureJobs>()
+        .init_resource::<drift::DriftScore>()
         .init_resource::<meshes::MeshJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
@@ -277,6 +279,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
+        .add_systems(Update, drift::update)
         .add_systems(
             Update,
             assets::spawn_scene.run_if(assets::launch_screen_shown),
@@ -324,7 +327,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(
             EguiPrimaryContextPass,
-            (hud::update, menu::ui, race_loop::ui).chain(),
+            (hud::update, menu::ui, race_loop::ui, drift::ui).chain(),
         )
         .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(

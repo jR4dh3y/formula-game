@@ -98,6 +98,7 @@ pub struct PackedInput {
 }
 const DRS_FLAG: u8 = 1;
 const HARVEST_FLAG: u8 = 2;
+const HANDBRAKE_FLAG: u8 = 4;
 impl PackedInput {
     pub fn pack(input: &CarInput) -> Self {
         let unit = |x: f64| (x.clamp(0., 1.) * u16::MAX as f64).round() as u16;
@@ -106,7 +107,8 @@ impl PackedInput {
             throttle: unit(input.throttle),
             brake: unit(input.brake),
             flags: if input.drs { DRS_FLAG } else { 0 }
-                | if input.harvest { HARVEST_FLAG } else { 0 },
+                | if input.harvest { HARVEST_FLAG } else { 0 }
+                | if input.handbrake { HANDBRAKE_FLAG } else { 0 },
         }
     }
     pub fn unpack(&self) -> CarInput {
@@ -116,11 +118,12 @@ impl PackedInput {
             brake: self.brake as f64 / u16::MAX as f64,
             drs: self.flags & DRS_FLAG != 0,
             harvest: self.flags & HARVEST_FLAG != 0,
+            handbrake: self.flags & HANDBRAKE_FLAG != 0,
             ..CarInput::default()
         }
     }
     pub fn valid(&self) -> bool {
-        self.steer != i16::MIN && self.flags & !(DRS_FLAG | HARVEST_FLAG) == 0
+        self.steer != i16::MIN && self.flags & !(DRS_FLAG | HARVEST_FLAG | HANDBRAKE_FLAG) == 0
     }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -274,7 +277,7 @@ mod tests {
             assert_eq!((back.drs, back.harvest), (drs, harvest));
         }
         let unknown = PackedInput {
-            flags: 4,
+            flags: 8,
             ..PackedInput::default()
         };
         assert!(!unknown.valid());

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build a single-file Windows game with bundled assets and no installer."""
 import argparse
+from drift_assets import copy_drift_assets
 import hashlib
 import json
 import os
@@ -151,6 +152,7 @@ def main():
             destination = package / "assets" / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(assets / path, destination)
+        has_drift = copy_drift_assets(assets, package / "assets")
         # The 2026 car is optional: the menu only offers installed cars.
         if (assets / "cars/gen26/car.json").is_file():
             shutil.copytree(assets / "cars/gen26", package / "assets/cars/gen26")
@@ -166,6 +168,7 @@ def main():
         shutil.copy2(ROOT / "tools/package/WINDOWS.md", package / "README.md")
         licenses = package / "licenses"
         licenses.mkdir()
+        shutil.copy2(ROOT / "README.md", licenses / "ASSET-CREDITS.md")
         shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "FONT-OFL.txt")
         shutil.copy2(ROOT / "game/audio/reference/CREDITS.md", licenses / "AUDIO-CREDITS.md")
         notices = copy_notices(cargo, ROOT / "Cargo.toml", package)
@@ -176,7 +179,7 @@ def main():
         (package / "BUILD.json").write_text(json.dumps({
             "source": "https://github.com/jR4dh3y/formula-game",
             "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-            "target": args.target, "experimental": False, "tracks": ["spa"],
+            "target": args.target, "experimental": False, "tracks": ["spa", "driftpark"] if has_drift else ["spa"],
             "rustc": subprocess.check_output(["rustc", "--version"], text=True).strip(),
             "assets_sha256": {path.as_posix(): hashlib.sha256((assets / path).read_bytes()).hexdigest()
                               for path in required},
