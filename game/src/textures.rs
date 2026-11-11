@@ -391,6 +391,8 @@ mod tests {
     }
 
     #[test]
+    // Windows builds ship uncompressed textures (`compress_bc7` is a no-op).
+    #[cfg(not(windows))]
     fn bc7_preserves_resolution_colour_space_and_the_complete_mip_tail() {
         for (format, compressed) in [
             (
