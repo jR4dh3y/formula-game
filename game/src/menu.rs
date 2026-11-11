@@ -247,6 +247,7 @@ impl Catalog {
 
 #[derive(Resource)]
 pub struct Frontend {
+    pub rewind: bool,
     pub catalog: Catalog,
     pub teams: crate::teams::Teams,
     pub draft: Options,
@@ -297,6 +298,7 @@ impl Frontend {
             draft.driver = driver.id.clone();
         }
         Self {
+            rewind: prefs.rewind,
             catalog: Catalog::discover(&options.assets),
             teams,
             draft,
@@ -383,6 +385,7 @@ pub fn apply(
         }
     }
     let prefs = crate::preferences::Preferences {
+        rewind: frontend.rewind,
         team: frontend.draft.team.clone(),
         weather: frontend.draft.weather,
         driver: frontend.draft.driver.clone(),
@@ -491,6 +494,7 @@ pub fn apply(
         telemetry: default(),
         ready: false,
         pings: Vec::new(),
+        impact: 0.,
         screen: Screen::Loading,
     };
     *options = selected;
@@ -1548,7 +1552,8 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
                 frontend.corner_braking = 0.6;
                 frontend.show_racing_line = true;
                 *aids = Assists {
-                    steering: 0.6,
+                    // The whole steering filter and no line guidance.
+                    steering: 0.5,
                     braking: 0.6,
                     traction: 0.6,
                     stability: 0.5,
@@ -1630,7 +1635,8 @@ fn car_control_sliders(ui: &mut egui::Ui, aids: &mut Assists) {
         (
             &mut aids.steering,
             "Steering assistance",
-            "Guides towards the racing line. Strong manual steering takes priority.",
+            "Up to 50% steadies the wheel and limits steering lock with speed; you do all \
+             the steering. Above 50% it also guides the car towards the racing line.",
         ),
         (
             &mut aids.braking,
@@ -1721,6 +1727,9 @@ fn camera_editor(viewport: &egui::Ui, session: &mut Session, car: &str) {
                                 egui::Slider::new(&mut tuning.shake, 0.0..=1.),
                             );
                         });
+                        setting_row(ui, "Chase dynamics", |ui| {
+                            ui.add(egui::Slider::new(&mut tuning.dynamics, 0.0..=1.));
+                        });
                         setting_row(ui, "Stable horizon", |ui| {
                             ui.add_sized(
                                 egui::vec2(ui.available_width(), 28.),
@@ -1800,6 +1809,10 @@ fn video_choice<T: Copy + PartialEq>(
 
 fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Session) {
     use crate::graphics::{AntiAlias, Level, ShadowFilter, TextureDetail};
+    ui.checkbox(
+        &mut frontend.rewind,
+        "Allow offline rewind (Z / right stick click)",
+    );
     section(ui, "Quality preset");
     ui.horizontal_wrapped(|ui| {
         for quality in crate::graphics::Quality::ALL {
@@ -1916,7 +1929,7 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
         );
         setting_row(lighting, "Contact shadows", |ui| {
             ui.add_enabled(
-                video.ambient_occlusion != Level::Off,
+                video.anti_alias != crate::graphics::AntiAlias::Msaa4,
                 egui::Checkbox::new(&mut video.contact_shadows, "Enabled"),
             );
         });
@@ -1928,6 +1941,23 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
             &Level::ALL[1..],
             Level::label,
         );
+        video_choice(
+            lighting,
+            "effects",
+            "Surface effects",
+            &mut video.effects,
+            &Level::ALL,
+            Level::label,
+        );
+        setting_row(lighting, "Asphalt detail", |ui| {
+            ui.checkbox(&mut video.surface_detail, "Enabled");
+        });
+        setting_row(lighting, "Daylight balance", |ui| {
+            ui.checkbox(&mut video.cinematic_lighting, "Enabled");
+        });
+        setting_row(lighting, "Camera motion", |ui| {
+            ui.checkbox(&mut video.camera_motion, "Enabled");
+        });
         setting_row(lighting, "Haze", |ui| {
             ui.add_sized(
                 egui::vec2(ui.available_width(), 28.),
@@ -2451,7 +2481,7 @@ mod tests {
                 ],
             );
         }
-        assert!((frontend.aids.steering - 0.6).abs() < 1e-9);
+        assert!((frontend.aids.steering - 0.5).abs() < 1e-9);
         assert!((frontend.aids.braking - 0.6).abs() < 1e-9);
         assert!((frontend.corner_braking - 0.6).abs() < 1e-9);
     }

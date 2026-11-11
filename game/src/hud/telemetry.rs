@@ -113,6 +113,16 @@ pub struct Telemetry {
 }
 
 impl Telemetry {
+    pub(crate) fn reward_pass(&self) -> Option<u64> {
+        self.pass.as_ref().filter(|p| p.gained).map(|p| p.until)
+    }
+    pub(crate) fn reward_sector_best(&self, sector: usize) -> bool {
+        self.splits[sector].is_some_and(|s| s.delta.is_some_and(|d| d < 0.))
+    }
+    pub(crate) fn reward_values(&self) -> (f64, f64) {
+        (self.speed.value(0.), self.tow.value(0.))
+    }
+
     pub(super) fn recover(&mut self) {
         self.speed = Average::default();
         self.rpm = Average::default();

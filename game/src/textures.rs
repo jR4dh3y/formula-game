@@ -252,7 +252,7 @@ fn compressed_cache_path(image: &Image) -> Option<std::path::PathBuf> {
     )
 }
 
-fn generate_mips(image: &mut Image) -> bool {
+pub(crate) fn generate_mips(image: &mut Image) -> bool {
     let desc = &image.texture_descriptor;
     if desc.dimension != TextureDimension::D2
         || desc.size.depth_or_array_layers != 1

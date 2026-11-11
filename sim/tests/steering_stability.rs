@@ -266,3 +266,69 @@ fn probe_laps() {
         }
     }
 }
+
+/// Find actual Spa kerbs rather than substituting a grip multiplier. Drive
+/// straight over each sampled patch for half a second with no recovery teleport.
+#[test]
+fn player_kerb_crossings() {
+    use racecraft_sim::{Car, CarInput, Setup, Surface};
+    let Some(root) = assets() else {
+        eprintln!("assets missing; skipped");
+        return;
+    };
+    let track = Track::load(root.join("tracks/spa")).unwrap();
+    for model in ["gen22", "rb6"] {
+        let spec = spec(&root, model);
+        let mut crossings = 0;
+        let mut peak_slip = 0.0_f64;
+        let mut worst_off = 0.0_f64;
+        for station in track.stations.iter().step_by(25) {
+            for side in [-1.0, 1.0] {
+                let position = station.point_at(side * (station.half_width - 0.5));
+                let mut car = Car::new(
+                    spec.clone(),
+                    Setup::default(),
+                    Assists {
+                        steering: 1.0,
+                        stability: 1.0,
+                        braking: 1.0,
+                        traction: 1.0,
+                        automatic_gears: true,
+                        ..Assists::default()
+                    },
+                    &track,
+                    position,
+                    station.tangent.x.atan2(station.tangent.y),
+                );
+                car.velocity = car.forward() * (120.0 / 3.6);
+                car.powertrain.gear = 3;
+                car.step(&CarInput::default(), &track, 1.0 / 360.0);
+                let kerbs = car
+                    .wheels
+                    .iter()
+                    .filter(|w| w.surface == Surface::Kerb)
+                    .count();
+                if !(1..=2).contains(&kerbs) {
+                    continue;
+                }
+                crossings += 1;
+                for _ in 0..180 {
+                    car.step(&CarInput::default(), &track, 1.0 / 360.0);
+                    let slip = car
+                        .velocity
+                        .dot(car.left())
+                        .atan2(car.forward_speed())
+                        .abs();
+                    peak_slip = peak_slip.max(slip);
+                    worst_off = worst_off.max(
+                        car.track_position.lateral.abs()
+                            - track.station(car.track_position.station).half_width,
+                    );
+                }
+            }
+        }
+        println!("{model}: {crossings} kerb crossings, peak body slip {:.2} deg, worst off-track {worst_off:.2} m", peak_slip.to_degrees());
+        assert!(crossings > 5, "probe did not reach enough real kerbs");
+        assert!(peak_slip < 0.3, "kerb crossing spun the car");
+    }
+}

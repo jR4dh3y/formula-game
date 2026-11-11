@@ -9,6 +9,8 @@ use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Preferences {
+    #[serde(default = "vsync_default")]
+    pub rewind: bool,
     #[serde(default)]
     pub team: String,
     #[serde(default)]
@@ -46,6 +48,7 @@ fn vsync_default() -> bool {
 impl Preferences {
     pub fn defaults(options: &Options) -> Self {
         Self {
+            rewind: true,
             team: options.team.clone(),
             weather: options.weather,
             driver: options.driver.clone(),

@@ -60,7 +60,7 @@ impl Guidance {
         // Full manual steering is an override. With no steering input, 100%
         // guidance follows the line. Never accelerate or steer a reversing car.
         if car.powertrain.gear > 0 && car.forward_speed() >= -0.5 {
-            let strength = car.assists.steering * (1. - raw.steer.abs().powi(2));
+            let strength = car.assists.steering_guidance() * (1. - raw.steer.abs().powi(2));
             input.steer += (reference.steer - raw.steer) * strength;
             let braking = corner_braking.clamp(0., 1.);
             if braking > 0. {
@@ -347,5 +347,386 @@ mod tests {
                 .steer,
             -1.
         );
+    }
+}
+
+#[cfg(test)]
+mod handling_probe {
+    use super::*;
+    use racecraft_sim::{Phase, Surface, PHYSICS_RATE};
+    const DT: f64 = 1.0 / PHYSICS_RATE;
+
+    #[derive(Clone, Copy, Debug)]
+    enum Error {
+        Late(f64),
+        Off(Surface, usize, f64),
+        Exit,
+        Weave,
+        Lift,
+        Clean,
+        CleanLate,
+        CleanExit,
+    }
+
+    fn race(model: &str, opponents: &str) -> Race {
+        let root = std::env::var("F1_TEST_ASSETS").expect("F1_TEST_ASSETS");
+        let options = crate::options::Options::parse(
+            [
+                "--assets",
+                &root,
+                "--car",
+                model,
+                "--opponents",
+                opponents,
+                "--grid",
+                "1",
+                "--laps",
+                "10",
+            ]
+            .into_iter()
+            .map(String::from),
+        )
+        .unwrap();
+        let mut race = crate::assets::load_race(&options).unwrap();
+        race.phase = Phase::Racing;
+        race.time = 0.;
+        race
+    }
+
+    #[derive(Debug)]
+    struct Result {
+        spin: bool,
+        slip: f64,
+        off: f64,
+        recovery: Option<f64>,
+        gate: Option<f64>,
+        surface_ticks: usize,
+        two: bool,
+        four: bool,
+        speed: f64,
+        dirt_seconds: f64,
+        return_yaw_step: f64,
+    }
+
+    /// Free motion throughout: start on the normal grid and use the same
+    /// Guidance -> Race::step path as main.rs. No recovery or pose resets.
+    fn drive(template: &Race, model: &str, trigger: f64, error: Error) -> Result {
+        let mut race = template.clone();
+        let mut guide = Guidance::new(&race, 0);
+        let mut start = None;
+        let mut start_s = trigger;
+        let mut released = None;
+        let mut steer = 0.0_f64;
+        let mut stable = 0;
+        let mut previous_dirt = false;
+        let mut previous_yaw = 0.0_f64;
+        let mut result = Result {
+            spin: false,
+            slip: 0.,
+            off: 0.,
+            recovery: None,
+            gate: None,
+            surface_ticks: 0,
+            two: false,
+            four: false,
+            speed: 0.,
+            dirt_seconds: 0.,
+            return_yaw_step: 0.,
+        };
+        for _ in 0..(350. * PHYSICS_RATE) as usize {
+            let car = &race.entrants[0].car;
+            let s = car.track_position.s;
+            let trigger_reached = if matches!(error, Error::Late(_) | Error::CleanLate) {
+                s >= trigger - 180.
+                    && s <= trigger + 100.
+                    && guide.activity.input.brake > 0.05
+                    && car.speed() > 25.
+            } else {
+                s >= trigger
+            };
+            if start.is_none() && trigger_reached && race.entrants[0].timing.laps_completed >= 1 {
+                start_s = s;
+                start = Some(race.time);
+                result.speed = car.speed() * 3.6;
+            }
+            let age = start.map_or(-1., |t| race.time - t);
+            let mut raw = CarInput {
+                throttle: 1.,
+                ..Default::default()
+            };
+            let mut corner_braking = 1.;
+            if matches!(error, Error::Exit | Error::CleanExit) && s < trigger && s > trigger - 40. {
+                raw.throttle = 0.4;
+            }
+            if age >= 0. {
+                match error {
+                    Error::Late(distance) if s < start_s + distance => {
+                        corner_braking = 0.;
+                    }
+                    Error::Off(surface, wheels, direction) if released.is_none() => {
+                        let count = car.wheels.iter().filter(|w| w.surface == surface).count();
+                        result.two |= count >= 2;
+                        result.four |= count == 4;
+                        result.surface_ticks += usize::from(count >= wheels);
+                        let required_ticks = if wheels == 2 { 1 } else { 36 };
+                        if result.surface_ticks >= required_ticks || age > 3. {
+                            released = Some(race.time);
+                        } else {
+                            raw.steer = direction;
+                            raw.throttle = 0.4;
+                        }
+                    }
+                    Error::Exit => {}
+                    Error::CleanExit => raw.throttle = 0.4,
+                    Error::Weave if age < 0.45 => {
+                        let target: f64 = if (age / 0.15) as usize == 1 { -1. } else { 1. };
+                        let rate = if target.signum() != steer.signum() {
+                            7.
+                        } else {
+                            3.2
+                        };
+                        steer += (target - steer).clamp(-rate * DT, rate * DT);
+                        raw.steer = steer;
+                    }
+                    Error::Weave if steer != 0. => {
+                        steer += (-steer).clamp(-7. * DT, 7. * DT);
+                        raw.steer = steer;
+                    }
+                    Error::Lift if age < 1. => raw.throttle = 0.,
+                    _ => {}
+                }
+            }
+            let input = guide.apply(
+                &race.entrants[0].car,
+                &race.track,
+                &[],
+                raw,
+                corner_braking,
+                DT,
+            );
+            race.step(&[input]);
+            if let Some(start) = start {
+                let car = &race.entrants[0].car;
+                let age = race.time - start;
+                let dirt = car
+                    .wheels
+                    .iter()
+                    .filter(|w| matches!(w.surface, Surface::Grass | Surface::Gravel))
+                    .count();
+                if dirt > 0 {
+                    result.dirt_seconds += DT;
+                }
+                if previous_dirt && dirt == 0 {
+                    result.return_yaw_step = result
+                        .return_yaw_step
+                        .max((car.yaw_rate - previous_yaw).abs());
+                }
+                previous_dirt = dirt > 0;
+                previous_yaw = car.yaw_rate;
+                if let Error::Off(surface, _, _) = error {
+                    let count = car.wheels.iter().filter(|w| w.surface == surface).count();
+                    result.two |= count >= 2;
+                    result.four |= count == 4;
+                }
+                let slip = car
+                    .velocity
+                    .dot(car.left())
+                    .atan2(car.forward_speed())
+                    .abs();
+                if car.speed() > 5. {
+                    result.slip = result.slip.max(slip.to_degrees());
+                }
+                result.spin |= slip > std::f64::consts::FRAC_PI_2 && car.speed() > 5.;
+                result.off = result.off.max(
+                    car.track_position.lateral.abs()
+                        - race.track.station(car.track_position.station).half_width,
+                );
+                let line = race.track.racing_line.lateral_at(car.track_position.s);
+                let at_pace =
+                    car.speed() >= guide.target_speed(&race.track, car.track_position.s) * 0.9;
+                let done = match error {
+                    Error::Off(..) => released.is_some(),
+                    Error::Late(distance) => {
+                        car.track_position.s > (start_s + distance).max(trigger + 300.)
+                    }
+                    _ => age > 1.,
+                };
+                if done && (car.track_position.lateral - line).abs() < 1.5 && at_pace && slip < 0.1
+                {
+                    stable += 1;
+                    if stable >= 180 && result.recovery.is_none() {
+                        result.recovery = Some(age - 0.5);
+                    }
+                } else {
+                    stable = 0;
+                }
+                if car.track_position.s >= trigger + 450. && result.gate.is_none() {
+                    result.gate = Some(age);
+                }
+                if age >= 30. || (result.gate.is_some() && result.recovery.is_some()) {
+                    break;
+                }
+            }
+        }
+        assert!(
+            start.is_some(),
+            "{model} {error:?}: never reached trigger {trigger}"
+        );
+        result
+    }
+
+    #[test]
+    #[ignore = "requires converted assets; prints free-driving handling measurements"]
+    fn spa_player_mistakes() {
+        for model in ["gen22", "rb6"] {
+            let template = race(model, "0");
+            for (label, trigger, error) in [
+                ("la-source-late30", 130., Error::Late(30.)),
+                ("la-source-late50", 130., Error::Late(50.)),
+                ("les-combes-late30", 2120., Error::Late(30.)),
+                ("les-combes-late50", 2120., Error::Late(50.)),
+                ("bus-stop-late30", 6480., Error::Late(30.)),
+                ("bus-stop-late50", 6480., Error::Late(50.)),
+                ("two-grass", 2120., Error::Off(Surface::Grass, 2, 1.)),
+                ("four-grass", 2120., Error::Off(Surface::Grass, 4, 1.)),
+                ("two-gravel", 2260., Error::Off(Surface::Gravel, 2, -1.)),
+                ("four-gravel", 2260., Error::Off(Surface::Gravel, 4, -1.)),
+                ("apex-throttle", 258., Error::Exit),
+                ("kemmel-weave", 1550., Error::Weave),
+                ("pouhon-lift", 3780., Error::Lift),
+            ] {
+                let clean = drive(
+                    &template,
+                    model,
+                    trigger,
+                    if matches!(error, Error::Late(_)) {
+                        Error::CleanLate
+                    } else if matches!(error, Error::Exit) {
+                        Error::CleanExit
+                    } else {
+                        Error::Clean
+                    },
+                );
+                let result = drive(&template, model, trigger, error);
+                assert!(!result.spin, "{model} {label}: {result:?}");
+                assert!(
+                    result.recovery.is_some(),
+                    "{model} {label}: no recovery within 30 s"
+                );
+                if matches!(error, Error::Off(..)) {
+                    assert!(
+                        result.surface_ticks > 0,
+                        "{model} {label}: missed requested surface"
+                    );
+                }
+                if matches!(error, Error::Weave) {
+                    assert!(result.speed >= 280., "{model}: weave below requested speed");
+                }
+                let lost = result.gate.zip(clean.gate).map(|(a, b)| a - b);
+                println!("{model} {label}: {result:?}, lost={lost:?}");
+            }
+        }
+    }
+    #[test]
+    #[ignore = "requires converted assets; real two-car grazing contacts"]
+    fn spa_player_contacts() {
+        use racecraft_sim::race::Driver;
+        for model in ["gen22", "rb6"] {
+            let template = race(model, "1");
+            for trigger in [1550., 3780.] {
+                for along in [0., -2.0] {
+                    for closing in [0.5, 1.5] {
+                        let mut race = template.clone();
+                        // Keep the rival away until the single initial contact setup.
+                        race.entrants[1].ghost = 1000.;
+                        let mut guide = Guidance::new(&race, 0);
+                        while (race.entrants[0].timing.laps_completed < 1
+                            || race.entrants[0].car.track_position.s < trigger)
+                            && race.time < 300.
+                        {
+                            let input = guide.apply(
+                                &race.entrants[0].car,
+                                &race.track,
+                                &[],
+                                CarInput {
+                                    throttle: 1.,
+                                    ..Default::default()
+                                },
+                                1.,
+                                DT,
+                            );
+                            race.step(&[input]);
+                        }
+                        race.entrants[1].car = race.entrants[0].car.clone();
+                        let player = &race.entrants[0].car;
+                        let mut across = 0.0_f64;
+                        for (a, ra) in player.collision_circles() {
+                            for (b, rb) in player.collision_circles() {
+                                let gap = (a - b).dot(player.forward()) - along;
+                                across =
+                                    across.max(((ra + rb).powi(2) - gap.powi(2)).max(0.).sqrt());
+                            }
+                        }
+                        let offset = player.left() * (across + 0.001) + player.forward() * along;
+                        let velocity = player.velocity - player.left() * closing;
+                        race.entrants[1].car.translate(offset);
+                        race.entrants[1].car.velocity = velocity;
+                        race.entrants[1].driver = Driver::Human { slot: 1 };
+                        race.entrants[1].ghost = 0.;
+                        race.entrants[0].ghost = 0.;
+                        let mut rival_guide = Guidance::new(&race, 1);
+                        let mut peak_slip = 0.0_f64;
+                        let mut off = 0.0_f64;
+                        let mut impulse = 0.0_f64;
+                        let mut touched = false;
+                        for _ in 0..(5. * PHYSICS_RATE) as usize {
+                            let raw = CarInput {
+                                throttle: 1.,
+                                ..Default::default()
+                            };
+                            let a = guide.apply(
+                                &race.entrants[0].car,
+                                &race.track,
+                                &race.rivals_of(0),
+                                raw,
+                                1.,
+                                DT,
+                            );
+                            let b = rival_guide.apply(
+                                &race.entrants[1].car,
+                                &race.track,
+                                &race.rivals_of(1),
+                                raw,
+                                1.,
+                                DT,
+                            );
+                            race.step(&[a, b]);
+                            let car = &race.entrants[0].car;
+                            touched |= car.impact > 0.;
+                            impulse = impulse.max(car.impact);
+                            peak_slip = peak_slip.max(
+                                car.velocity
+                                    .dot(car.left())
+                                    .atan2(car.forward_speed())
+                                    .abs(),
+                            );
+                            off = off.max(
+                                car.track_position.lateral.abs()
+                                    - race.track.station(car.track_position.station).half_width,
+                            );
+                        }
+                        assert!(
+                            touched,
+                            "{model} s={trigger} along={along} closing={closing}: missed contact"
+                        );
+                        assert!(
+                            peak_slip < std::f64::consts::FRAC_PI_2,
+                            "{model}: graze spun player"
+                        );
+                        println!("{model} contact s={trigger} along={along} closing={closing}: touched={touched} impulse={impulse:.1} slip={:.2} off={off:.2} spin={}", peak_slip.to_degrees(), peak_slip > std::f64::consts::FRAC_PI_2);
+                    }
+                }
+            }
+        }
     }
 }
