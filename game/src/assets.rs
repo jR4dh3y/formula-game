@@ -176,14 +176,36 @@ pub struct VisualAssets {
     scene_count: usize,
 }
 
-pub fn setup(
+/// Scene loading saturates every core preparing textures, which starved the
+/// loading screen's own first frames: the window stayed black. Interactive
+/// launches start loading once the loader has been on screen briefly;
+/// captures and tests start at once. True on exactly one frame.
+pub fn launch_screen_shown(
+    options: Res<Options>,
+    time: Res<Time<Real>>,
+    mut frames: Local<u32>,
+    mut done: Local<bool>,
+) -> bool {
+    if *done {
+        return false;
+    }
+    *frames += 1;
+    let immediate = cfg!(test) || options.frames.is_some() || options.benchmark.is_some();
+    *done = immediate || *frames >= 10 && time.elapsed_secs() >= 0.6;
+    *done
+}
+
+/// Starts loading the track and car scenes; see [`launch_screen_shown`].
+pub fn spawn_scene(
     mut commands: Commands,
     server: Res<AssetServer>,
     options: Res<Options>,
     session: Res<Session>,
-    mut images: ResMut<Assets<Image>>,
 ) {
     spawn_visuals(&mut commands, &server, &options, &session);
+}
+
+pub fn setup(mut commands: Commands, session: Res<Session>, mut images: ResMut<Assets<Image>>) {
     let sun = session.race.track.sun_direction;
     sky::setup(
         &mut commands,
@@ -508,7 +530,7 @@ fn visual_ready(
 #[allow(clippy::too_many_arguments)]
 pub fn check_loading(
     server: Res<AssetServer>,
-    mut visuals: ResMut<VisualAssets>,
+    visuals: Option<ResMut<VisualAssets>>,
     ready: Query<(), With<VisualReady>>,
     surfaces: Query<
         (
@@ -523,9 +545,9 @@ pub fn check_loading(
     mut exit: MessageWriter<AppExit>,
     mut menu: ResMut<crate::menu::Frontend>,
 ) {
-    if session.ready {
+    let Some(mut visuals) = visuals.filter(|_| !session.ready) else {
         return;
-    }
+    };
     let started = *visuals.started.get_or_insert(time.elapsed_secs_f64());
     let textures: Vec<_> = surfaces
         .iter()

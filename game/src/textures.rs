@@ -91,6 +91,17 @@ fn scale_normals(image: &mut Image, scale: f32) {
     }
 }
 
+/// Imported textures prepared so far, for the loading screen.
+#[derive(Resource, Default)]
+pub struct TextureJobs {
+    pub finished: usize,
+}
+
+/// Builds mips and BC7 blocks for newly loaded scene textures before their
+/// first upload. A scene's textures arrive together; one at a time this held
+/// the main thread for seconds and froze the window. They are now prepared in
+/// parallel on every core, still within the frame they arrive in, because
+/// an image changed after its first upload did not reach its materials.
 pub fn prepare(
     mut events: MessageReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
@@ -98,8 +109,15 @@ pub fn prepare(
     detail: Option<Res<TextureDetail>>,
     device: Option<Res<RenderDevice>>,
     normal_scales: Res<NormalScales>,
+    mut jobs: ResMut<TextureJobs>,
 ) {
     let dropped = detail.map_or(0, |detail| detail.0);
+    let compress = device.as_ref().is_some_and(|device| {
+        device
+            .features()
+            .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
+    });
+    let mut batch = Vec::new();
     for event in events.read() {
         let (AssetEvent::Added { id } | AssetEvent::LoadedWithDependencies { id }) = event else {
             continue;
@@ -113,32 +131,52 @@ pub fn prepare(
         }) {
             continue;
         }
-        let Some(image) = images.get_mut_untracked(*id) else {
+        // Added already schedules extraction; do not trigger a second upload.
+        let Some(slot) = images.get_mut_untracked(*id) else {
             continue;
         };
-        if let Some(scale) = normal_scales.0.lock().unwrap().remove(id) {
-            scale_normals(image, scale);
+        if !needs_mips(slot) {
+            continue;
         }
-        if generate_mips(image) {
-            drop_top_mips(image, dropped);
-            let mut sampler = match &image.sampler {
-                ImageSampler::Descriptor(sampler) => sampler.clone(),
-                ImageSampler::Default => ImageSamplerDescriptor::linear(),
-            };
-            sampler.set_anisotropic_filter(16);
-            sampler.mipmap_filter = ImageFilterMode::Linear;
-            image.sampler = ImageSampler::Descriptor(sampler);
-            if device.as_ref().is_some_and(|device| {
-                device
-                    .features()
-                    .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
-            }) {
-                compress_bc7(image);
-            }
-            // Immutable imported textures do not need a second copy in the main world.
-            image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+        let scale = normal_scales.0.lock().unwrap().remove(id);
+        batch.push((*id, std::mem::take(slot), scale));
+    }
+    if batch.is_empty() {
+        return;
+    }
+    let prepared = bevy::tasks::ComputeTaskPool::get().scope(|scope| {
+        for (id, image, scale) in batch {
+            scope.spawn(async move { (id, process(image, scale, dropped, compress)) });
+        }
+    });
+    jobs.finished += prepared.len();
+    for (id, image) in prepared {
+        if let Some(slot) = images.get_mut_untracked(id) {
+            *slot = image;
         }
     }
+}
+
+fn process(mut image: Image, scale: Option<f32>, dropped: u32, compress: bool) -> Image {
+    if let Some(scale) = scale {
+        scale_normals(&mut image, scale);
+    }
+    if generate_mips(&mut image) {
+        drop_top_mips(&mut image, dropped);
+        let mut sampler = match &image.sampler {
+            ImageSampler::Descriptor(sampler) => sampler.clone(),
+            ImageSampler::Default => ImageSamplerDescriptor::linear(),
+        };
+        sampler.set_anisotropic_filter(16);
+        sampler.mipmap_filter = ImageFilterMode::Linear;
+        image.sampler = ImageSampler::Descriptor(sampler);
+        if compress {
+            compress_bc7(&mut image);
+        }
+        // Immutable imported textures do not need a second copy in the main world.
+        image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+    }
+    image
 }
 
 /// Encode the complete mip chain without changing its resolution or colour space.
@@ -250,6 +288,23 @@ fn compressed_cache_path(image: &Image) -> Option<std::path::PathBuf> {
         root.join("f1-racecraft/bc7-v1")
             .join(format!("{:016x}.bin", hash.finish())),
     )
+}
+
+/// Whether `generate_mips` would build a chain for this image.
+fn needs_mips(image: &Image) -> bool {
+    let desc = &image.texture_descriptor;
+    desc.dimension == TextureDimension::D2
+        && desc.size.depth_or_array_layers == 1
+        && desc.mip_level_count == 1
+        && matches!(
+            desc.format,
+            TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb
+        )
+        && image
+            .data
+            .as_ref()
+            .is_some_and(|data| data.len() == (desc.size.width * desc.size.height * 4) as usize)
+        && desc.size.width.max(desc.size.height) > 1
 }
 
 pub(crate) fn generate_mips(image: &mut Image) -> bool {

@@ -430,7 +430,7 @@ pub fn ui(
         return Ok(());
     }
     let ctx = contexts.ctx_mut()?;
-    if session.screen == Screen::Main {
+    if session.screen == Screen::Main && frontend.launched {
         egui::Window::new("Driver record")
             .anchor(egui::Align2::RIGHT_TOP, [-16., 70.])
             .resizable(false)

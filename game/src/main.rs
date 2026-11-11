@@ -263,6 +263,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .insert_resource(frontend)
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
+        .init_resource::<textures::TextureJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
             Startup,
@@ -275,6 +276,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
+        .add_systems(
+            Update,
+            assets::spawn_scene.run_if(assets::launch_screen_shown),
+        )
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .init_resource::<race_loop::Run>()
         .add_systems(
