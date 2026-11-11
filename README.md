@@ -330,7 +330,10 @@ Track and car assets retain their upstream ownership and attribution; see the
 [asset conversion notes](tools/track/README.md). The repository's historical audio
 sources have [reference credits](game/audio/reference/CREDITS.md) and
 [V8 source credits](game/audio/v8/CREDITS_LICENSE.md); the active voices are procedural.
-The bundled font uses the [SIL Open Font License](game/fonts/OFL.txt).
+The 2026 car (`assets/cars/gen26`) is built from
+["2026 Redbull RB22"](https://sketchfab.com/3d-models/2026-redbull-rb22-0a3d24a58e0549d591a5a48c22eec383)
+by Dave Love, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/);
+converted for the game (wheels split out, mesh decimated, textures downscaled). The bundled font uses the [SIL Open Font License](game/fonts/OFL.txt).
 AppImages include runtime package metadata and applicable license texts; see the
 [packaging notes](tools/package/README.md).
 
