@@ -28,7 +28,7 @@ fn inset_mesh(mesh: &Mesh, distance: f32) -> Option<Mesh> {
         return None;
     };
     let normals = normals.clone();
-    let mut inset = mesh.clone();
+    let mut inset = crate::meshes::renderable(mesh);
     let Some(VertexAttributeValues::Float32x3(positions)) =
         inset.attribute_mut(Mesh::ATTRIBUTE_POSITION)
     else {
@@ -544,6 +544,8 @@ pub fn check_loading(
     mut session: ResMut<Session>,
     mut exit: MessageWriter<AppExit>,
     mut menu: ResMut<crate::menu::Frontend>,
+    texture_jobs: Res<crate::textures::TextureJobs>,
+    mesh_jobs: Res<crate::meshes::MeshJobs>,
 ) {
     let Some(mut visuals) = visuals.filter(|_| !session.ready) else {
         return;
@@ -577,7 +579,11 @@ pub fn check_loading(
             return;
         }
     }
+    // Textures and meshes are prepared on worker threads after their scenes
+    // spawn; the scene is not drawn in full until the last one is back.
     if ready.iter().count() == visuals.scene_count
+        && texture_jobs.pending == 0
+        && mesh_jobs.pending == 0
         && textures
             .iter()
             .all(|id| server.is_loaded_with_dependencies(*id))

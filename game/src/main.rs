@@ -264,6 +264,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
         .init_resource::<textures::TextureJobs>()
+        .init_resource::<meshes::MeshJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
             Startup,
@@ -332,6 +333,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(Last, capture);
     textures::register_normal_scales(&mut app);
+    if !(cfg!(test) || capture_run) {
+        // A scene's meshes and textures reach the GPU over a few frames rather
+        // than stalling one. Capture runs count frames and need them at once.
+        app.insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
+            8 << 20,
+        ));
+    }
     if profile {
         // F1_PROFILE=1 logs per-pass CPU/GPU render timings every few seconds.
         app.add_plugins((

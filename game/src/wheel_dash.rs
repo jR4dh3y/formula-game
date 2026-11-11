@@ -283,7 +283,7 @@ pub fn attach(
         if entrant != session.player {
             continue;
         }
-        let Some(source) = meshes.get(&mesh.0).cloned() else {
+        let Some(source) = meshes.get(&mesh.0).map(crate::meshes::renderable) else {
             continue;
         };
         match part {
