@@ -64,6 +64,7 @@ impl Options {
   --track NAME        circuit (default: spa; other circuits require an exp build)
   --weather clear|storm   sky and thunder; track always stays dry
   --car gen22|gen26|rb6  car era (default: gen22; rb22 is a deprecated alias)
+  --drift             drift mode: the Thar on the drift park, scored on angle and speed
   --team ID           2022 team (default: first team in teams.json)
   --driver ID         driver in that team (default: its first driver)
   --laps N            race length (default: 3)
@@ -180,8 +181,10 @@ impl Options {
                     if options.car == "rb22" {
                         options.car = "gen22".into();
                     }
-                    if !racecraft_sim::CarSpec::ERAS.contains(&options.car.as_str()) {
-                        return Err("car must be rb6, gen22 or gen26".into());
+                    if !racecraft_sim::CarSpec::ERAS.contains(&options.car.as_str())
+                        && !racecraft_sim::CarSpec::DRIFT_CARS.contains(&options.car.as_str())
+                    {
+                        return Err("car must be rb6, gen22, gen26 or thar".into());
                     }
                 }
                 "--team" => options.team = value()?,
@@ -213,6 +216,13 @@ impl Options {
                         "hard" => Compound::Hard,
                         other => return Err(format!("unknown tyre compound {other}")),
                     }
+                }
+                "--drift" => {
+                    options.car = crate::drift::CAR.into();
+                    options.track = crate::drift::TRACK.into();
+                    options.opponents = 0;
+                    options.grid_slot = 1;
+                    options.laps = 50;
                 }
                 "--auto-gears" => {
                     options.automatic_gears = true;
@@ -338,8 +348,13 @@ impl Options {
         Ok(options)
     }
 
+    /// Drift mode: a drift car, solo, scored by `crate::drift`.
+    pub fn drift(&self) -> bool {
+        racecraft_sim::CarSpec::DRIFT_CARS.contains(&self.car.as_str())
+    }
+
     pub fn track_enabled(track: &str) -> bool {
-        track == "spa" || cfg!(feature = "exp")
+        track == "spa" || track == crate::drift::TRACK || cfg!(feature = "exp")
     }
 
     pub fn validate_track(&self) -> Result<(), String> {

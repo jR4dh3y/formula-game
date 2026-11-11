@@ -49,6 +49,33 @@ fn default_dynamics() -> f64 {
 impl Tuning {
     pub fn for_car(car: &str) -> Self {
         let modern = car.eq_ignore_ascii_case("gen22") || car.eq_ignore_ascii_case("gen26");
+        if car.eq_ignore_ascii_case("thar") {
+            // A tall SUV: the driver sits high and the chase view sits above
+            // the roof so a slide reads against the track.
+            return Self {
+                cockpit: View {
+                    height: 1.45,
+                    fore_aft: 0.1,
+                    pitch: 4.,
+                    fov: 70.,
+                },
+                tv: View {
+                    height: 2.15,
+                    fore_aft: -0.6,
+                    pitch: 8.,
+                    fov: 60.,
+                },
+                chase: View {
+                    height: 3.0,
+                    fore_aft: -7.8,
+                    pitch: 8.,
+                    fov: 60.,
+                },
+                shake: 0.3,
+                horizon: 0.65,
+                dynamics: default_dynamics(),
+            };
+        }
         Self {
             cockpit: View {
                 height: if modern { 1.00 } else { 0.96 },

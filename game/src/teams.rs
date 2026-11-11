@@ -137,7 +137,10 @@ impl Teams {
     ) -> Result<Vec<Option<Identity>>, String> {
         // The RB6 races as itself; the 2026 car borrows the roster when it
         // is installed and races anonymously otherwise.
-        if options.car == "rb6" || options.car == "gen26" && self.teams.is_empty() {
+        if options.car == "rb6"
+            || options.drift()
+            || options.car == "gen26" && self.teams.is_empty()
+        {
             return Ok(vec![None; options.opponents + 1]);
         }
         let (team, driver) = self.selection(&options.team, &options.driver)?;

@@ -112,10 +112,36 @@ pub(super) fn power_lamp(
     text: f32,
     session: &Session,
 ) {
+    let car = &session.race.entrants[session.player].car;
+    if !car.spec.aero.has_drs() && car.spec.hybrid.is_none() && car.spec.steer_lock > 0.5 {
+        // Road cars in drift mode: the handbrake, lit while held.
+        handbrake_lamp(hud, style, rect, text, session.controls.handbrake);
+        return;
+    }
     match EnergyLamp::of(session) {
         Some(lamp) => energy_lamp(hud, style, rect, text, lamp),
         None => drs_lamp(hud, style, rect, text, DrsLamp::of(session)),
     }
+}
+
+fn handbrake_lamp(hud: &Hud, style: &HudStyle, rect: egui::Rect, text: f32, held: bool) {
+    let radius = rect.height() * 0.22;
+    let (x, y, w, h) = (rect.left(), rect.top(), rect.width(), rect.height());
+    let red = Color::from_rgb(225, 40, 40);
+    let (fill, ink) = if held {
+        (red, Color::WHITE)
+    } else {
+        (Color::from_rgb(20, 22, 23), Color::from_gray(110))
+    };
+    hud.fill_round(x, y, w, h, radius, fill);
+    hud.text_mid(
+        &style.bold,
+        text * 0.75,
+        (rect.center().x, rect.center().y),
+        Align::Center,
+        ink,
+        "HANDBRAKE",
+    );
 }
 
 /// Battery charge as a fill, coloured by deploy mode, outlined when overtake

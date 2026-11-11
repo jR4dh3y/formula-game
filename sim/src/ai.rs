@@ -804,6 +804,7 @@ impl AiDriver {
             },
             // Normal deployment already recovers the AI's battery within a lap.
             harvest: false,
+            handbrake: false,
         }
     }
 

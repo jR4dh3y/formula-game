@@ -226,6 +226,11 @@ impl Catalog {
                 "2026 active aero",
                 "50/50 hybrid / active wings / overtake mode",
             ),
+            (
+                "thar",
+                "Mahindra Thar Roxx",
+                "Drift mode / 260 kW drift build / rear drive / handbrake",
+            ),
         ] {
             let car = root.join("cars").join(id);
             if car.join("car.glb").is_file()
@@ -1281,6 +1286,40 @@ fn page(ui: &mut egui::Ui, mut draw: impl FnMut(&mut egui::Ui, Part)) {
 }
 
 fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
+    let drift_ready = catalog.cars.iter().any(|car| car.id == crate::drift::CAR)
+        && catalog
+            .circuits
+            .iter()
+            .any(|track| track.id == crate::drift::TRACK && track.unavailable.is_none());
+    if drift_ready {
+        section(ui, "Mode");
+        ui.horizontal(|ui| {
+            let drift = draft.drift();
+            if ui.selectable_label(!drift, "Race").clicked() && drift {
+                draft.car = "gen22".into();
+                draft.track = "spa".into();
+                draft.opponents = 7;
+                draft.grid_slot = 6;
+                draft.laps = 3;
+            }
+            if ui
+                .selectable_label(drift, "Drift")
+                .on_hover_text(
+                    "The Thar on the drift park. Score on slide angle and speed; \
+                     link slides for a multiplier. Space is the handbrake.",
+                )
+                .clicked()
+                && !drift
+            {
+                draft.car = crate::drift::CAR.into();
+                draft.track = crate::drift::TRACK.into();
+                draft.opponents = 0;
+                draft.grid_slot = 1;
+                draft.laps = 50;
+            }
+        });
+        ui.separator();
+    }
     section(ui, "Circuit");
     circuit_choice(ui, catalog, draft);
     ui.separator();
@@ -1305,7 +1344,13 @@ pub(crate) fn circuit_choice(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut O
         .width(ui.available_width())
         .selected_text(selected)
         .show_ui(ui, |ui| {
-            for track in &catalog.circuits {
+            // The drift park belongs to drift mode, and drift mode to it.
+            let drift = draft.drift();
+            for track in catalog
+                .circuits
+                .iter()
+                .filter(|track| (track.id == crate::drift::TRACK) == drift)
+            {
                 ui.add_enabled_ui(track.unavailable.is_none(), |ui| {
                     ui.selectable_value(&mut draft.track, track.id.clone(), &track.name);
                 });
@@ -1381,7 +1426,12 @@ fn car_model_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let catalog = &frontend.catalog;
     section(ui, "Car");
     ui.horizontal_wrapped(|ui| {
-        for car in &catalog.cars {
+        let drift = draft.drift();
+        for car in catalog
+            .cars
+            .iter()
+            .filter(|car| racecraft_sim::CarSpec::DRIFT_CARS.contains(&car.id.as_str()) == drift)
+        {
             let response = ui
                 .radio_value(
                     &mut draft.car,

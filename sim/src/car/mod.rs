@@ -37,6 +37,9 @@ pub struct CarInput {
     /// 2026 cars: toggles harvest (recharge) mode.
     #[serde(default)]
     pub harvest: bool,
+    /// Locks the rear wheels and declutches them, for starting a slide.
+    #[serde(default)]
+    pub handbrake: bool,
 }
 
 /// Driving aids. They help with control, never with racecraft, and are
@@ -406,10 +409,10 @@ impl Car {
     }
 
     fn assisted_lock(&self, angle: f64) -> f64 {
-        const FULL_LOCK: f64 = 0.36;
+        let full_lock = self.spec.steer_lock;
         // Car::assists is mutable and can be restored from a host snapshot.
         let steering = self.assists.steering_filter();
-        FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * steering
+        full_lock + (angle.min(full_lock) - full_lock) * steering
     }
 
     /// Lock the steering and stability aids allow into the turn the car is
@@ -788,6 +791,10 @@ impl Car {
             // Longitudinal demand: drive on the rear, brakes everywhere.
             let mut brake_force = wheel_brakes[index];
             let mut drive_force = if front { 0.0 } else { drive * 0.5 };
+            let handbrake = input.handbrake && !front;
+            if handbrake {
+                drive_force = 0.0;
+            }
 
             // Partial ABS trims a locking demand to slightly under the limit, so
             // it never beats a driver who brakes right at the limit.
@@ -801,7 +808,10 @@ impl Car {
             } else {
                 1.0 + 0.5 * abs / (1.0 - abs)
             };
-            if brake_force > room {
+            if handbrake {
+                // The handbrake bypasses ABS and locks the rear at any speed.
+                locked = wheel_long.abs() > 0.5;
+            } else if brake_force > room {
                 if brake_force > room * lock_margin + 50.0 {
                     locked = wheel_long.abs() > 0.5;
                 } else {

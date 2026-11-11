@@ -2,6 +2,12 @@
 
   blender -b --disable-autoexec --factory-startup -P tools/car/prepare_gen26.py -- \
       <source.glb> <out dir> [--max-texture 4096] [--lod-texture 2048] [--lod-ratio 0.5]
+      [--scale 0.0254] [--front low|high] [--no-flap] [--inboard 0.18]
+
+--scale converts the source units to metres; --front says which end of the
+length axis is the nose when the overhang test is wrong (road cars carry
+more behind the rear axle than an F1 car does); --no-flap skips the wing;
+--inboard is how far (m) inside the tyre a wheel's rim and hub may reach.
 
 The 2026 grid models (Dave Love, CC BY 4.0) merge their geometry per material
 and name their wheel materials differently, so wheels and the rear-wing flap
@@ -31,11 +37,22 @@ from mathutils import Matrix, Vector
 
 def parse_args():
     args = sys.argv[sys.argv.index("--") + 1 :]
-    options = {"--max-texture": "4096", "--lod-texture": "2048", "--lod-ratio": "0.5"}
+    options = {
+        "--max-texture": "4096",
+        "--lod-texture": "2048",
+        "--lod-ratio": "0.5",
+        "--scale": "1",
+        "--front": "",
+        "--inboard": "0.18",
+    }
+    flags = set()
     positional = []
     i = 0
     while i < len(args):
-        if args[i] in options:
+        if args[i] == "--no-flap":
+            flags.add(args[i])
+            i += 1
+        elif args[i] in options:
             options[args[i]] = args[i + 1]
             i += 2
         else:
@@ -48,6 +65,10 @@ def parse_args():
         int(options["--max-texture"]),
         int(options["--lod-texture"]),
         float(options["--lod-ratio"]),
+        float(options["--scale"]),
+        options["--front"],
+        "--no-flap" in flags,
+        float(options["--inboard"]),
     )
 
 
@@ -63,7 +84,10 @@ def mesh_objects():
 
 
 def bounds(obj):
-    points = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+    """World-space bounds from the vertices: `bound_box` can be stale on a
+    freshly separated object until the depsgraph updates."""
+    matrix = obj.matrix_world
+    points = [matrix @ v.co for v in obj.data.vertices]
     low = Vector((min(p.x for p in points), min(p.y for p in points), min(p.z for p in points)))
     high = Vector((max(p.x for p in points), max(p.y for p in points), max(p.z for p in points)))
     return low, high
@@ -117,7 +141,9 @@ NAMED = {"body"}
 
 
 def main():
-    source, out_dir, max_texture, lod_texture, lod_ratio = parse_args()
+    source, out_dir, max_texture, lod_texture, lod_ratio, scale, front, no_flap, inboard = (
+        parse_args()
+    )
     os.makedirs(out_dir, exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=source)
@@ -128,8 +154,9 @@ def main():
         bpy.ops.object.join()
     body = bpy.context.view_layer.objects.active
     # Sketchfab exports parent the meshes under scaled, rotated empties.
+    world = body.matrix_world.copy()
     body.parent = None
-    body.matrix_world = body.matrix_world.copy()
+    body.matrix_world = Matrix.Scale(scale, 4) @ world
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     for obj in list(bpy.context.scene.objects):
         if obj.type != "MESH":
@@ -149,14 +176,15 @@ def main():
     mesh.from_mesh(body.data)
     parts = islands(mesh)
     ground = low.z
-    # Tyres: ground-touching rings about 0.6-0.85 m across, narrower than tall.
+    # Tyres: ground-touching round parts 0.55-0.9 m across and narrower than
+    # tall. Some models build a tyre from many thin slices, so any width counts.
     tyres = [
         (faces, lo, hi)
         for faces, lo, hi in parts
         if lo.z < ground + 0.06
         and 0.55 < hi.z - lo.z < 0.9
-        and 0.55 < hi.y - lo.y < 0.9
-        and 0.12 < hi.x - lo.x < 0.55
+        and abs((hi.y - lo.y) - (hi.z - lo.z)) < 0.08
+        and hi.x - lo.x < 0.55
     ]
     centre_x = (low.x + high.x) * 0.5
     centre_y = (low.y + high.y) * 0.5
@@ -174,6 +202,9 @@ def main():
     axle_a = (quadrants[("a", "l")][0].y + quadrants[("a", "l")][1].y) * 0.5
     axle_b = (quadrants[("b", "l")][0].y + quadrants[("b", "l")][1].y) * 0.5
     front_is_a = high.y - axle_a > axle_b - low.y
+    if front:
+        # "high" is the +Y end of the length axis after the rotation above.
+        front_is_a = (front == "high") == (axle_a > axle_b)
     flip = front_is_a  # front at +Y: rotate 180 degrees so it faces -Y
 
     wheel_parts = {}
@@ -182,7 +213,6 @@ def main():
         radius = (hi.z - lo.z) * 0.5
         # Rims and hubs sit inboard of the tyre; anything within the wheel's
         # radius that far in turns with it.
-        inboard = 0.18
         if side == "l":
             x_low, x_high = lo.x - inboard, hi.x + 0.01
         else:
@@ -220,7 +250,7 @@ def main():
         and len(faces) >= 300
         and not used.intersection(faces[:1])
     ]
-    flap = max(candidates, key=lambda part: part[2].z, default=None)
+    flap = None if no_flap else max(candidates, key=lambda part: part[2].z, default=None)
     flap_faces = []
     if flap:
         # The seed is often only one layer of the flap (its paint or decal
@@ -268,8 +298,15 @@ def main():
         bpy.ops.object.mode_set(mode="EDIT")
         data = bmesh.from_edit_mesh(body.data)
         tag = data.faces.layers.int["part"]
+        # Clear vertex and edge selection too: an import can leave loose
+        # vertices selected, and separate() would carry them along.
+        for vert in data.verts:
+            vert.select = False
+        for edge in data.edges:
+            edge.select = False
         for face in data.faces:
             face.select = face[tag] == number
+        data.select_flush_mode()
         bmesh.update_edit_mesh(body.data)
         bpy.ops.mesh.separate(type="SELECTED")
         bpy.ops.object.mode_set(mode="OBJECT")
