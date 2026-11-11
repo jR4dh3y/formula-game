@@ -32,6 +32,16 @@ if [[ $selection == all || $selection == cars ]]; then
         "$extracted/source/redbull rb6.glb" "$output/cars/rb6" \
         --wheel-materials wheel,wheel.001,tread,tyre --max-texture 1024
     "$repo/tools/car/build_gen22.sh" "$output/cars/gen22"
+    # 2026 car: optional, built when its archive is present.
+    if [[ -f "$zip_dir/2026-redbull-rb22.zip" ]]; then
+        extract '2026-redbull-rb22.zip'
+        "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
+            "$extracted/source/untitled.glb" "$output/cars/gen26"
+    fi
+    # Team cars: GEN26_SOURCES holds <team>.glb files (tools/car/gen26_teams.json).
+    if [[ -n ${GEN26_SOURCES:-} ]]; then
+        "$repo/tools/car/build_gen26.sh" "$GEN26_SOURCES" "$output"
+    fi
 fi
 found=false
 for config in "$repo"/tools/track/tracks/*.json; do

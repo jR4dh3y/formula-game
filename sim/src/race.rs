@@ -128,6 +128,8 @@ pub struct Race {
     pub events: Vec<RaceEvent>,
     /// Empty when no car in the field has DRS.
     pub drs_zones: Vec<drs::Zone>,
+    /// Where 2026 active aero may run in straight mode; empty without it.
+    pub straight_zones: Vec<drs::Zone>,
     ai_power: f64,
     order: Vec<usize>,
     finish_order: Vec<usize>,
@@ -146,6 +148,8 @@ impl Race {
                     Assists {
                         automatic_gears: true,
                         stability: AI_STABILITY,
+                        // Overtake mode is engaged as soon as it is earned.
+                        auto_drs: true,
                         ..Assists::default()
                     }
                 } else {
@@ -181,12 +185,22 @@ impl Race {
             })
             .collect();
         let order = (0..entrants.len()).collect();
-        let drs_zones = if entrants.iter().any(|e| e.car.spec.aero.has_drs()) {
+        // 2026 cars earn overtake mode in the zones DRS would use.
+        let drs_zones = if entrants
+            .iter()
+            .any(|e| e.car.spec.aero.has_drs() || e.car.spec.hybrid.is_some())
+        {
             drs::zones(&track)
         } else {
             Vec::new()
         };
+        let straight_zones = if entrants.iter().any(|e| e.car.spec.aero.active.is_some()) {
+            drs::straight_mode_zones(&track)
+        } else {
+            Vec::new()
+        };
         Self {
+            straight_zones,
             ai_power: 1.,
             drs_zones,
             track,
@@ -306,10 +320,19 @@ impl Race {
                 .drs
                 .update(&self.track, &self.drs_zones, s, qualifies);
             let anywhere = entrant.car.assists.drs_anywhere;
+            let spec = &entrant.car.spec;
             entrant.car.drs.available = (open || anywhere)
                 && racing
                 && entrant.timing.finish_time.is_none()
-                && entrant.car.spec.aero.has_drs();
+                && (spec.aero.has_drs() || spec.hybrid.is_some());
+            // Straight mode is the car's own aero, not a race privilege: it
+            // runs from the start and after the flag, but not on the grid.
+            entrant.car.active_aero.allowed = spec.aero.active.is_some()
+                && !matches!(self.phase, Phase::Countdown { .. })
+                && self
+                    .straight_zones
+                    .iter()
+                    .any(|zone| zone.contains(&self.track, s));
         }
     }
 
@@ -603,6 +626,7 @@ impl Race {
                     timing.best_lap = Some(lap_time);
                 }
                 timing.sector_times = [None; SECTORS];
+                entrant.car.battery.new_lap();
                 self.events.push(RaceEvent::LapCompleted {
                     entrant: index,
                     lap: laps,

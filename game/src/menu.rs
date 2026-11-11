@@ -221,6 +221,11 @@ impl Catalog {
                 "2022 ground effect",
                 "V6 hybrid / 8-speed / shared team model",
             ),
+            (
+                "gen26",
+                "2026 active aero",
+                "50/50 hybrid / active wings / overtake mode",
+            ),
         ] {
             let car = root.join("cars").join(id);
             if car.join("car.glb").is_file()
@@ -247,6 +252,8 @@ impl Catalog {
 
 #[derive(Resource)]
 pub struct Frontend {
+    /// The first scene has loaded; until then a loading screen replaces the menu.
+    pub launched: bool,
     pub rewind: bool,
     pub catalog: Catalog,
     pub teams: crate::teams::Teams,
@@ -298,6 +305,7 @@ impl Frontend {
             draft.driver = driver.id.clone();
         }
         Self {
+            launched: false,
             rewind: prefs.rewind,
             catalog: Catalog::discover(&options.assets),
             teams,
@@ -514,6 +522,60 @@ pub(crate) const WELL: Color32 = Color32::from_rgb(9, 10, 12);
 pub(crate) const WELL_RIM: Color32 = Color32::from_rgb(56, 58, 64);
 
 /// Raised charcoal panel matching the race HUD's instrument housings.
+/// Full-screen loader shown from launch until the first scene is ready.
+fn launch_screen(ui: &mut egui::Ui, track: &str, textures: usize) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::new().fill(BACKDROP))
+        .show(ui, |ui| {
+            let rect = ui.max_rect();
+            let painter = ui.painter();
+            let time = ui.input(|input| input.time) as f32;
+            let centre = rect.center();
+            painter.text(
+                centre - egui::vec2(0., 70.),
+                egui::Align2::CENTER_CENTER,
+                "F1 RACECRAFT",
+                egui::FontId::proportional(54.),
+                Color32::WHITE,
+            );
+            painter.text(
+                centre - egui::vec2(0., 22.),
+                egui::Align2::CENTER_CENTER,
+                format!("Loading {track}"),
+                egui::FontId::proportional(20.),
+                DIM,
+            );
+            // An indeterminate sweep: loading time depends on the texture
+            // cache, so a percentage would only guess.
+            let width = (rect.width() * 0.4).clamp(220., 520.);
+            let bar =
+                egui::Rect::from_center_size(centre + egui::vec2(0., 22.), egui::vec2(width, 6.));
+            painter.rect_filled(bar, 3., Color32::from_gray(45));
+            let phase = (time * 0.7).fract();
+            let run = width * 0.28;
+            let start = bar.left() - run + (width + run) * phase;
+            let sweep = egui::Rect::from_x_y_ranges(
+                start.max(bar.left())..=(start + run).min(bar.right()),
+                bar.y_range(),
+            );
+            if sweep.width() > 0. {
+                painter.rect_filled(sweep, 3., RED);
+            }
+            let status = if textures == 0 {
+                "Reading circuit and cars".to_string()
+            } else {
+                format!("Preparing textures ({textures})")
+            };
+            painter.text(
+                centre + egui::vec2(0., 52.),
+                egui::Align2::CENTER_CENTER,
+                status,
+                egui::FontId::proportional(15.),
+                DIM,
+            );
+        });
+}
+
 pub(crate) fn housing() -> egui::Frame {
     egui::Frame::new()
         .fill(HOUSING)
@@ -710,6 +772,7 @@ pub fn ui(
     car_preview: Res<car_preview::CarPreview>,
     mut exit: MessageWriter<AppExit>,
     mut online: Option<ResMut<crate::online::Online>>,
+    textures: Res<crate::textures::TextureJobs>,
 ) -> Result {
     frontend.benchmark.poll();
     let context = contexts.ctx_mut()?;
@@ -790,6 +853,14 @@ pub fn ui(
     }
     if session.screen == Screen::CameraEditor {
         camera_editor(&viewport, &mut session, &options.car);
+        return Ok(());
+    }
+    // From launch until the first scene is ready, a loading screen replaces
+    // the menu, which would otherwise sit half-drawn while the scene loads.
+    frontend.launched |= session.ready || cfg!(test) || multiplayer;
+    if !frontend.launched && session.screen == Screen::Main {
+        launch_screen(&mut viewport, &session.race.track.name, textures.finished);
+        context.request_repaint();
         return Ok(());
     }
     // Online loading stays on the Room page, where the roster and Leave live.
@@ -1315,10 +1386,10 @@ fn car_model_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
                 .radio_value(
                     &mut draft.car,
                     car.id.clone(),
-                    if car.id == "gen22" {
-                        "2022 car"
-                    } else {
-                        car.name
+                    match car.id.as_str() {
+                        "gen22" => "2022 car",
+                        "gen26" => "2026 car",
+                        _ => car.name,
                     },
                 )
                 .on_hover_text(car.description);
@@ -1388,7 +1459,7 @@ fn setup_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
 fn driver_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let draft = &mut frontend.draft;
     let teams = &frontend.teams;
-    if draft.car != "gen22" {
+    if draft.car == "rb6" {
         ui.heading("Red Bull Racing");
         ui.label(
             "The 2010 RB6 races in its own livery. Pick the 2022 car under Car to choose a team.",
@@ -1595,17 +1666,34 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
     setting_row(ui, "Racing line", |ui| {
         ui.checkbox(&mut frontend.show_racing_line, "Enabled");
     });
-    setting_row(ui, "Automatic DRS", |ui| {
-        ui.checkbox(&mut aids.auto_drs, "Enabled").on_hover_text(
+    // The 2026 car has active aero and overtake mode on the same button.
+    let modern = frontend.draft.car == "gen26";
+    let (auto_label, auto_help, anywhere_label, anywhere_help) = if modern {
+        (
+            "Automatic overtake mode",
+            "Engages overtake mode as soon as it is earned. F (gamepad B) still \
+             toggles boost elsewhere and H (D-pad down) toggles harvest mode; the \
+             wings open and close by themselves.",
+            "Overtake mode anywhere",
+            "Overtake mode is available all lap, not only within a second of the car \
+             ahead in an overtake zone. AI cars keep to the race rules.",
+        )
+    } else {
+        (
+            "Automatic DRS",
             "Opens the flap as soon as DRS is available. Braking or the end of the zone closes it.",
-        );
-    });
-    setting_row(ui, "DRS anywhere", |ui| {
-        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
-            .on_hover_text(
-                "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
+            "DRS anywhere",
+            "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
              AI cars keep to the race rules.",
-            );
+        )
+    };
+    setting_row(ui, auto_label, |ui| {
+        ui.checkbox(&mut aids.auto_drs, "Enabled")
+            .on_hover_text(auto_help);
+    });
+    setting_row(ui, anywhere_label, |ui| {
+        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
+            .on_hover_text(anywhere_help);
     });
     ui.add_space(6.);
     if ui.available_width() >= 760. {

@@ -237,6 +237,7 @@ impl Online {
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.settings.car, "rb6".into(), "RB6");
                     ui.selectable_value(&mut self.settings.car, "gen22".into(), "GEN22");
+                    ui.selectable_value(&mut self.settings.car, "gen26".into(), "GEN26");
                 });
         });
         field(ui, "UDP port", |ui| {
@@ -775,6 +776,7 @@ fn yes(on: bool) -> String {
 fn car_name(car: &str) -> &'static str {
     match car {
         "gen22" => "GEN22",
+        "gen26" => "GEN26",
         "rb6" => "RB6",
         _ => "Car",
     }

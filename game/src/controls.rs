@@ -22,6 +22,8 @@ pub struct Controls {
     shift_down: bool,
     drs: bool,
     drs_press_age: Option<f32>,
+    /// 2026 harvest-mode toggle, queued like a shift.
+    harvest: bool,
     /// The stick, not the keys, set the steering last.
     analog: bool,
     /// Car speed in m/s, for the speed-sensitive keyboard steering rate.
@@ -248,6 +250,9 @@ impl Controls {
             self.drs_press_age = Some(0.);
         }
 
+        // 2026 cars: H (gamepad D-pad down) toggles harvest mode.
+        self.harvest |= pressed(&[KeyCode::KeyH]) || pad_pressed(GamepadButton::DPadDown);
+
         Actions {
             menu: pressed(&[KeyCode::Escape]),
             pause: pressed(&[KeyCode::KeyP]) || pad_pressed(GamepadButton::Start),
@@ -265,10 +270,12 @@ impl Controls {
             shift_up: self.shift_up,
             shift_down: self.shift_down,
             drs: self.drs,
+            harvest: self.harvest,
         };
         self.shift_up = false;
         self.shift_down = false;
         self.drs = false;
+        self.harvest = false;
         command
     }
 

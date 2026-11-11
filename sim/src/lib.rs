@@ -11,6 +11,7 @@ pub mod ai;
 pub mod car;
 pub mod drs;
 pub mod exact;
+pub mod hybrid;
 pub mod race;
 pub mod rng;
 pub mod track;

@@ -793,9 +793,47 @@ impl AiDriver {
             brake,
             shift_up: false,
             shift_down: false,
-            // The race only lets the flap open where DRS is earned.
-            drs: true,
+            // The race only lets the flap open where DRS is earned. A 2026
+            // car's button toggles boost instead, so press only to change it.
+            drs: match &car.spec.hybrid {
+                None => true,
+                Some(hybrid) => {
+                    let boosting = car.battery.mode == crate::hybrid::DeployMode::Boost;
+                    self.wants_boost(car, hybrid, rivals, corner, track) != boosting
+                }
+            },
+            // Normal deployment already recovers the AI's battery within a lap.
+            harvest: false,
         }
+    }
+
+    /// Spend the battery at full power to make or stop a pass on a straight,
+    /// keeping a reserve for the next one.
+    fn wants_boost(
+        &self,
+        car: &Car,
+        hybrid: &crate::hybrid::HybridSpec,
+        rivals: &[Rival],
+        corner: Option<CornerPlan>,
+        track: &Track,
+    ) -> bool {
+        let s = car.track_position.s;
+        let to_brake = corner.map_or(f64::INFINITY, |corner| {
+            track.delta(s, corner.brake_s).rem_euclid(track.length)
+        });
+        if to_brake < 60.0 + car.speed() * 0.5 || car.battery.charge(hybrid) < BOOST_RESERVE {
+            return false;
+        }
+        let attacking = matches!(self.intent, Intent::Attack { .. })
+            || self.pulled_out
+            || rivals.iter().any(|rival| {
+                rival.gap > 0.0 && rival.gap < 25.0 && rival.speed < car.speed() + 2.0
+            });
+        let defending = matches!(self.intent, Intent::Defend { .. })
+            && rivals
+                .iter()
+                .any(|rival| rival.gap < 0.0 && rival.gap > -20.0);
+        attacking || defending
     }
 
     fn tactical_line<'a>(&self, track: &'a Track) -> Option<&'a RacingLine> {
@@ -1227,6 +1265,9 @@ fn signed_curvature(a: DVec2, b: DVec2, c: DVec2) -> f64 {
 /// Whether the passing lane at `lateral` is worth pulling into: no other car
 /// in it ahead within range, which would just hold us up there instead, and
 /// no faster car coming up behind in it that we would pull out in front of.
+/// Battery share the AI keeps back rather than boost with.
+const BOOST_RESERVE: f64 = 0.35;
+
 /// Throttle and brake for a speed error (target minus current), m/s.
 fn pedals(error: f64) -> (f64, f64) {
     if error > 0.0 {
@@ -1294,7 +1335,7 @@ fn speed_profile(profile: DriverProfile, car: &Car, line: &RacingLine, tyre_grip
         // never catch the plan and the throttle saturates instead of tracking
         // the curve. Braking points come from the backward pass and are
         // unaffected.
-        power: spec.engine.max_power * 1.1,
+        power: (spec.engine.max_power + spec.hybrid.as_ref().map_or(0.0, |h| h.mguk_power)) * 1.1,
         brake_fraction: brake,
         load_sensitivity: LOAD_SENSITIVITY,
     };

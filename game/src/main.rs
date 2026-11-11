@@ -263,6 +263,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .insert_resource(frontend)
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
+        .init_resource::<textures::TextureJobs>()
+        .init_resource::<meshes::MeshJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
             Startup,
@@ -275,6 +277,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
+        .add_systems(
+            Update,
+            assets::spawn_scene.run_if(assets::launch_screen_shown),
+        )
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .init_resource::<race_loop::Run>()
         .add_systems(
@@ -327,6 +333,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(Last, capture);
     textures::register_normal_scales(&mut app);
+    if !(cfg!(test) || capture_run) {
+        // A scene's meshes and textures reach the GPU over a few frames rather
+        // than stalling one. Capture runs count frames and need them at once.
+        app.insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
+            8 << 20,
+        ));
+    }
     if profile {
         // F1_PROFILE=1 logs per-pass CPU/GPU render timings every few seconds.
         app.add_plugins((

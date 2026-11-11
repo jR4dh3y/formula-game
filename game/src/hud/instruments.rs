@@ -62,6 +62,96 @@ fn drs_lamp(hud: &Hud, style: &HudStyle, rect: egui::Rect, text: f32, lamp: Opti
     );
 }
 
+/// What the 2026 energy cell shows for the player's car.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct EnergyLamp {
+    /// Battery charge, 0..1.
+    pub charge: f32,
+    pub mode: racecraft_sim::hybrid::DeployMode,
+    /// Overtake mode is earned here and not yet used.
+    pub overtake_ready: bool,
+    /// Wing elements in straight mode, 0..1.
+    pub straight_mode: f32,
+}
+
+impl EnergyLamp {
+    pub(super) fn of(session: &Session) -> Option<Self> {
+        let car = &session.race.entrants[session.player].car;
+        let hybrid = car.spec.hybrid.as_ref()?;
+        let mode = car.battery.mode;
+        Some(Self {
+            charge: car.battery.charge(hybrid) as f32,
+            mode,
+            overtake_ready: car.drs.available
+                && mode != racecraft_sim::hybrid::DeployMode::Overtake,
+            straight_mode: car.active_aero.position as f32,
+        })
+    }
+
+    fn label(&self) -> String {
+        use racecraft_sim::hybrid::DeployMode;
+        match self.mode {
+            DeployMode::Overtake => "OVERTAKE".into(),
+            DeployMode::Boost => "BOOST".into(),
+            DeployMode::Harvest => format!("HARVEST {:.0}%", self.charge * 100.),
+            DeployMode::Normal if self.overtake_ready => "OVT READY".into(),
+            DeployMode::Normal => format!("ERS {:.0}%", self.charge * 100.),
+        }
+    }
+}
+
+const ENERGY_BLUE: Color = Color::from_rgb(40, 140, 255);
+const OVERTAKE_PURPLE: Color = Color::from_rgb(190, 70, 255);
+const STRAIGHT_CYAN: Color = Color::from_rgb(60, 230, 230);
+
+/// The DRS lamp, or on a 2026 car the battery and overtake cell in its place.
+pub(super) fn power_lamp(
+    hud: &Hud,
+    style: &HudStyle,
+    rect: egui::Rect,
+    text: f32,
+    session: &Session,
+) {
+    match EnergyLamp::of(session) {
+        Some(lamp) => energy_lamp(hud, style, rect, text, lamp),
+        None => drs_lamp(hud, style, rect, text, DrsLamp::of(session)),
+    }
+}
+
+/// Battery charge as a fill, coloured by deploy mode, outlined when overtake
+/// mode is earned and edged cyan while the wings are in straight mode.
+fn energy_lamp(hud: &Hud, style: &HudStyle, rect: egui::Rect, text: f32, lamp: EnergyLamp) {
+    use racecraft_sim::hybrid::DeployMode;
+    let radius = rect.height() * 0.22;
+    let (x, y, w, h) = (rect.left(), rect.top(), rect.width(), rect.height());
+    hud.fill_round(x, y, w, h, radius, Color::from_rgb(20, 22, 23));
+    let fill = match lamp.mode {
+        DeployMode::Normal => ENERGY_BLUE,
+        DeployMode::Boost => AMBER,
+        DeployMode::Overtake => OVERTAKE_PURPLE,
+        DeployMode::Harvest => GREEN,
+    };
+    let filled =
+        (w * lamp.charge.clamp(0., 1.)).max(if lamp.charge > 0. { radius * 2. } else { 0. });
+    if filled > 0. {
+        hud.fill_round(x, y, filled, h, radius, fill.gamma_multiply(0.85));
+    }
+    let edge = (h * 0.08).max(1.5);
+    if lamp.overtake_ready {
+        hud.stroke_round(x, y, w, h, radius, edge, OVERTAKE_PURPLE);
+    } else if lamp.straight_mode > 0.5 {
+        hud.stroke_round(x, y, w, h, radius, edge, STRAIGHT_CYAN);
+    }
+    hud.text_mid(
+        &style.bold,
+        text * 0.8,
+        (rect.center().x, rect.center().y),
+        Align::Center,
+        Color::WHITE,
+        &lamp.label(),
+    );
+}
+
 fn rect(x: f32, y: f32, w: f32, h: f32) -> egui::Rect {
     egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(w, h))
 }
@@ -279,7 +369,7 @@ fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
     );
     // Sector timing lives in the timing strip; this cell is the DRS lamp.
     well(hud, speed_x, lower_y, side_w, lower_h, scale);
-    drs_lamp(
+    power_lamp(
         hud,
         style,
         rect(
@@ -289,7 +379,7 @@ fn segments(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
             lower_h - 12. * scale,
         ),
         22. * scale,
-        DrsLamp::of(session),
+        session,
     );
     if let Some(text) = refusal {
         let tag_w = hud.text_width(&style.bold, 20.0 * scale, text) + 24.0 * scale;
@@ -688,12 +778,12 @@ fn gauges(hud: &Hud, style: &HudStyle, session: &Session, scale: f32) {
     );
     // DRS sits in the free arc gap beneath the gear window.
     let (lw, lh) = (0.3 * r, 0.11 * r);
-    drs_lamp(
+    power_lamp(
         hud,
         style,
         rect(c.0 - lw * 0.5, c.1 + 0.59 * r, lw, lh),
         0.075 * r,
-        DrsLamp::of(session),
+        session,
     );
     tach.needle(
         hud,

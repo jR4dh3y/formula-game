@@ -28,7 +28,7 @@ fn inset_mesh(mesh: &Mesh, distance: f32) -> Option<Mesh> {
         return None;
     };
     let normals = normals.clone();
-    let mut inset = mesh.clone();
+    let mut inset = crate::meshes::renderable(mesh);
     let Some(VertexAttributeValues::Float32x3(positions)) =
         inset.attribute_mut(Mesh::ATTRIBUTE_POSITION)
     else {
@@ -176,14 +176,36 @@ pub struct VisualAssets {
     scene_count: usize,
 }
 
-pub fn setup(
+/// Scene loading saturates every core preparing textures, which starved the
+/// loading screen's own first frames: the window stayed black. Interactive
+/// launches start loading once the loader has been on screen briefly;
+/// captures and tests start at once. True on exactly one frame.
+pub fn launch_screen_shown(
+    options: Res<Options>,
+    time: Res<Time<Real>>,
+    mut frames: Local<u32>,
+    mut done: Local<bool>,
+) -> bool {
+    if *done {
+        return false;
+    }
+    *frames += 1;
+    let immediate = cfg!(test) || options.frames.is_some() || options.benchmark.is_some();
+    *done = immediate || *frames >= 10 && time.elapsed_secs() >= 0.6;
+    *done
+}
+
+/// Starts loading the track and car scenes; see [`launch_screen_shown`].
+pub fn spawn_scene(
     mut commands: Commands,
     server: Res<AssetServer>,
     options: Res<Options>,
     session: Res<Session>,
-    mut images: ResMut<Assets<Image>>,
 ) {
     spawn_visuals(&mut commands, &server, &options, &session);
+}
+
+pub fn setup(mut commands: Commands, session: Res<Session>, mut images: ResMut<Assets<Image>>) {
     let sun = session.race.track.sun_direction;
     sky::setup(
         &mut commands,
@@ -219,12 +241,39 @@ pub fn spawn_visuals(
             Transform::default(),
         ))
         .observe(visual_ready);
-    for (index, entrant) in session.race.entrants.iter().enumerate() {
-        let scene = if index == session.player {
-            car.clone()
+    // 2026 cars race in their own team's model: full detail for the player,
+    // the lighter LOD for opponents. Teams without one use the base car.
+    let team_scene = |index: usize| {
+        if options.car != "gen26" {
+            return None;
+        }
+        let team = session.identities.get(index)?.as_ref()?.team.as_str();
+        // Racing Bulls share Red Bull's chassis.
+        let team = if team == "racingbulls" {
+            "redbull"
         } else {
-            opponent.clone()
+            team
         };
+        let file = if index == session.player {
+            "car.glb"
+        } else {
+            "car_lod1.glb"
+        };
+        let path = format!("cars/gen26/teams/{team}/{file}");
+        options
+            .assets
+            .join(&path)
+            .is_file()
+            .then(|| server.load(GltfAssetLabel::Scene(0).from_asset(path)))
+    };
+    for (index, entrant) in session.race.entrants.iter().enumerate() {
+        let scene = team_scene(index).unwrap_or_else(|| {
+            if index == session.player {
+                car.clone()
+            } else {
+                opponent.clone()
+            }
+        });
         commands
             .spawn((
                 Name::new(format!("car-{index}")),
@@ -508,7 +557,7 @@ fn visual_ready(
 #[allow(clippy::too_many_arguments)]
 pub fn check_loading(
     server: Res<AssetServer>,
-    mut visuals: ResMut<VisualAssets>,
+    visuals: Option<ResMut<VisualAssets>>,
     ready: Query<(), With<VisualReady>>,
     surfaces: Query<
         (
@@ -522,10 +571,12 @@ pub fn check_loading(
     mut session: ResMut<Session>,
     mut exit: MessageWriter<AppExit>,
     mut menu: ResMut<crate::menu::Frontend>,
+    texture_jobs: Res<crate::textures::TextureJobs>,
+    mesh_jobs: Res<crate::meshes::MeshJobs>,
 ) {
-    if session.ready {
+    let Some(mut visuals) = visuals.filter(|_| !session.ready) else {
         return;
-    }
+    };
     let started = *visuals.started.get_or_insert(time.elapsed_secs_f64());
     let textures: Vec<_> = surfaces
         .iter()
@@ -555,7 +606,11 @@ pub fn check_loading(
             return;
         }
     }
+    // Textures and meshes are prepared on worker threads after their scenes
+    // spawn; the scene is not drawn in full until the last one is back.
     if ready.iter().count() == visuals.scene_count
+        && texture_jobs.pending == 0
+        && mesh_jobs.pending == 0
         && textures
             .iter()
             .all(|id| server.is_loaded_with_dependencies(*id))
@@ -708,8 +763,15 @@ pub fn sync_cars(
             RigKind::Upright => Quat::from_rotation_y(pose.steer as f32),
             // Every car's flap follows its own simulated DRS actuator.
             RigKind::Drs => Quat::from_rotation_x(
-                session.rig.drs.open_angle
-                    * session.race.entrants[part.entrant].car.drs.flap as f32,
+                session.rig.drs.open_angle * {
+                    // A 2026 car's flap follows its active aero instead.
+                    let car = &session.race.entrants[part.entrant].car;
+                    if car.spec.aero.active.is_some() {
+                        car.active_aero.position as f32
+                    } else {
+                        car.drs.flap as f32
+                    }
+                },
             ),
         };
         transform.rotation = part.rest.rotation * rotation;
@@ -848,15 +910,15 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     }
     let track = Arc::new(Track::load(&track_dir)?);
     let geometry = CarGeometry::load(root.join(format!("cars/{}/car.json", options.car)))?;
-    let field_spec = Arc::new(if options.car == "rb6" {
-        CarSpec::rb6_with(&geometry)
-    } else {
-        CarSpec::gen22_with(&geometry)
-    });
-    let teams = if options.car == "gen22" {
-        crate::teams::Teams::load(root)?
-    } else {
-        default()
+    let field_spec = Arc::new(
+        CarSpec::for_era(&options.car, &geometry)
+            .ok_or_else(|| format!("unknown car {}", options.car))?,
+    );
+    let teams = match options.car.as_str() {
+        "gen22" => crate::teams::Teams::load(root)?,
+        // The 2026 field races under the current roster's names and colours.
+        "gen26" => crate::teams::Teams::load(root).unwrap_or_default(),
+        _ => default(),
     };
     let identities = teams.field(options)?;
     // Grid: the player starts in the requested slot among the AI field.

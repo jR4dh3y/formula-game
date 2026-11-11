@@ -77,7 +77,7 @@ impl Default for RaceSettings {
 }
 impl RaceSettings {
     pub fn validate(&self) -> Result<(), String> {
-        if !matches!(self.car.as_str(), "rb6" | "gen22")
+        if !CarSpec::ERAS.contains(&self.car.as_str())
             || self.track.is_empty()
             || self.track.len() > 32
             || !self
@@ -174,11 +174,7 @@ pub fn load_race(root: &Path, settings: &RaceSettings, players: &[Player]) -> Re
     }
     let track = Arc::new(Track::load(root.join("tracks").join(&settings.track))?);
     let geometry = CarGeometry::load(root.join("cars").join(&settings.car).join("car.json"))?;
-    let spec = Arc::new(if settings.car == "rb6" {
-        CarSpec::rb6_with(&geometry)
-    } else {
-        CarSpec::gen22_with(&geometry)
-    });
+    let spec = Arc::new(CarSpec::for_era(&settings.car, &geometry).ok_or("unknown car")?);
     let count = players
         .len()
         .checked_add(settings.ai_cars)

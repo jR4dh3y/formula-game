@@ -91,6 +91,39 @@ fn scale_normals(image: &mut Image, scale: f32) {
     }
 }
 
+/// Threads that prepare imported textures and meshes, so a scene's assets
+/// neither hold a frame nor occupy the pools that run its systems and asset
+/// IO. A third of the cores: more of them finished a scene no sooner, since
+/// reading it is the slower part, and took frame time from the game.
+pub(crate) fn workers() -> &'static bevy::tasks::TaskPool {
+    static WORKERS: std::sync::OnceLock<bevy::tasks::TaskPool> = std::sync::OnceLock::new();
+    WORKERS.get_or_init(|| {
+        let cores = std::thread::available_parallelism().map_or(1, |cores| cores.get());
+        bevy::tasks::TaskPoolBuilder::new()
+            .num_threads(cores.div_ceil(3))
+            .thread_name("Asset preparation".into())
+            .build()
+    })
+}
+
+/// Imported textures in preparation, for the loading screens and scene readiness.
+#[derive(Resource, Default)]
+pub struct TextureJobs {
+    pub finished: usize,
+    /// Textures taken for preparation whose result has not been handed back.
+    pub pending: usize,
+    running: Vec<(AssetId<Image>, bevy::tasks::Task<Image>)>,
+}
+
+/// Builds mips and BC7 blocks for newly loaded scene textures on worker
+/// threads, so the window keeps drawing while a scene's textures arrive.
+///
+/// A material keeps the texture view it was first bound with, so an image
+/// changed after its first upload never reaches the screen. The texture is
+/// therefore withheld from the renderer entirely until it is prepared: its
+/// slot holds a main-world-only placeholder, which is never extracted, and
+/// materials that use it wait undrawn. The prepared image is then its first
+/// and only upload.
 pub fn prepare(
     mut events: MessageReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
@@ -98,8 +131,14 @@ pub fn prepare(
     detail: Option<Res<TextureDetail>>,
     device: Option<Res<RenderDevice>>,
     normal_scales: Res<NormalScales>,
+    mut jobs: ResMut<TextureJobs>,
 ) {
     let dropped = detail.map_or(0, |detail| detail.0);
+    let compress = device.as_ref().is_some_and(|device| {
+        device
+            .features()
+            .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
+    });
     for event in events.read() {
         let (AssetEvent::Added { id } | AssetEvent::LoadedWithDependencies { id }) = event else {
             continue;
@@ -113,32 +152,59 @@ pub fn prepare(
         }) {
             continue;
         }
-        let Some(image) = images.get_mut_untracked(*id) else {
+        // Untracked: the placeholder must not announce itself as a change.
+        let Some(slot) = images.get_mut_untracked(*id) else {
             continue;
         };
-        if let Some(scale) = normal_scales.0.lock().unwrap().remove(id) {
-            scale_normals(image, scale);
+        if !needs_mips(slot) {
+            continue;
         }
-        if generate_mips(image) {
-            drop_top_mips(image, dropped);
-            let mut sampler = match &image.sampler {
-                ImageSampler::Descriptor(sampler) => sampler.clone(),
-                ImageSampler::Default => ImageSamplerDescriptor::linear(),
-            };
-            sampler.set_anisotropic_filter(16);
-            sampler.mipmap_filter = ImageFilterMode::Linear;
-            image.sampler = ImageSampler::Descriptor(sampler);
-            if device.as_ref().is_some_and(|device| {
-                device
-                    .features()
-                    .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
-            }) {
-                compress_bc7(image);
-            }
-            // Immutable imported textures do not need a second copy in the main world.
-            image.asset_usage = RenderAssetUsages::RENDER_WORLD;
-        }
+        let placeholder = Image {
+            asset_usage: RenderAssetUsages::MAIN_WORLD,
+            ..default()
+        };
+        let image = std::mem::replace(slot, placeholder);
+        let scale = normal_scales.0.lock().unwrap().remove(id);
+        let task = workers().spawn(async move { process(image, scale, dropped, compress) });
+        jobs.running.push((*id, task));
     }
+    let mut running = std::mem::take(&mut jobs.running);
+    running.retain_mut(|(id, task)| {
+        let Some(image) = bevy::tasks::futures::check_ready(task) else {
+            return true;
+        };
+        jobs.finished += 1;
+        // Tracked, so this change is what first extracts the texture. A scene
+        // dropped while its textures were in preparation no longer has a slot.
+        if let Some(mut slot) = images.get_mut(*id) {
+            *slot = image;
+        }
+        false
+    });
+    jobs.running = running;
+    jobs.pending = jobs.running.len();
+}
+
+fn process(mut image: Image, scale: Option<f32>, dropped: u32, compress: bool) -> Image {
+    if let Some(scale) = scale {
+        scale_normals(&mut image, scale);
+    }
+    if generate_mips(&mut image) {
+        drop_top_mips(&mut image, dropped);
+        let mut sampler = match &image.sampler {
+            ImageSampler::Descriptor(sampler) => sampler.clone(),
+            ImageSampler::Default => ImageSamplerDescriptor::linear(),
+        };
+        sampler.set_anisotropic_filter(16);
+        sampler.mipmap_filter = ImageFilterMode::Linear;
+        image.sampler = ImageSampler::Descriptor(sampler);
+        if compress {
+            compress_bc7(&mut image);
+        }
+        // Immutable imported textures do not need a second copy in the main world.
+        image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+    }
+    image
 }
 
 /// Encode the complete mip chain without changing its resolution or colour space.
@@ -250,6 +316,23 @@ fn compressed_cache_path(image: &Image) -> Option<std::path::PathBuf> {
         root.join("f1-racecraft/bc7-v1")
             .join(format!("{:016x}.bin", hash.finish())),
     )
+}
+
+/// Whether `generate_mips` would build a chain for this image.
+fn needs_mips(image: &Image) -> bool {
+    let desc = &image.texture_descriptor;
+    desc.dimension == TextureDimension::D2
+        && desc.size.depth_or_array_layers == 1
+        && desc.mip_level_count == 1
+        && matches!(
+            desc.format,
+            TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb
+        )
+        && image
+            .data
+            .as_ref()
+            .is_some_and(|data| data.len() == (desc.size.width * desc.size.height * 4) as usize)
+        && desc.size.width.max(desc.size.height) > 1
 }
 
 pub(crate) fn generate_mips(image: &mut Image) -> bool {

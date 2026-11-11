@@ -1,0 +1,19 @@
+{
+  "author": "Dave Love (Sketchfab: Tyler_Dave)",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "changes": "wheels and rear-wing flap split into nodes, grounded and centred; opponent LOD decimated with textures capped at 2048 px",
+  "base": "redbull",
+  "fallbacks": { "racingbulls": "redbull" },
+  "teams": {
+    "redbull": { "model": "2026 Redbull RB22", "uid": "0a3d24a58e0549d591a5a48c22eec383" },
+    "ferrari": { "model": "2026 Ferrari SF-26", "uid": "e5ca6cecdc42449283f4bed27360f2a7" },
+    "mercedes": { "model": "2026 Mercedes W17", "uid": "b806f1e70aa343219e7158169549b97b" },
+    "mclaren": { "model": "2026 McLaren MCL40", "uid": "96214ad5624f42a0861f77008f8d29e7" },
+    "astonmartin": { "model": "2026 Aston Martin AMR26", "uid": "a50d1c7bc086455c9412470d93fc3fc7" },
+    "williams": { "model": "2026 Williams FW48", "uid": "4efa51e6d64a4192a83418f1b715c671" },
+    "haas": { "model": "2026 Haas VF-26", "uid": "1f41e03886724bc6acd16c92402989bc" },
+    "audi": { "model": "2026 Audi R26", "uid": "32bf228264b047669b100b0f1b8769ac" },
+    "cadillac": { "model": "2026 Cadillac MAC-26", "uid": "95bcd37aa7c649779efc33b90b6c023e" }
+  }
+}
