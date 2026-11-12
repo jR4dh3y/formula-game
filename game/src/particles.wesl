@@ -154,8 +154,10 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let scene = -depth_ndc_to_view_z(bevy_pbr::prepass::utils::prepass_depth(in.position, 0u));
     clear = min(clear, clamp((scene - depth + reach) / (2.0 * reach + 1e-3), 0.0, 1.0));
 }
-    // A puff the camera drives into thins out rather than popping.
-    let near = smoothstep(0.4, 0.4 + 2.5 * radius, distance);
+    // A puff the camera drives into thins out rather than popping, and smoke
+    // hanging between a chase camera and its car (a few metres) stays thin
+    // enough to see the car through.
+    let near = smoothstep(0.8, 4.5 + 1.5 * radius, distance);
 
     let life = smoothstep(0.0, 0.05, age) * (1.0 - smoothstep(0.45, 1.0, age));
     let thickness = material.tint.a * (0.3 + 0.7 * strength) * life
