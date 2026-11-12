@@ -215,10 +215,12 @@ Normal packaging always builds without `exp` and includes only Spa.
 
 | Action | Keyboard | Gamepad |
 | --- | --- | --- |
-| Throttle / brake | W / S or up / down | RT / LT |
-| Steer | A / D or left / right | Left stick |
+| Throttle / brake | W / S | RT / LT |
+| Steer | A / D | Left stick |
 | Shift up / down | E or Shift / Q or Ctrl | RB or A / LB or X |
 | Cycle camera | C | Y |
+| Look around | Arrows: left / right pan all the way round, up / down tilt | Right stick points the view; pull back to look behind |
+| Look back | B (hold) | Right stick back |
 | Adjust camera against live scene | F4; F4 / Esc to resume | — |
 | Cockpit / TV pod / third person | 1 / 2 / 3, or on-screen buttons | Cycle with Y |
 | Recover to track | R | Back / Select |
@@ -227,7 +229,7 @@ Normal packaging always builds without `exp` and includes only Spa.
 | Frame-rate readout | F3 | — |
 | Quit | Quit game in menu, or window close | Window close |
 
-There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or the Camera page. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and GEN22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
+There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or the Camera page. Free look works in all three and eases back ahead when released: the chase camera swings round the car, and the cockpit view turns the driver's head, leans out to the side and, turned right round, rises over the roll hoop to see behind. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and GEN22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
 
 The RB6 and GEN22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. GEN22 uses the named `steering_wheel` node, including its live LCD and LEDs; RB6 keeps its legacy wheel and screen pod.
 
