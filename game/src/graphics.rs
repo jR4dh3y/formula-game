@@ -113,6 +113,7 @@ impl Quality {
             surface_detail: self >= Medium,
             cinematic_lighting: self >= Medium,
             camera_motion: self >= Medium,
+            mirrors: self >= Medium,
             effects: if self >= High {
                 Level::High
             } else if self == Medium {
@@ -300,6 +301,8 @@ pub struct Video {
     pub surface_detail: bool,
     pub cinematic_lighting: bool,
     pub camera_motion: bool,
+    /// Live rear view in the cockpit mirrors.
+    pub mirrors: bool,
 }
 
 impl Default for Video {
@@ -333,6 +336,7 @@ impl Default for Video {
             surface_detail: false,
             cinematic_lighting: false,
             camera_motion: true,
+            mirrors: true,
         }
     }
 }
@@ -529,6 +533,10 @@ pub fn apply(
                 camera.insert(TemporalAntiAliasing::default());
             }
         }
+        if video.effects != Level::Off {
+            // Smoke is cut against the scene's depth; see `particles.wesl`.
+            camera.insert(DepthPrepass);
+        }
         if video.sharpening > 0. {
             camera.insert(ContrastAdaptiveSharpening {
                 enabled: true,
@@ -651,7 +659,11 @@ type SkyCameras<'w, 's> = Query<
         Entity,
         Option<Ref<'static, bevy::light::GeneratedEnvironmentMapLight>>,
     ),
-    (With<Camera3d>, With<bevy::light::Skybox>),
+    (
+        With<Camera3d>,
+        With<bevy::light::Skybox>,
+        Without<crate::mirrors::MirrorCamera>,
+    ),
 >;
 
 fn freeze_sky_lighting(
@@ -689,7 +701,7 @@ fn trace_frames(
     settled: Res<PipelinesSettled>,
     time: Res<Time<Real>>,
     session: Res<crate::Session>,
-    particles: Query<(), With<crate::effects::Particle>>,
+    particles: Query<&crate::effects::Particle>,
     mut images: MessageReader<AssetEvent<Image>>,
     mut file: Local<Option<std::fs::File>>,
 ) {
@@ -707,7 +719,7 @@ fn trace_frames(
     let file = file.get_or_insert_with(|| {
         std::fs::File::create(std::env::var_os("F1_VISUAL_TRACE").unwrap()).unwrap()
     });
-    let value = serde_json::json!({"elapsed":time.elapsed_secs_f64(),"dt_ms":time.delta_secs_f64()*1000.,"pipelines_settled_frames":frames_ready,"image_events":uploads,"particles":particles.iter().count(),"race_time":session.race.time});
+    let value = serde_json::json!({"elapsed":time.elapsed_secs_f64(),"dt_ms":time.delta_secs_f64()*1000.,"pipelines_settled_frames":frames_ready,"image_events":uploads,"particles":particles.iter().count(),"sparks":particles.iter().filter(|particle| particle.is_spark()).count(),"speed":session.race.entrants[session.player].car.speed(),"race_time":session.race.time});
     writeln!(file, "{value}").unwrap();
 }
 

@@ -14,12 +14,14 @@ mod hud;
 mod materials;
 mod menu;
 mod meshes;
+mod mirrors;
 mod online;
 mod options;
 mod pose;
 mod preferences;
 mod race_loop;
 mod road;
+mod script;
 mod sky;
 mod teams;
 #[cfg(test)]
@@ -71,6 +73,8 @@ pub struct Session {
     pub impact: f64,
     /// Strongest collision since the audio update, consumed once per frame.
     pub pending_impact: f64,
+    /// Collisions of any car since the effects last drew, for their sparks.
+    pub contacts: Vec<effects::Contact>,
 }
 
 /// Seconds for a collision's camera jolt to fade to about a third.
@@ -181,6 +185,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        contacts: Vec::new(),
         screen: if quick_race {
             menu::Screen::Racing
         } else {
@@ -205,6 +210,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
             primary_window: Some(Window {
                 title,
                 resolution: (options.width, options.height).into(),
+                // A capture must be the size asked for: a fixed-size window is
+                // left alone by tiling compositors, which would otherwise
+                // stretch it to a column.
+                resizable: !capture_run,
                 ..default()
             }),
             ..default()
@@ -239,6 +248,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
     if let Some(run) = benchmark {
         app.insert_resource(run);
     }
+    if let Some(script) = script::Script::from_env().filter(|_| capture_run) {
+        app.insert_resource(script);
+    }
     app.add_plugins(plugins)
         .add_audio_source::<audio::Soundscape>()
         .add_plugins(EguiPlugin::default())
@@ -248,7 +260,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
             auto_create_primary_context: false,
             ..default()
         })
-        .add_systems(Startup, (effects::setup, road::setup))
+        .add_plugins(effects::EffectsPlugin)
+        .add_plugins(mirrors::MirrorPlugin)
+        .add_systems(Startup, road::setup)
         .add_plugins(graphics::StaticSkyLighting)
         .add_plugins(wheel_dash::WheelDashPlugin)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
@@ -382,6 +396,7 @@ fn step_race(
     mut session: ResMut<Session>,
     benchmark: Option<Res<benchmark::Run>>,
     mut online: Option<ResMut<online::Online>>,
+    mut script: Option<ResMut<script::Script>>,
 ) {
     if benchmark.is_some() {
         return;
@@ -419,7 +434,17 @@ fn step_race(
             .collect();
         pilot.drive(car, &race.track, &rivals, 1. / PHYSICS_RATE)
     });
+    let staged = if scripted.is_none() && !connected {
+        script
+            .as_mut()
+            .and_then(|script| script.input(&session.race, session.player))
+    } else {
+        None
+    };
+    let scripted = scripted.or(staged.and_then(Result::ok));
     let input = if let Some(input) = scripted {
+        input
+    } else if let Some(Err(input)) = staged {
         input
     } else if connected && session.screen != menu::Screen::Racing {
         racecraft_sim::CarInput {
@@ -455,6 +480,21 @@ fn step_race(
         }
     } else {
         race.step(&[input]);
+    }
+    let Session { race, contacts, .. } = &mut *session;
+    for entrant in &race.entrants {
+        let car = &entrant.car;
+        if car.impact > 0. && contacts.len() < 32 {
+            contacts.push(effects::Contact {
+                point: Vec3::new(
+                    car.impact_point.x as f32,
+                    car.position.y as f32 + 0.25,
+                    car.impact_point.y as f32,
+                ),
+                velocity: Vec3::new(car.velocity.x as f32, 0., car.velocity.y as f32),
+                impulse: car.impact as f32,
+            });
+        }
     }
     let hit = session.race.entrants[session.player].car.impact;
     session.pending_impact = session.pending_impact.max(hit);

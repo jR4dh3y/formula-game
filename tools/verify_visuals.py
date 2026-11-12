@@ -29,13 +29,14 @@ def video(preset, enabled):
                  tonemapping='AcesFitted', exposure=0, saturation=1.05, contrast=1.01,
                  temperature=0, bloom=.08, vignette=0, chromatic_aberration=0, motion_blur=.18,
                  depth_of_field=False, bokeh=False, focus_distance=30, haze=.018, effects='High',
-                 surface_detail=True, cinematic_lighting=True, camera_motion=True)
+                 surface_detail=True, cinematic_lighting=True, camera_motion=True,
+                 mirrors=True)
     if preset == 'low':
         value.update(anti_alias='Fxaa', shadow_resolution=1024, shadow_cascades=2,
                      shadow_distance=90, shadow_filter='Hard', contact_shadows=False,
                      texture='Quarter', ai_detail='Low', saturation=1, contrast=1,
                      haze=0, effects='Off', surface_detail=False, cinematic_lighting=False,
-                     camera_motion=False, bloom=0, motion_blur=0)
+                     camera_motion=False, mirrors=False, bloom=0, motion_blur=0)
     if preset == 'ultra':
         value.update(shadow_resolution=4096, shadow_cascades=4, shadow_distance=90,
                      ambient_occlusion='High', sky='High', ai_detail='High')
