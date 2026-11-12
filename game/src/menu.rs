@@ -509,6 +509,7 @@ pub fn apply(
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        contacts: Vec::new(),
         screen: Screen::Loading,
     };
     *options = selected;
@@ -2096,6 +2097,9 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
         });
         setting_row(lighting, "Camera motion", |ui| {
             ui.checkbox(&mut video.camera_motion, "Enabled");
+        });
+        setting_row(lighting, "Cockpit mirrors", |ui| {
+            ui.checkbox(&mut video.mirrors, "Live rear view");
         });
         setting_row(lighting, "Haze", |ui| {
             ui.add_sized(

@@ -236,6 +236,9 @@ pub struct Car {
     vertical_acceleration: f64,
     /// Strongest impact this tick (N·s), for camera shake and damage later.
     pub impact: f64,
+    /// Ground-plane point of that impact, for contact effects. Presentation
+    /// only: it is not part of the snapshot.
+    pub impact_point: DVec2,
 }
 
 /// Visual body pitch per m/s² of longitudinal acceleration, rad.
@@ -322,6 +325,7 @@ impl Car {
             vertical_velocity: 0.0,
             vertical_acceleration: 0.0,
             impact: 0.0,
+            impact_point: DVec2::ZERO,
         }
     }
 
@@ -969,6 +973,9 @@ impl Car {
         let arm = point - DVec2::new(self.position.x, self.position.z);
         self.velocity += impulse / self.spec.mass;
         self.yaw_rate -= arm.perp_dot(impulse) / self.spec.yaw_inertia;
+        if impulse.length() > self.impact {
+            self.impact_point = point;
+        }
         self.impact = self.impact.max(impulse.length());
     }
 
