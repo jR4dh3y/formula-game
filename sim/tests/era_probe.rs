@@ -243,11 +243,79 @@ fn era_racecraft() {
             let mut race = Race::new(track.clone(), entrants, laps, 11);
             let (mut passes, mut contacts) = (0, 0);
             let (mut boost, mut overtake) = (0.0, 0.0);
+            let (mut soc_sum, mut soc_n, mut soc_min) = (0.0, 0.0, f64::INFINITY);
             let dt = 1.0 / PHYSICS_RATE;
             let limit = (laps as f64 * 300.0 * PHYSICS_RATE) as u64;
+            // ERA_TRACE=<car>:<from s>:<to s>[:<lap>] prints that car's pass through the window.
+            let trace: Option<(usize, f64, f64, u32)> =
+                std::env::var("ERA_TRACE").ok().and_then(|v| {
+                    let mut parts = v.split(':').map(|p| p.parse::<f64>().ok());
+                    Some((
+                        parts.next()?? as usize,
+                        parts.next()??,
+                        parts.next()??,
+                        parts.next().flatten().unwrap_or(0.0) as u32,
+                    ))
+                });
             while race.phase != Phase::Finished && race.tick < limit {
                 race.step(&[]);
+                if let Some((index, from, to, lap)) = trace {
+                    let entrant = &race.entrants[index];
+                    let car = &entrant.car;
+                    let s = car.track_position.s;
+                    if entrant.timing.laps_completed == lap
+                        && (from..to).contains(&s)
+                        && race.tick.is_multiple_of(PHYSICS_RATE as u64 / 20)
+                    {
+                        let intent = match &entrant.driver {
+                            racecraft_sim::Driver::Ai(ai) => {
+                                format!(
+                                    "plan {:.0} curv {:.4}",
+                                    ai.target_speed(&track, s) * 3.6,
+                                    track.racing_line.curvature[track.station_at(s)]
+                                )
+                            }
+                            _ => String::new(),
+                        };
+                        let near = race
+                            .entrants
+                            .iter()
+                            .enumerate()
+                            .filter(|(i, _)| *i != index)
+                            .map(|(i, other)| {
+                                let delta = track.delta(s, other.car.track_position.s);
+                                (i, delta, other.car.track_position.lateral)
+                            })
+                            .filter(|(_, delta, _)| delta.abs() < 30.0)
+                            .map(|(i, d, l)| format!("#{i} {d:+.0}m@{l:+.1}"))
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        println!(
+                            "  s {s:6.0} lat {:+5.1} line {:+5.1} w {:4.1} {:3.0} km/h yaw {:+5.1} steer {:+.2} slip r {:.2} f {:.2} T {:.0}/{:.0} camber {:+.3} {:?} {intent} | {near}",
+                            car.track_position.lateral,
+                            track.racing_line.lateral_at(s),
+                            track.frame_at(s).half_width,
+                            car.speed() * 3.6,
+                            car.yaw_rate,
+                            car.steer_angle,
+                            car.wheels[2].sliding.max(car.wheels[3].sliding),
+                            car.wheels[0].sliding.max(car.wheels[1].sliding),
+                            car.tyres[0].temperature,
+                            car.tyres[1].temperature,
+                            (car.wheels[0].ground_height - car.wheels[1].ground_height) / 1.5,
+                            car.wheels[0].surface,
+                        );
+                    }
+                }
                 for entrant in &race.entrants {
+                    if let Some(hybrid) = &entrant.car.spec.hybrid {
+                        if race.tick as f64 > 30.0 * PHYSICS_RATE {
+                            let soc = entrant.car.battery.charge(hybrid);
+                            soc_sum += soc;
+                            soc_n += 1.0;
+                            soc_min = soc_min.min(soc);
+                        }
+                    }
                     match entrant.car.battery.mode {
                         DeployMode::Boost => boost += dt,
                         DeployMode::Overtake => overtake += dt,
@@ -257,7 +325,19 @@ fn era_racecraft() {
                 for event in race.events.drain(..) {
                     match event {
                         RaceEvent::Overtake { .. } => passes += 1,
-                        RaceEvent::Contact { impulse, .. } if impulse > 2000.0 => contacts += 1,
+                        RaceEvent::Contact { a, b, impulse } if impulse > 2000.0 => {
+                            contacts += 1;
+                            if std::env::var_os("ERA_CONTACTS").is_some() {
+                                let car = &race.entrants[a].car;
+                                println!(
+                                    "  contact {a}-{b:?} {impulse:.0} N s at s {:.0} m lateral {:.1} m {:.0} km/h lap {}",
+                                    car.track_position.s,
+                                    car.track_position.lateral,
+                                    car.speed() * 3.6,
+                                    race.entrants[a].timing.laps_completed,
+                                );
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -268,7 +348,12 @@ fn era_racecraft() {
                 .filter(|e| e.timing.finish_time.is_some())
                 .count();
             println!(
-                "{track_name:<12} {era:<6} passes {passes:>3}  hard contacts {contacts:>3}  boost {boost:>6.1}s  overtake {overtake:>6.1}s  finished {finished}/6"
+                "{track_name:<12} {era:<6} passes {passes:>3}  hard contacts {contacts:>3}  boost {boost:>6.1}s  overtake {overtake:>6.1}s  finished {finished}/6{}",
+                if soc_n > 0.0 {
+                    format!("  charge mean {:.0}% min {:.0}%", 100.0 * soc_sum / soc_n, 100.0 * soc_min)
+                } else {
+                    String::new()
+                }
             );
         }
     }

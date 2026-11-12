@@ -176,6 +176,9 @@ pub struct ChaseCamera {
     /// The player's held collision impulse (N·s), for the jolt.
     pub impact: f64,
     pub motion_enabled: bool,
+    /// Free look: wanted and smoothed (yaw left, pitch up) in radians.
+    look_target: glam::DVec2,
+    look: glam::DVec2,
 }
 
 impl ChaseCamera {
@@ -197,6 +200,8 @@ impl ChaseCamera {
             cockpit_eye: None,
             impact: 0.,
             motion_enabled: true,
+            look_target: glam::DVec2::ZERO,
+            look: glam::DVec2::ZERO,
         };
         camera.snap(&Pose::of(car));
         camera
@@ -204,6 +209,25 @@ impl ChaseCamera {
     pub fn set_cockpit_eye(&mut self, eye: Option<[f64; 3]>) {
         self.cockpit_eye = eye.map(DVec3::from_array);
         self.cut = true;
+    }
+    /// Where the driver wants to look, relative to straight ahead.
+    pub fn look_toward(&mut self, (yaw, pitch): (f64, f64)) {
+        self.look_target = glam::DVec2::new(yaw, pitch);
+    }
+    /// Turns the head: eases the view toward the look target, the shorter
+    /// way round except that looking back always swings through the side
+    /// the view is already turned toward.
+    fn turn_head(&mut self, dt: f64) {
+        let pi = std::f64::consts::PI;
+        let mut delta =
+            (self.look_target.x - self.look.x + pi).rem_euclid(std::f64::consts::TAU) - pi;
+        if (delta.abs() - pi).abs() < 1e-6 && self.look.x != 0. {
+            delta = pi * self.look.x.signum();
+        }
+        let rate = 1. - (-dt * 9.).exp();
+        self.look.x += delta * rate;
+        self.look.x = (self.look.x + pi).rem_euclid(std::f64::consts::TAU) - pi;
+        self.look.y += (self.look_target.y - self.look.y) * rate;
     }
     pub fn cycle(&mut self) {
         self.select(match self.mode {
@@ -246,9 +270,14 @@ impl ChaseCamera {
                         - self.speed * strength * 0.6
                         - self.load.x * strength * 0.012)
                 + DVec3::Y * view.height;
+            // Free look swings the boom round the car.
+            let turn = glam::DQuat::from_rotation_y(self.look.x);
+            let eye = origin + turn * (eye - origin);
+            let ahead = turn * forward;
+            let pitch = pitch - self.look.y;
             (
                 eye,
-                eye + forward * (30. * pitch.cos()) - DVec3::Y * (30. * pitch.sin()),
+                eye + ahead * (30. * pitch.cos()) - DVec3::Y * (30. * pitch.sin()),
             )
         } else {
             let attitude =
@@ -265,8 +294,26 @@ impl ChaseCamera {
             } else {
                 DVec3::ZERO
             };
-            let eye = origin + attitude * (DVec3::new(0., view.height, view.fore_aft) + offset);
-            (eye, eye + stabilized * direction * 30.)
+            // Free look turns the head; turned well round, it leans out
+            // toward that side as a driver does to see past the headrest.
+            let head = glam::DQuat::from_rotation_y(self.look.x)
+                * glam::DQuat::from_rotation_x(-self.look.y);
+            // Turned right round, nobody sees through the headrest: the view
+            // rises over the roll hoop like a rear-facing onboard camera.
+            let behind = ((self.look.x.abs() - 1.3) / 1.1).clamp(0., 1.);
+            let behind = behind * behind * (3. - 2. * behind);
+            let lean = if self.mode == Mode::Cockpit {
+                DVec3::new(
+                    self.look.x.sin() * 0.08,
+                    self.look.x.abs().min(1.) * 0.03 + behind * 0.62,
+                    -behind * 0.35,
+                )
+            } else {
+                DVec3::ZERO
+            };
+            let eye =
+                origin + attitude * (DVec3::new(0., view.height, view.fore_aft) + offset + lean);
+            (eye, eye + stabilized * (head * direction) * 30.)
         }
     }
     /// Eye position and look-at point; the audio listener follows them.
@@ -289,6 +336,7 @@ impl ChaseCamera {
         let dt = dt as f64;
         let car = &race.entrants[player].car;
         let cut = self.cut || self.position.distance(pose.origin) > 25.;
+        self.turn_head(dt);
         let response = if cut { 1. } else { 1. - (-dt * 2.5).exp() };
         let load = glam::DVec2::new(car.acceleration.x.clamp(-45., 15.), 0.);
         self.load += (load - self.load) * response;
@@ -509,6 +557,32 @@ mod tests {
             max - min < 0.05,
             "steady-speed framing differs: {offsets:?}"
         );
+    }
+
+    #[test]
+    fn looking_back_swings_the_chase_view_in_front_and_eases_home() {
+        let session = crate::tests::session();
+        let race = &session.race;
+        let pose = Pose::of(&race.entrants[0].car);
+        let mut camera = ChaseCamera::new(race, 0);
+        let mut transform = Transform::default();
+        let mut projection = Projection::Perspective(PerspectiveProjection::default());
+        camera.update(&mut transform, &mut projection, race, 0, &pose, 1. / 60.);
+        let forward = DVec3::new(pose.yaw.sin(), 0., pose.yaw.cos());
+        let ahead =
+            |transform: &Transform| (transform.translation.as_dvec3() - pose.origin).dot(forward);
+        assert!(ahead(&transform) < 0.);
+        camera.look_toward((std::f64::consts::PI, 0.));
+        for _ in 0..120 {
+            camera.update(&mut transform, &mut projection, race, 0, &pose, 1. / 60.);
+        }
+        assert!(ahead(&transform) > 2., "{}", ahead(&transform));
+        assert!(transform.forward().as_dvec3().dot(forward) < -0.9);
+        camera.look_toward((0., 0.));
+        for _ in 0..120 {
+            camera.update(&mut transform, &mut projection, race, 0, &pose, 1. / 60.);
+        }
+        assert!(ahead(&transform) < 0.);
     }
 
     #[test]

@@ -1,9 +1,10 @@
 //! Keyboard and gamepad mapping to car commands.
 //!
-//! Keyboard: W/↑ throttle, S/↓ brake, A/D or ←/→ steer, E/Shift up, Q/Ctrl down,
-//! C camera (1/2/3 direct), R reset to track, P/Esc pause menu.
-//! Gamepad: RT throttle, LT brake, left stick steer, RB/A up, LB/X down,
-//! Y camera, Back reset, Start pause.
+//! Keyboard: W throttle, S brake, A/D steer, E/Shift up, Q/Ctrl down,
+//! C camera (1/2/3 direct), arrows look around, B look back, R reset to
+//! track, P/Esc pause menu.
+//! Gamepad: RT throttle, LT brake, left stick steer, right stick look around
+//! (pull back to look behind), RB/A up, LB/X down, Y camera, Back reset, Start pause.
 
 use crate::{
     camera::Mode,
@@ -30,7 +31,19 @@ pub struct Controls {
     analog: bool,
     /// Car speed in m/s, for the speed-sensitive keyboard steering rate.
     pub speed: f64,
+    /// Where the driver is looking, relative to straight ahead: yaw (radians,
+    /// positive to the left) and pitch (radians, positive up).
+    pub look: (f64, f64),
+    /// The arrow keys' own look direction, kept while they pan.
+    key_look: (f64, f64),
 }
+
+/// Arrow-key panning rates, radians per second.
+const LOOK_PAN: f64 = 2.6;
+const LOOK_TILT: f64 = 1.2;
+const LOOK_PITCH_LIMIT: f64 = 0.6;
+/// Right-stick deflection that starts turning the view.
+const LOOK_DEADZONE: f32 = 0.25;
 
 #[derive(Default)]
 pub struct Actions {
@@ -162,6 +175,8 @@ pub fn update(
     if actions.camera {
         session.camera.cycle();
     }
+    let look = session.controls.look;
+    session.camera.look_toward(look);
     if actions.reset {
         let player = session.player;
         if let Some(client) = online.as_mut().and_then(|o| o.client.as_mut()) {
@@ -189,8 +204,9 @@ impl Controls {
         let pressed = |keys: &[KeyCode]| keys.iter().any(|&key| input.just_pressed(key));
         let pad_pressed = |button| pad.is_some_and(|pad| pad.just_pressed(button));
 
-        let left = held(&[KeyCode::KeyA, KeyCode::ArrowLeft]);
-        let right = held(&[KeyCode::KeyD, KeyCode::ArrowRight]);
+        self.look = self.read_look(input, pad, dt);
+        let left = held(&[KeyCode::KeyA]);
+        let right = held(&[KeyCode::KeyD]);
         let stick = pad
             .and_then(|pad| pad.get(GamepadAxis::LeftStickX))
             .unwrap_or(0.0);
@@ -222,8 +238,8 @@ impl Controls {
             self.steer += (target - self.steer).clamp(-step, step);
         }
 
-        let key_throttle = held(&[KeyCode::KeyW, KeyCode::ArrowUp]);
-        let key_brake = held(&[KeyCode::KeyS, KeyCode::ArrowDown]);
+        let key_throttle = held(&[KeyCode::KeyW]);
+        let key_brake = held(&[KeyCode::KeyS]);
         let pad_throttle = pad
             .and_then(|pad| pad.get(GamepadButton::RightTrigger2))
             .unwrap_or(0.0) as f64;
@@ -268,6 +284,47 @@ impl Controls {
     }
 
     /// Command for one physics tick; queued shifts fire once.
+    /// Look direction from B (look back), the right
+    /// stick (points the view: down looks back) or the arrows (pan freely).
+    /// With nothing held the view eases back to straight ahead.
+    fn read_look(
+        &mut self,
+        input: &ButtonInput<KeyCode>,
+        pad: Option<&Gamepad>,
+        dt: f64,
+    ) -> (f64, f64) {
+        let held = |key| input.pressed(key);
+        let axis = |axis| pad.and_then(|pad| pad.get(axis)).unwrap_or(0.0);
+        let pan = held(KeyCode::ArrowLeft) as i32 - held(KeyCode::ArrowRight) as i32;
+        let tilt = held(KeyCode::ArrowUp) as i32 - held(KeyCode::ArrowDown) as i32;
+        if pan != 0 || tilt != 0 {
+            let yaw = self.key_look.0 + pan as f64 * LOOK_PAN * dt;
+            self.key_look = (
+                (yaw + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU)
+                    - std::f64::consts::PI,
+                (self.key_look.1 + tilt as f64 * LOOK_TILT * dt)
+                    .clamp(-LOOK_PITCH_LIMIT, LOOK_PITCH_LIMIT),
+            );
+        } else {
+            self.key_look = (0.0, 0.0);
+        }
+        if held(KeyCode::KeyB) {
+            return (std::f64::consts::PI, 0.0);
+        }
+        let (x, y) = (
+            axis(GamepadAxis::RightStickX),
+            axis(GamepadAxis::RightStickY),
+        );
+        let deflection = (x.hypot(y) - LOOK_DEADZONE) / (1.0 - LOOK_DEADZONE);
+        if deflection > 0.0 {
+            // Up is ahead, sideways looks out, down looks behind; a part
+            // deflection turns the view part of the way.
+            let angle = -(x as f64).atan2(y as f64);
+            return (angle * (deflection as f64).min(1.0), 0.0);
+        }
+        self.key_look
+    }
+
     pub fn car_input(&mut self) -> CarInput {
         let command = CarInput {
             steer: self.steer,
@@ -327,6 +384,53 @@ mod tests {
         controls.update(&keys, None, 0.01);
         assert!(controls.car_input().drs);
         assert!(!controls.car_input().drs);
+    }
+
+    #[test]
+    fn arrows_look_around_without_driving_and_the_view_recentres() {
+        let mut keys = ButtonInput::default();
+        let mut controls = Controls::default();
+        keys.press(KeyCode::ArrowLeft);
+        keys.press(KeyCode::ArrowUp);
+        for _ in 0..10 {
+            controls.update(&keys, None, 0.1);
+        }
+        let (yaw, pitch) = controls.look;
+        // A full second of panning turns well past the side, toward behind.
+        assert!(yaw > 2.0, "{yaw}");
+        assert!((pitch - LOOK_PITCH_LIMIT).abs() < 1e-9);
+        let input = controls.car_input();
+        assert_eq!((input.steer, input.throttle, input.brake), (0.0, 0.0, 0.0));
+        // Panning on wraps all the way round.
+        for _ in 0..10 {
+            controls.update(&keys, None, 0.1);
+        }
+        assert!(controls.look.0.abs() <= std::f64::consts::PI);
+        keys.release_all();
+        controls.update(&keys, None, 0.01);
+        assert_eq!(controls.look, (0.0, 0.0));
+        keys.press(KeyCode::KeyB);
+        controls.update(&keys, None, 0.01);
+        assert_eq!(controls.look.0, std::f64::consts::PI);
+    }
+
+    #[test]
+    fn right_stick_points_the_view() {
+        let keys = ButtonInput::default();
+        let mut pad = Gamepad::default();
+        let mut controls = Controls::default();
+        // Full right looks right (negative yaw), full down looks behind.
+        pad.analog_mut().set(GamepadAxis::RightStickX, 1.0);
+        controls.update(&keys, Some(&pad), 0.01);
+        assert!((controls.look.0 + std::f64::consts::FRAC_PI_2).abs() < 1e-6);
+        pad.analog_mut().set(GamepadAxis::RightStickX, 0.0);
+        pad.analog_mut().set(GamepadAxis::RightStickY, -1.0);
+        controls.update(&keys, Some(&pad), 0.01);
+        assert!((controls.look.0.abs() - std::f64::consts::PI).abs() < 1e-6);
+        // Inside the dead zone the view stays ahead.
+        pad.analog_mut().set(GamepadAxis::RightStickY, -0.2);
+        controls.update(&keys, Some(&pad), 0.01);
+        assert_eq!(controls.look, (0.0, 0.0));
     }
 
     #[test]
