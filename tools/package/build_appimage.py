@@ -210,6 +210,8 @@ def main():
             source = Path("/usr/share/licenses/spdx/exceptions") / f"{license_id}.txt"
         if source.exists():
             shutil.copy2(source, licenses / source.name)
+    shutil.copy2(ROOT / "LICENSE", licenses / "f1-racecraft" / "LICENSE")
+    shutil.copy2(ROOT / "LICENSING.md", licenses / "f1-racecraft" / "LICENSING.md")
     shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "f1-racecraft/FONT-OFL.txt")
     shutil.copy2(ROOT / "game/audio/reference/CREDITS.md", licenses / "f1-racecraft/AUDIO-CREDITS.md")
     shutil.copy2(ROOT / "tools/package/README.md", APP / "README.txt")

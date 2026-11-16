@@ -163,6 +163,8 @@ def main():
         shutil.copy2(ROOT / "tools/package/WINDOWS.md", package / "README.md")
         licenses = package / "licenses"
         licenses.mkdir()
+        shutil.copy2(ROOT / "LICENSE", licenses / "LICENSE")
+        shutil.copy2(ROOT / "LICENSING.md", licenses / "LICENSING.md")
         shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "FONT-OFL.txt")
         shutil.copy2(ROOT / "game/audio/reference/CREDITS.md", licenses / "AUDIO-CREDITS.md")
         notices = copy_notices(cargo, ROOT / "Cargo.toml", package)
