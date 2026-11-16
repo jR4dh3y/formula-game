@@ -2,6 +2,7 @@
 name = "f1-the-game"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

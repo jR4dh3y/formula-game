@@ -4,6 +4,7 @@ members = ["sim", "game", "net"]
 exclude = ["archive/custom-engine"]
 
 [workspace.package]
+license = "GPL-3.0-or-later"
 edition = "2021"
 version = "2.0.0"
 
