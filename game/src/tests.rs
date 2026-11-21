@@ -75,6 +75,7 @@ pub(super) fn session() -> Session {
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        drift_score: default(),
         screen: menu::Screen::Racing,
     }
 }

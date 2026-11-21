@@ -42,7 +42,7 @@ pub enum Outcome {
     Grass,
 }
 
-#[derive(Resource, Default, Debug)]
+#[derive(Default, Debug)]
 pub struct DriftScore {
     /// Points in the current chain, before banking.
     pub chain: f64,
@@ -73,7 +73,31 @@ impl DriftScore {
         self.multiplier = 1.0;
     }
 
-    /// Advances the score for one frame of `dt` seconds.
+    pub fn discard_chain(&mut self) {
+        *self = Self {
+            total: self.total,
+            best_chain: self.best_chain,
+            ..Self::default()
+        };
+    }
+
+    pub fn sample(&mut self, car: &racecraft_sim::Car, dt: f64) {
+        let on_grass = car
+            .wheels
+            .iter()
+            .any(|wheel| wheel.surface == Surface::Grass);
+        let forward = car.velocity.dot(car.forward());
+        let lateral = car.velocity.dot(car.left());
+        self.advance(
+            lateral.atan2(forward).to_degrees().abs(),
+            car.speed(),
+            on_grass,
+            car.impact,
+            dt,
+        );
+    }
+
+    /// Advances the score for one physics tick.
     pub fn advance(&mut self, slip: f64, speed: f64, on_grass: bool, impact: f64, dt: f64) {
         if let Some((_, left)) = &mut self.outcome {
             *left -= dt;
@@ -83,6 +107,7 @@ impl DriftScore {
         }
         self.angle = slip;
         let chaining = self.chain > 0.0;
+        self.drifting = false;
         if chaining && impact > WALL_IMPULSE {
             self.end(Outcome::Wall);
             return;
@@ -114,51 +139,9 @@ impl DriftScore {
     }
 }
 
-/// Slip angle of the player's car in degrees and its speed, from the sim.
-fn slip_of(car: &racecraft_sim::Car) -> f64 {
-    let forward = car.velocity.dot(car.forward());
-    let lateral = car.velocity.dot(car.left());
-    lateral.atan2(forward).to_degrees().abs()
-}
-
-pub fn update(
-    options: Res<crate::options::Options>,
-    mut session: ResMut<crate::Session>,
-    mut score: ResMut<DriftScore>,
-    time: Res<Time>,
-    mut last_race_time: Local<f64>,
-) {
-    if !options.drift() {
-        return;
-    }
-    // A restart or a new session rewinds the race clock: start a fresh score.
-    if session.race.time < *last_race_time - 0.5 {
-        *score = DriftScore::default();
-    }
-    *last_race_time = session.race.time;
-    let player = session.player;
-    // Drifting aids, whatever the menu last applied.
-    let aids = assists(session.race.entrants[player].car.assists);
-    session.race.entrants[player].car.assists = aids;
-    session.corner_braking = 0.0;
-    session.show_racing_line = false;
-    if !session.ready || session.paused || session.screen != crate::menu::Screen::Racing {
-        return;
-    }
-    let car = &session.race.entrants[player].car;
-    let on_grass = car
-        .wheels
-        .iter()
-        .all(|wheel| wheel.surface == Surface::Grass);
-    let (slip, speed) = (slip_of(car), car.speed());
-    let impact = session.impact;
-    score.advance(slip, speed, on_grass, impact, time.delta_secs_f64());
-}
-
 pub fn ui(
     options: Res<crate::options::Options>,
     session: Res<crate::Session>,
-    score: Res<DriftScore>,
     mut contexts: EguiContexts,
 ) -> Result {
     // After lights out: during the countdown the start lights own the top.
@@ -169,11 +152,13 @@ pub fn ui(
     {
         return Ok(());
     }
+    let score = &session.drift_score;
     let context = contexts.ctx_mut()?;
+    let scale = crate::hud::scale(context.content_rect().size());
     let amber = egui::Color32::from_rgb(255, 184, 28);
     let red = egui::Color32::from_rgb(235, 55, 55);
     egui::Area::new("drift-score".into())
-        .anchor(egui::Align2::CENTER_TOP, [0.0, 16.0])
+        .anchor(egui::Align2::CENTER_TOP, [0.0, 82.0 * scale])
         .interactable(false)
         .show(context, |ui| {
             egui::Frame::new()
@@ -279,6 +264,21 @@ mod tests {
             assert_eq!(score.total, 0);
             assert_eq!(score.outcome.map(|o| o.0), Some(expected));
         }
+    }
+
+    #[test]
+    fn discarding_a_chain_keeps_banked_points() {
+        let mut score = DriftScore {
+            total: 300,
+            best_chain: 200,
+            ..DriftScore::default()
+        };
+        score.advance(35.0, 15.0, false, 0.0, 1.0);
+        assert!(score.chain > 0.0);
+        score.discard_chain();
+        assert_eq!((score.total, score.best_chain), (300, 200));
+        assert_eq!(score.chain, 0.0);
+        assert!(!score.drifting);
     }
 
     #[test]

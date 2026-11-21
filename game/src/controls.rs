@@ -171,6 +171,7 @@ pub fn update(
             }
         } else {
             session.race.recover(player);
+            session.drift_score.discard_chain();
         }
         session.recover_hud();
     }

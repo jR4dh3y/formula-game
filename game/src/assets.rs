@@ -988,6 +988,12 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     let identities = teams.field(options)?;
     // Grid: the player starts in the requested slot among the AI field.
     let player_slot = options.grid_slot - 1;
+    let aids = options.player_assists();
+    let aids = if options.drift() {
+        crate::drift::assists(aids)
+    } else {
+        aids
+    };
     let total = options.opponents + 1;
     let mut ai_index = 0;
     let entrants: Vec<EntrantConfig> = (0..total)
@@ -999,7 +1005,7 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
                         .map_or_else(|| "You".into(), |identity| identity.name.clone()),
                     spec: field_spec.clone(),
                     setup: options.setup,
-                    assists: options.player_assists(),
+                    assists: aids,
                     ai: None,
                     human_slot: 0,
                     livery: [1.0, 1.0, 1.0],

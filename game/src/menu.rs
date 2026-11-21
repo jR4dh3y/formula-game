@@ -503,8 +503,12 @@ pub fn apply(
         identities,
         rig,
         guidance: crate::driving::Guidance::new(&race, player),
-        corner_braking: frontend.corner_braking,
-        show_racing_line: frontend.show_racing_line,
+        corner_braking: if selected.drift() {
+            0.
+        } else {
+            frontend.corner_braking
+        },
+        show_racing_line: !selected.drift() && frontend.show_racing_line,
         show_performance: session.show_performance,
         minimap: hud::Minimap::new(&race.track),
         poses: crate::pose::Poses::new(&race),
@@ -520,6 +524,7 @@ pub fn apply(
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        drift_score: default(),
         screen: Screen::Loading,
     };
     *options = selected;
@@ -1184,12 +1189,17 @@ pub fn ui(
     }
     if frontend.race_started {
         let player = session.player;
-        session.race.entrants[player].car.assists = frontend.aids;
+        let drift = options.drift();
+        session.race.entrants[player].car.assists = if drift {
+            crate::drift::assists(frontend.aids)
+        } else {
+            frontend.aids
+        };
         options.driver_aids = Some(frontend.aids);
         options.automatic_gears = frontend.aids.automatic_gears;
         options.corner_braking = frontend.corner_braking;
-        session.corner_braking = frontend.corner_braking;
-        session.show_racing_line = frontend.show_racing_line;
+        session.corner_braking = if drift { 0. } else { frontend.corner_braking };
+        session.show_racing_line = !drift && frontend.show_racing_line;
     }
     Ok(())
 }
@@ -1306,12 +1316,31 @@ fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
         section(ui, "Mode");
         ui.horizontal(|ui| {
             let drift = draft.drift();
-            if ui.selectable_label(!drift, "Race").clicked() && drift {
-                draft.car = "gen22".into();
-                draft.track = "spa".into();
-                draft.opponents = 7;
-                draft.grid_slot = 6;
-                draft.laps = 3;
+            let race_car = catalog
+                .cars
+                .iter()
+                .filter(|car| car.id != crate::drift::CAR)
+                .min_by_key(|car| car.id != "gen22");
+            let race_track = catalog
+                .circuits
+                .iter()
+                .filter(|track| track.id != crate::drift::TRACK && track.unavailable.is_none())
+                .min_by_key(|track| track.id != "spa");
+            if ui
+                .add_enabled(
+                    race_car.is_some() && race_track.is_some(),
+                    egui::Button::selectable(!drift, "Race"),
+                )
+                .clicked()
+                && drift
+            {
+                if let (Some(car), Some(track)) = (race_car, race_track) {
+                    draft.car = car.id.clone();
+                    draft.track = track.id.clone();
+                    draft.opponents = 7;
+                    draft.grid_slot = 6;
+                    draft.laps = 3;
+                }
             }
             if ui
                 .selectable_label(drift, "Drift")
@@ -2478,6 +2507,7 @@ fn controls_panel(ui: &mut egui::Ui) {
         ["Steer", "A / D or arrows", "Left stick"],
         ["Shift up / down", "E / Q", "RB / LB"],
         ["Harvest mode (2026 car)", "H", "D-pad down"],
+        ["Handbrake (drift car)", "Space", "D-pad left"],
         ["Cycle camera", "C (or 1 / 2 / 3)", "Y"],
         ["Adjust camera", "F4", "-"],
         ["Pause / resume", "Esc or P", "Start"],
