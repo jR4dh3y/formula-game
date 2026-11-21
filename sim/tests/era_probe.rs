@@ -244,10 +244,29 @@ fn era_racecraft() {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(4);
+    const FIELD_SIZE: usize = 6;
+    // ERA_TRACE=<car>:<from s>:<to s>[:<lap>]
+    let trace: Option<(usize, f64, f64, u32)> = std::env::var("ERA_TRACE").ok().and_then(|value| {
+        let mut parts = value.split(':');
+        let parsed = (|| {
+            let index: usize = parts.next()?.parse().ok()?;
+            let from = parts.next()?.parse().ok()?;
+            let to = parts.next()?.parse().ok()?;
+            let lap = parts.next().unwrap_or("0").parse().ok()?;
+            (index < FIELD_SIZE && parts.next().is_none()).then_some((index, from, to, lap))
+        })();
+        if parsed.is_none() {
+            eprintln!(
+                "Ignoring invalid ERA_TRACE={value}; use a car index from 0 to {}",
+                FIELD_SIZE - 1
+            );
+        }
+        parsed
+    });
     for (track_name, track) in tracks(&root) {
         for (era, spec) in eras(&root) {
             // Slowest first so the field has to pass.
-            let entrants: Vec<_> = (0..6)
+            let entrants: Vec<_> = (0..FIELD_SIZE)
                 .map(|i| entrant(&spec, 0.93 + 0.012 * i as f64, 0.3 + 0.1 * i as f64))
                 .collect();
             let mut race = Race::new(track.clone(), entrants, laps, 11);
@@ -256,17 +275,6 @@ fn era_racecraft() {
             let (mut soc_sum, mut soc_n, mut soc_min) = (0.0, 0.0, f64::INFINITY);
             let dt = 1.0 / PHYSICS_RATE;
             let limit = (laps as f64 * 300.0 * PHYSICS_RATE) as u64;
-            // ERA_TRACE=<car>:<from s>:<to s>[:<lap>] prints that car's pass through the window.
-            let trace: Option<(usize, f64, f64, u32)> =
-                std::env::var("ERA_TRACE").ok().and_then(|v| {
-                    let mut parts = v.split(':').map(|p| p.parse::<f64>().ok());
-                    Some((
-                        parts.next()?? as usize,
-                        parts.next()??,
-                        parts.next()??,
-                        parts.next().flatten().unwrap_or(0.0) as u32,
-                    ))
-                });
             while race.phase != Phase::Finished && race.tick < limit {
                 race.step(&[]);
                 if let Some((index, from, to, lap)) = trace {
@@ -340,7 +348,7 @@ fn era_racecraft() {
                             if std::env::var_os("ERA_CONTACTS").is_some() {
                                 let car = &race.entrants[a].car;
                                 println!(
-                                    "  contact {a}-{b:?} {impulse:.0} N s at s {:.0} m lateral {:.1} m {:.0} km/h lap {}",
+                                    "  contact {a}-{b:?} {impulse:.0} N s; post-step s {:.0} m lateral {:.1} m {:.0} km/h lap {}",
                                     car.track_position.s,
                                     car.track_position.lateral,
                                     car.speed() * 3.6,
@@ -358,7 +366,7 @@ fn era_racecraft() {
                 .filter(|e| e.timing.finish_time.is_some())
                 .count();
             println!(
-                "{track_name:<12} {era:<6} passes {passes:>3}  hard contacts {contacts:>3}  boost {boost:>6.1}s  overtake {overtake:>6.1}s  finished {finished}/6{}",
+                "{track_name:<12} {era:<6} passes {passes:>3}  hard contacts {contacts:>3}  boost {boost:>6.1}s  overtake {overtake:>6.1}s  finished {finished}/{FIELD_SIZE}{}",
                 if soc_n > 0.0 {
                     format!("  charge mean {:.0}% min {:.0}%", 100.0 * soc_sum / soc_n, 100.0 * soc_min)
                 } else {

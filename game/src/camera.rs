@@ -214,6 +214,12 @@ impl ChaseCamera {
     pub fn look_toward(&mut self, (yaw, pitch): (f64, f64)) {
         self.look_target = glam::DVec2::new(yaw, pitch);
     }
+    pub fn reset_look(&mut self) {
+        self.look_target = glam::DVec2::ZERO;
+        self.look = glam::DVec2::ZERO;
+        self.cut = true;
+    }
+
     /// Turns the head: eases the view toward the look target, the shorter
     /// way round except that looking back always swings through the side
     /// the view is already turned toward.

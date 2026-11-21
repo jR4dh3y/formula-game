@@ -359,6 +359,12 @@ pub fn resume(session: &mut Session) {
     session.controls = Controls::default();
 }
 
+pub fn edit_camera(session: &mut Session) {
+    session.camera.reset_look();
+    session.screen = Screen::CameraEditor;
+    session.paused = true;
+}
+
 /// Commit the pending selection transactionally: CPU-load failures leave the old race intact.
 #[allow(clippy::too_many_arguments)]
 pub fn apply(
@@ -2493,8 +2499,7 @@ fn camera_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session) {
         )
         .clicked()
     {
-        session.screen = Screen::CameraEditor;
-        session.paused = true;
+        edit_camera(session);
     }
 }
 
@@ -2503,8 +2508,10 @@ fn controls_panel(ui: &mut egui::Ui) {
     ui.add_space(4.);
     let bindings = [
         ["Action", "Keyboard", "Gamepad"],
-        ["Throttle / brake", "W / S or arrows", "RT / LT"],
-        ["Steer", "A / D or arrows", "Left stick"],
+        ["Throttle / brake", "W / S", "RT / LT"],
+        ["Steer", "A / D", "Left stick"],
+        ["Look around", "Arrow keys", "Right stick"],
+        ["Look back", "B (hold)", "Right stick back"],
         ["Shift up / down", "E / Q", "RB / LB"],
         ["Harvest mode (2026 car)", "H", "D-pad down"],
         ["Handbrake (drift car)", "Space", "D-pad left"],
