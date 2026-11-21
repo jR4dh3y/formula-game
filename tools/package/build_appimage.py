@@ -166,6 +166,9 @@ def main():
             continue
         shutil.copytree(assets / "cars" / car,
                         APP / "usr/share/f1-racecraft/assets/cars" / car)
+        if car == "gen26":
+            shutil.copy2(ROOT / "tools/car/gen26_teams.json",
+                         APP / "usr/share/licenses/f1-racecraft/GEN26-ATTRIBUTION.json")
 
     # Only generic x86-64 official packages are used. The build host's CachyOS
     # AVX2/v3-optimized libraries must not impose that CPU requirement on players.

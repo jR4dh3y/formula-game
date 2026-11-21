@@ -37,6 +37,7 @@ if [[ $selection == all || $selection == cars ]]; then
         extract '2026-redbull-rb22.zip'
         "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
             "$extracted/source/untitled.glb" "$output/cars/gen26"
+        cp "$repo/tools/car/gen26_teams.json" "$output/cars/gen26/ATTRIBUTION.json"
     fi
     # Team cars: GEN26_SOURCES holds <team>.glb files (tools/car/gen26_teams.json).
     if [[ -n ${GEN26_SOURCES:-} ]]; then

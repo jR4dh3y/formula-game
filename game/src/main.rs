@@ -279,7 +279,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
         .add_systems(
             Update,
-            assets::spawn_scene.run_if(assets::launch_screen_shown),
+            assets::spawn_scene
+                .after(menu::apply)
+                .run_if(assets::launch_screen_shown),
         )
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .init_resource::<race_loop::Run>()
@@ -299,7 +301,6 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 graphics::apply,
                 assets::update_opponent_lods.after(graphics::apply),
                 materials::prepare,
-                assets::check_loading.after(materials::prepare),
                 benchmark::advance,
                 assets::sync_cars,
                 assets::animate_controls,
@@ -329,10 +330,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(
             PostUpdate,
-            (textures::prepare, meshes::prepare).after(bevy::asset::AssetEventSystems),
+            ((textures::prepare, meshes::prepare), assets::check_loading)
+                .chain()
+                .after(bevy::asset::AssetEventSystems),
         )
         .add_systems(Last, capture);
     textures::register_normal_scales(&mut app);
+    assets::watch_gpu_uploads(&mut app);
     if !(cfg!(test) || capture_run) {
         // A scene's meshes and textures reach the GPU over a few frames rather
         // than stalling one. Capture runs count frames and need them at once.

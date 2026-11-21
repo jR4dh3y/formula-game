@@ -166,6 +166,8 @@ def main():
         shutil.copy2(ROOT / "tools/package/WINDOWS.md", package / "README.md")
         licenses = package / "licenses"
         licenses.mkdir()
+        if (package / "assets/cars/gen26").is_dir():
+            shutil.copy2(ROOT / "tools/car/gen26_teams.json", licenses / "GEN26-ATTRIBUTION.json")
         shutil.copy2(ROOT / "LICENSE", licenses / "LICENSE")
         shutil.copy2(ROOT / "LICENSING.md", licenses / "LICENSING.md")
         shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "FONT-OFL.txt")

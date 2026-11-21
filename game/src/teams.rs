@@ -129,6 +129,43 @@ impl Teams {
             primary: rgb(&team.colors.primary).unwrap(),
         }
     }
+    pub fn online_field(
+        &self,
+        players: &[racecraft_net::Player],
+        size: usize,
+    ) -> Result<Vec<Option<Identity>>, String> {
+        let mut field = players
+            .iter()
+            .map(|player| {
+                player
+                    .identity
+                    .as_ref()
+                    .map(|identity| {
+                        self.selection(&identity.team, &identity.driver)
+                            .map(|(team, driver)| Self::identity(team, driver))
+                    })
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if field.iter().any(Option::is_some) {
+            let remaining: Vec<_> = self
+                .teams
+                .iter()
+                .flat_map(|team| {
+                    team.drivers
+                        .iter()
+                        .map(move |driver| Self::identity(team, driver))
+                })
+                .filter(|identity| !field.iter().flatten().any(|i| i.driver == identity.driver))
+                .take(size.saturating_sub(field.len()))
+                .map(Some)
+                .collect();
+            field.extend(remaining);
+        }
+        field.resize_with(size, || None);
+        Ok(field)
+    }
+
     /// First drivers across teams, then second drivers: teammates are spread across the grid.
     /// Put the selected driver's teammate first in the candidate list so even a small field includes them.
     pub fn field(

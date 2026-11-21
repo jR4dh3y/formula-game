@@ -166,6 +166,12 @@ pub(crate) struct BatteryTick {
 }
 
 impl Battery {
+    pub(crate) fn recover(&mut self) {
+        self.mode = DeployMode::Normal;
+        self.bonus = 0.0;
+        self.power = 0.0;
+    }
+
     pub fn full(spec: &HybridSpec) -> Self {
         Self {
             energy: spec.capacity,
