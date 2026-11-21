@@ -177,6 +177,7 @@ pub struct VisualAssets {
     handles: Vec<Handle<bevy::world_serialization::WorldAsset>>,
     started: Option<f64>,
     scene_count: usize,
+    cpu_ready: bool,
     upload_probe: Option<u64>,
 }
 
@@ -404,6 +405,7 @@ pub fn spawn_visuals(
         handles,
         started: None,
         scene_count,
+        cpu_ready: false,
         upload_probe: None,
     });
 }
@@ -666,11 +668,16 @@ pub fn check_loading(
         && textures
             .iter()
             .all(|id| server.is_loaded_with_dependencies(*id));
+    let had_cpu_assets = std::mem::replace(&mut visuals.cpu_ready, cpu_ready);
     let render_ready = if !cpu_ready {
         visuals.upload_probe = None;
         false
     } else if cap.is_some_and(|cap| cap.max_bytes.is_some()) {
-        // Wait for the render world to process a frame after the last CPU job.
+        // Preparation runs after Bevy publishes asset events. Wait for the
+        // next publication before probing the render-world upload budget.
+        if !had_cpu_assets {
+            return;
+        }
         let probe = *visuals.upload_probe.get_or_insert_with(|| {
             uploads.requested += 1;
             uploads.requested
