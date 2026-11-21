@@ -24,6 +24,8 @@ def prepare(assets: Path, destination: Path, car: str, track: str) -> None:
     if destination.resolve().is_relative_to(assets.resolve()) or assets.resolve().is_relative_to(destination.resolve()):
         raise ValueError('source assets and deployment directory must be separate')
     destination.mkdir(parents=True, exist_ok=True)
+    if car == 'gen26' and roster not in payloads:
+        (destination / 'assets' / roster).unlink(missing_ok=True)
     manifest = {}
     for part, data in payloads.items():
         target = destination / 'assets' / part

@@ -1610,10 +1610,13 @@ fn car_driver_page(ui: &mut egui::Ui, frontend: &mut Frontend, preview: &car_pre
             ui.heading(format!("#{}  {}", driver.number, driver.name));
             ui.label(RichText::new(&team.name).color(DIM));
         }
-    } else if frontend.draft.car == "gen26" {
-        ui.heading("2026 car");
-    } else {
-        ui.heading("Red Bull RB6");
+    } else if let Some(car) = frontend
+        .catalog
+        .cars
+        .iter()
+        .find(|car| car.id == frontend.draft.car)
+    {
+        ui.heading(car.name);
     }
     ui.add_space(12.);
     let width = ui.available_width();
