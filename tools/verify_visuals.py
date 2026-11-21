@@ -42,7 +42,8 @@ def video(preset, enabled):
                      ambient_occlusion='High', sky='High', ai_detail='High')
     if not enabled:
         value.update(saturation=1, contrast=1, bloom=0, haze=0, motion_blur=0,
-                     effects='Off', surface_detail=False, cinematic_lighting=False, camera_motion=False)
+                     effects='Off', surface_detail=False, cinematic_lighting=False, camera_motion=False,
+                     mirrors=False)
     return value
 
 

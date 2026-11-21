@@ -21,7 +21,7 @@ const RATE: f64 = 30.;
 /// Share of its speed a spark keeps through a bounce.
 const BOUNCE: f32 = 0.38;
 /// Collision impulse (N·s) below which a contact throws no sparks.
-const IMPACT_THRESHOLD: f32 = 700.;
+pub const IMPACT_THRESHOLD: f32 = 700.;
 /// Seconds of relative motion a spark's streak covers, like a shutter.
 const STREAK_SHUTTER: f32 = 0.017;
 /// Texels along each edge of the smoke cloud sheet.
@@ -412,15 +412,15 @@ fn slipping(speed: f64, locked: bool, spinning: bool, sliding: f64) -> bool {
     spinning || (locked && speed > 3.) || (sliding > 0.95 && speed > 8.)
 }
 
-/// A tyre's slide heat after one more emitter tick. A brief lock-up or a
+/// A tyre's slide heat after the elapsed race time. A brief lock-up or a
 /// launch only wisps; a held slide or burnout builds into thick smoke.
-fn warm(heat: f32, slipping: bool) -> f32 {
+fn warm(heat: f32, slipping: bool, elapsed: f32) -> f32 {
     let step = if slipping {
         1. / SMOKE_BUILD
     } else {
         -1. / SMOKE_COOL
     };
-    (heat + step / RATE as f32).clamp(0., 1.)
+    (heat + step * elapsed).clamp(0., 1.)
 }
 
 /// How hard the plank is striking the road, 0.25..1, if it is at all.
@@ -438,10 +438,10 @@ fn strike(speed: f64, squash: f64, overload: f64, loaded_kerb: bool) -> Option<f
     )
 }
 
-/// The strength of a car's spark shower after one more emitter tick: a new
+/// The strength of a car's spark shower after the elapsed race time: a new
 /// strike sets it, and it fades over [`GRIND_HOLD`] rather than flickering.
-fn grind(held: f32, strike: Option<f32>) -> f32 {
-    let faded = (held - 1. / (GRIND_HOLD * RATE as f32)).max(0.);
+fn grind(held: f32, strike: Option<f32>, elapsed: f32) -> f32 {
+    let faded = (held - elapsed / GRIND_HOLD).max(0.);
     strike.map_or(faded, |strike| strike.max(faded))
 }
 
@@ -552,8 +552,6 @@ pub fn update(
     let now = session.race.time;
     let (budget, mark_budget, spark_budget, plank_sparks) = limits(frontend.video.effects);
     let (eye, target) = session.camera.listener();
-    let impacts = std::mem::take(&mut session.contacts);
-    let session = &*session;
     let look = frontend.draft.weather;
     if resources.look != Some(look) {
         resources.look = Some(look);
@@ -653,14 +651,16 @@ pub fn update(
             }
         }
     }
-    if budget == 0 {
+    let tick = (now * RATE).floor() as i64;
+    if budget == 0 || !session.ready {
+        session.contacts.clear();
+        resources.last = tick;
         resources.contacts.clear();
         resources.heat.clear();
         resources.grinding.clear();
         return;
     }
-    let tick = (now * RATE).floor() as i64;
-    if tick == resources.last || session.paused || !session.ready {
+    if tick == resources.last || session.paused {
         return;
     }
     if tick < resources.last {
@@ -668,16 +668,17 @@ pub fn update(
         resources.heat.clear();
         resources.grinding.clear();
     }
+    let elapsed = (tick - resources.last).max(1) as f32 / RATE as f32;
     resources.last = tick;
+    let impacts = std::mem::take(&mut session.contacts);
+    let session = &*session;
+    let player = &session.race.entrants[session.player].car;
     let entrants = session.race.entrants.len();
     resources.contacts.resize(entrants, [None; 4]);
     resources.heat.resize(entrants, [0.; 4]);
     resources.grinding.resize(entrants, 0.);
     for (index, contact) in impacts.iter().enumerate() {
-        if contact.impulse < IMPACT_THRESHOLD
-            || contact.point.distance(player.position.as_vec3()) > 90.
-            || sparks >= spark_budget
-        {
+        if contact.point.distance(player.position.as_vec3()) > 90. || sparks >= spark_budget {
             continue;
         }
         let force = (contact.impulse / 9000.).clamp(0.15, 1.);
@@ -729,6 +730,7 @@ pub fn update(
         let heat = grind(
             resources.grinding[entrant],
             strike(car.speed(), squash, overload, loaded_kerb),
+            elapsed,
         );
         resources.grinding[entrant] = heat;
         if sparks < spark_budget && heat > 0. {
@@ -772,7 +774,11 @@ pub fn update(
                 point.z as f32,
             );
             let slipping = slipping(car.speed(), wheel.locked, wheel.spinning, wheel.sliding);
-            let heat = warm(resources.heat[entrant][index], slipping && wheel.load > 0.);
+            let heat = warm(
+                resources.heat[entrant][index],
+                slipping && wheel.load > 0.,
+                elapsed,
+            );
             resources.heat[entrant][index] = heat;
             let on_road = matches!(
                 wheel.surface,
@@ -990,15 +996,15 @@ mod tests {
         // A half-second lock-up barely warms the tyre; a held slide saturates.
         let mut heat = 0.;
         for _ in 0..(0.5 * RATE) as usize {
-            heat = warm(heat, true);
+            heat = warm(heat, true, 1. / RATE as f32);
         }
         assert!((heat - 0.5 / SMOKE_BUILD).abs() < 0.03, "{heat}");
         for _ in 0..(3. * RATE) as usize {
-            heat = warm(heat, true);
+            heat = warm(heat, true, 1. / RATE as f32);
         }
         assert_eq!(heat, 1.);
         for _ in 0..(SMOKE_COOL * RATE as f32) as usize + 1 {
-            heat = warm(heat, false);
+            heat = warm(heat, false, 1. / RATE as f32);
         }
         assert_eq!(heat, 0.);
     }
@@ -1014,10 +1020,10 @@ mod tests {
         let hard = strike(80., 0., 1.8, true).unwrap();
         assert_eq!(hard, 1.);
         // One strike keeps showering for GRIND_HOLD, weakening all the way.
-        let mut held = grind(0., Some(hard));
+        let mut held = grind(0., Some(hard), 1. / RATE as f32);
         let mut ticks = 0;
         while held > 0. {
-            let next = grind(held, None);
+            let next = grind(held, None, 1. / RATE as f32);
             assert!(next < held);
             held = next;
             ticks += 1;
@@ -1028,9 +1034,18 @@ mod tests {
         );
         // A weaker strike does not cut a stronger shower short.
         assert_eq!(
-            grind(0.9, Some(0.25)),
+            grind(0.9, Some(0.25), 1. / RATE as f32),
             0.9 - 1. / (GRIND_HOLD * RATE as f32)
         );
+    }
+
+    #[test]
+    fn skipped_emitter_ticks_use_the_same_heat_and_spark_decay() {
+        let dt = 1. / RATE as f32;
+        let heat = (0..6).fold(0., |heat, _| warm(heat, true, dt));
+        assert!((heat - warm(0., true, dt * 6.)).abs() < 1e-6);
+        let shower = (0..6).fold(1., |held, _| grind(held, None, dt));
+        assert!((shower - grind(1., None, dt * 6.)).abs() < 1e-6);
     }
 
     #[test]

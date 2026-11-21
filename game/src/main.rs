@@ -492,7 +492,7 @@ fn step_race(
     let Session { race, contacts, .. } = &mut *session;
     for entrant in &race.entrants {
         let car = &entrant.car;
-        if car.impact > 0. && contacts.len() < 32 {
+        if car.impact >= f64::from(effects::IMPACT_THRESHOLD) && contacts.len() < 32 {
             contacts.push(effects::Contact {
                 point: Vec3::new(
                     car.impact_point.x as f32,

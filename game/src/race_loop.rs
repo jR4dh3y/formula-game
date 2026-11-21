@@ -294,6 +294,7 @@ fn jump(session: &mut Session, race: Race) {
     session.telemetry = default();
     session.impact = 0.;
     session.pending_impact = 0.;
+    session.contacts.clear();
     session.screen = Screen::Racing;
 }
 pub fn update(

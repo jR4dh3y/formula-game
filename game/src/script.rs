@@ -15,7 +15,6 @@ enum Step {
 pub struct Script {
     steps: Vec<(f64, Step)>,
     pilot: Option<AiDriver>,
-    ticks: u64,
 }
 
 impl Script {
@@ -47,9 +46,7 @@ impl Script {
     /// The scripted command for this physics tick: `Ok` is a finished AI
     /// command, `Err` a raw input that still passes through the driving aids.
     pub fn input(&mut self, race: &Race, player: usize) -> Option<Result<CarInput, CarInput>> {
-        let time = self.ticks as f64 / racecraft_sim::PHYSICS_RATE;
-        self.ticks += 1;
-        let step = self.steps.iter().rev().find(|(at, _)| *at <= time)?.1;
+        let step = self.steps.iter().rev().find(|(at, _)| *at <= race.time)?.1;
         let car = &race.entrants[player].car;
         match step {
             Step::Hold([throttle, brake, steer, handbrake]) => Some(Err(CarInput {
@@ -87,6 +84,18 @@ impl Script {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn script_uses_race_time_after_the_countdown() {
+        let mut race = crate::tests::session().race;
+        let mut script = Script::parse("0:1,0,0;9:0,1,0").unwrap();
+        race.time = -3.;
+        assert!(script.input(&race, 0).is_none());
+        race.time = 8.99;
+        assert_eq!(script.input(&race, 0).unwrap().unwrap_err().throttle, 1.);
+        race.time = 9.;
+        assert_eq!(script.input(&race, 0).unwrap().unwrap_err().brake, 1.);
+    }
 
     #[test]
     fn script_parses_ai_and_held_inputs_and_rejects_garbage() {
