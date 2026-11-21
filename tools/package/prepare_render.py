@@ -11,8 +11,9 @@ def prepare(assets: Path, destination: Path, car: str, track: str) -> None:
     if not track or len(track) > 32 or not all(c.isascii() and (c.isalnum() or c == '_') for c in track):
         raise ValueError('invalid circuit name')
     parts = [f'tracks/{track}/track.json', f'tracks/{track}/collision.bin', f'cars/{car}/car.json']
-    if car == 'gen22':
-        parts.append(f'cars/{car}/teams.json')
+    roster = 'cars/gen22/teams.json'
+    if car == 'gen22' or car == 'gen26' and (assets / roster).is_file():
+        parts.append(roster)
     payloads = {part: (assets / part).read_bytes() for part in parts}
     for name, data in payloads.items():
         if name.endswith('.json'):
@@ -23,6 +24,8 @@ def prepare(assets: Path, destination: Path, car: str, track: str) -> None:
     if destination.resolve().is_relative_to(assets.resolve()) or assets.resolve().is_relative_to(destination.resolve()):
         raise ValueError('source assets and deployment directory must be separate')
     destination.mkdir(parents=True, exist_ok=True)
+    if car == 'gen26' and roster not in payloads:
+        (destination / 'assets' / roster).unlink(missing_ok=True)
     manifest = {}
     for part, data in payloads.items():
         target = destination / 'assets' / part
@@ -41,7 +44,7 @@ def prepare(assets: Path, destination: Path, car: str, track: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--assets', required=True, type=Path)
-    parser.add_argument('--car', choices=['rb6', 'gen22'], default='rb6')
+    parser.add_argument('--car', choices=['rb6', 'gen22', 'gen26'], default='rb6')
     parser.add_argument('--track', default='spa')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]

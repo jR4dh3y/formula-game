@@ -221,6 +221,16 @@ impl Catalog {
                 "2022 ground effect",
                 "V6 hybrid / 8-speed / shared team model",
             ),
+            (
+                "gen26",
+                "2026 active aero",
+                "50/50 hybrid / active wings / overtake mode",
+            ),
+            (
+                "thar",
+                "Mahindra Thar Roxx",
+                "Drift mode / 260 kW drift build / rear drive / handbrake",
+            ),
         ] {
             let car = root.join("cars").join(id);
             if car.join("car.glb").is_file()
@@ -247,6 +257,8 @@ impl Catalog {
 
 #[derive(Resource)]
 pub struct Frontend {
+    /// The first scene has loaded; until then a loading screen replaces the menu.
+    pub launched: bool,
     pub rewind: bool,
     pub catalog: Catalog,
     pub teams: crate::teams::Teams,
@@ -298,6 +310,7 @@ impl Frontend {
             draft.driver = driver.id.clone();
         }
         Self {
+            launched: false,
             rewind: prefs.rewind,
             catalog: Catalog::discover(&options.assets),
             teams,
@@ -344,6 +357,12 @@ pub fn resume(session: &mut Session) {
     session.screen = Screen::Racing;
     session.paused = false;
     session.controls = Controls::default();
+}
+
+pub fn edit_camera(session: &mut Session) {
+    session.camera.reset_look();
+    session.screen = Screen::CameraEditor;
+    session.paused = true;
 }
 
 /// Commit the pending selection transactionally: CPU-load failures leave the old race intact.
@@ -428,7 +447,11 @@ pub fn apply(
     selected.automatic_gears = frontend.aids.automatic_gears;
     selected.corner_braking = frontend.corner_braking;
     selected.grid_slot = selected.grid_slot.clamp(1, selected.opponents + 1);
-    let race = match assets::load_race(&selected) {
+    let lobby = online.as_ref().and_then(|online| online.install.as_ref());
+    let race = match lobby.map_or_else(
+        || assets::load_race(&selected),
+        |lobby| racecraft_net::load_race(&selected.assets, &lobby.settings, &lobby.players),
+    ) {
         Ok(race) => race,
         Err(error) => {
             frontend.error = Some(error);
@@ -443,7 +466,14 @@ pub fn apply(
             return;
         }
     };
-    let identities = match frontend.teams.field(&selected) {
+    let identities = match lobby.map_or_else(
+        || frontend.teams.field(&selected),
+        |lobby| {
+            frontend
+                .teams
+                .online_field(&lobby.players, race.entrants.len())
+        },
+    ) {
         Ok(field) => field,
         Err(error) => {
             frontend.error = Some(error);
@@ -479,8 +509,12 @@ pub fn apply(
         identities,
         rig,
         guidance: crate::driving::Guidance::new(&race, player),
-        corner_braking: frontend.corner_braking,
-        show_racing_line: frontend.show_racing_line,
+        corner_braking: if selected.drift() {
+            0.
+        } else {
+            frontend.corner_braking
+        },
+        show_racing_line: !selected.drift() && frontend.show_racing_line,
         show_performance: session.show_performance,
         minimap: hud::Minimap::new(&race.track),
         poses: crate::pose::Poses::new(&race),
@@ -496,6 +530,8 @@ pub fn apply(
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        contacts: Vec::new(),
+        drift_score: default(),
         screen: Screen::Loading,
     };
     *options = selected;
@@ -514,6 +550,60 @@ pub(crate) const WELL: Color32 = Color32::from_rgb(9, 10, 12);
 pub(crate) const WELL_RIM: Color32 = Color32::from_rgb(56, 58, 64);
 
 /// Raised charcoal panel matching the race HUD's instrument housings.
+/// Full-screen loader shown from launch until the first scene is ready.
+fn launch_screen(ui: &mut egui::Ui, track: &str, textures: usize) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::new().fill(BACKDROP))
+        .show(ui, |ui| {
+            let rect = ui.max_rect();
+            let painter = ui.painter();
+            let time = ui.input(|input| input.time) as f32;
+            let centre = rect.center();
+            painter.text(
+                centre - egui::vec2(0., 70.),
+                egui::Align2::CENTER_CENTER,
+                "F1 RACECRAFT",
+                egui::FontId::proportional(54.),
+                Color32::WHITE,
+            );
+            painter.text(
+                centre - egui::vec2(0., 22.),
+                egui::Align2::CENTER_CENTER,
+                format!("Loading {track}"),
+                egui::FontId::proportional(20.),
+                DIM,
+            );
+            // An indeterminate sweep: loading time depends on the texture
+            // cache, so a percentage would only guess.
+            let width = (rect.width() * 0.4).clamp(220., 520.);
+            let bar =
+                egui::Rect::from_center_size(centre + egui::vec2(0., 22.), egui::vec2(width, 6.));
+            painter.rect_filled(bar, 3., Color32::from_gray(45));
+            let phase = (time * 0.7).fract();
+            let run = width * 0.28;
+            let start = bar.left() - run + (width + run) * phase;
+            let sweep = egui::Rect::from_x_y_ranges(
+                start.max(bar.left())..=(start + run).min(bar.right()),
+                bar.y_range(),
+            );
+            if sweep.width() > 0. {
+                painter.rect_filled(sweep, 3., RED);
+            }
+            let status = if textures == 0 {
+                "Reading circuit and cars".to_string()
+            } else {
+                format!("Preparing textures ({textures})")
+            };
+            painter.text(
+                centre + egui::vec2(0., 52.),
+                egui::Align2::CENTER_CENTER,
+                status,
+                egui::FontId::proportional(15.),
+                DIM,
+            );
+        });
+}
+
 pub(crate) fn housing() -> egui::Frame {
     egui::Frame::new()
         .fill(HOUSING)
@@ -710,6 +800,7 @@ pub fn ui(
     car_preview: Res<car_preview::CarPreview>,
     mut exit: MessageWriter<AppExit>,
     mut online: Option<ResMut<crate::online::Online>>,
+    textures: Res<crate::textures::TextureJobs>,
 ) -> Result {
     frontend.benchmark.poll();
     let context = contexts.ctx_mut()?;
@@ -790,6 +881,14 @@ pub fn ui(
     }
     if session.screen == Screen::CameraEditor {
         camera_editor(&viewport, &mut session, &options.car);
+        return Ok(());
+    }
+    // From launch until the first scene is ready, a loading screen replaces
+    // the menu, which would otherwise sit half-drawn while the scene loads.
+    frontend.launched |= session.ready || frontend.error.is_some() || cfg!(test) || multiplayer;
+    if !frontend.launched && session.screen == Screen::Main {
+        launch_screen(&mut viewport, &session.race.track.name, textures.finished);
+        context.request_repaint();
         return Ok(());
     }
     // Online loading stays on the Room page, where the roster and Leave live.
@@ -1097,12 +1196,17 @@ pub fn ui(
     }
     if frontend.race_started {
         let player = session.player;
-        session.race.entrants[player].car.assists = frontend.aids;
+        let drift = options.drift();
+        session.race.entrants[player].car.assists = if drift {
+            crate::drift::assists(frontend.aids)
+        } else {
+            frontend.aids
+        };
         options.driver_aids = Some(frontend.aids);
         options.automatic_gears = frontend.aids.automatic_gears;
         options.corner_braking = frontend.corner_braking;
-        session.corner_braking = frontend.corner_braking;
-        session.show_racing_line = frontend.show_racing_line;
+        session.corner_braking = if drift { 0. } else { frontend.corner_braking };
+        session.show_racing_line = !drift && frontend.show_racing_line;
     }
     Ok(())
 }
@@ -1210,6 +1314,59 @@ fn page(ui: &mut egui::Ui, mut draw: impl FnMut(&mut egui::Ui, Part)) {
 }
 
 fn selection(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut Options) {
+    let drift_ready = catalog.cars.iter().any(|car| car.id == crate::drift::CAR)
+        && catalog
+            .circuits
+            .iter()
+            .any(|track| track.id == crate::drift::TRACK && track.unavailable.is_none());
+    if drift_ready {
+        section(ui, "Mode");
+        ui.horizontal(|ui| {
+            let drift = draft.drift();
+            let race_car = catalog
+                .cars
+                .iter()
+                .filter(|car| car.id != crate::drift::CAR)
+                .min_by_key(|car| car.id != "gen22");
+            let race_track = catalog
+                .circuits
+                .iter()
+                .filter(|track| track.id != crate::drift::TRACK && track.unavailable.is_none())
+                .min_by_key(|track| track.id != "spa");
+            if ui
+                .add_enabled(
+                    race_car.is_some() && race_track.is_some(),
+                    egui::Button::selectable(!drift, "Race"),
+                )
+                .clicked()
+                && drift
+            {
+                if let (Some(car), Some(track)) = (race_car, race_track) {
+                    draft.car = car.id.clone();
+                    draft.track = track.id.clone();
+                    draft.opponents = 7;
+                    draft.grid_slot = 6;
+                    draft.laps = 3;
+                }
+            }
+            if ui
+                .selectable_label(drift, "Drift")
+                .on_hover_text(
+                    "The Thar on the drift park. Score on slide angle and speed; \
+                     link slides for a multiplier. Space is the handbrake.",
+                )
+                .clicked()
+                && !drift
+            {
+                draft.car = crate::drift::CAR.into();
+                draft.track = crate::drift::TRACK.into();
+                draft.opponents = 0;
+                draft.grid_slot = 1;
+                draft.laps = 50;
+            }
+        });
+        ui.separator();
+    }
     section(ui, "Circuit");
     circuit_choice(ui, catalog, draft);
     ui.separator();
@@ -1234,7 +1391,13 @@ pub(crate) fn circuit_choice(ui: &mut egui::Ui, catalog: &Catalog, draft: &mut O
         .width(ui.available_width())
         .selected_text(selected)
         .show_ui(ui, |ui| {
-            for track in &catalog.circuits {
+            // The drift park belongs to drift mode, and drift mode to it.
+            let drift = draft.drift();
+            for track in catalog
+                .circuits
+                .iter()
+                .filter(|track| (track.id == crate::drift::TRACK) == drift)
+            {
                 ui.add_enabled_ui(track.unavailable.is_none(), |ui| {
                     ui.selectable_value(&mut draft.track, track.id.clone(), &track.name);
                 });
@@ -1310,15 +1473,20 @@ fn car_model_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let catalog = &frontend.catalog;
     section(ui, "Car");
     ui.horizontal_wrapped(|ui| {
-        for car in &catalog.cars {
+        let drift = draft.drift();
+        for car in catalog
+            .cars
+            .iter()
+            .filter(|car| racecraft_sim::CarSpec::DRIFT_CARS.contains(&car.id.as_str()) == drift)
+        {
             let response = ui
                 .radio_value(
                     &mut draft.car,
                     car.id.clone(),
-                    if car.id == "gen22" {
-                        "2022 car"
-                    } else {
-                        car.name
+                    match car.id.as_str() {
+                        "gen22" => "2022 car",
+                        "gen26" => "2026 car",
+                        _ => car.name,
                     },
                 )
                 .on_hover_text(car.description);
@@ -1388,7 +1556,7 @@ fn setup_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
 fn driver_choice(ui: &mut egui::Ui, frontend: &mut Frontend) {
     let draft = &mut frontend.draft;
     let teams = &frontend.teams;
-    if draft.car != "gen22" {
+    if draft.car == "rb6" {
         ui.heading("Red Bull Racing");
         ui.label(
             "The 2010 RB6 races in its own livery. Pick the 2022 car under Car to choose a team.",
@@ -1442,8 +1610,13 @@ fn car_driver_page(ui: &mut egui::Ui, frontend: &mut Frontend, preview: &car_pre
             ui.heading(format!("#{}  {}", driver.number, driver.name));
             ui.label(RichText::new(&team.name).color(DIM));
         }
-    } else {
-        ui.heading("Red Bull RB6");
+    } else if let Some(car) = frontend
+        .catalog
+        .cars
+        .iter()
+        .find(|car| car.id == frontend.draft.car)
+    {
+        ui.heading(car.name);
     }
     ui.add_space(12.);
     let width = ui.available_width();
@@ -1595,17 +1768,34 @@ fn aids_panel(ui: &mut egui::Ui, frontend: &mut Frontend) -> [egui::Rect; 3] {
     setting_row(ui, "Racing line", |ui| {
         ui.checkbox(&mut frontend.show_racing_line, "Enabled");
     });
-    setting_row(ui, "Automatic DRS", |ui| {
-        ui.checkbox(&mut aids.auto_drs, "Enabled").on_hover_text(
+    // The 2026 car has active aero and overtake mode on the same button.
+    let modern = frontend.draft.car == "gen26";
+    let (auto_label, auto_help, anywhere_label, anywhere_help) = if modern {
+        (
+            "Automatic overtake mode",
+            "Engages overtake mode as soon as it is earned. F (gamepad B) still \
+             toggles boost elsewhere and H (D-pad down) toggles harvest mode; the \
+             wings open and close by themselves.",
+            "Overtake mode anywhere",
+            "Overtake mode is available all lap, not only within a second of the car \
+             ahead in an overtake zone. AI cars keep to the race rules.",
+        )
+    } else {
+        (
+            "Automatic DRS",
             "Opens the flap as soon as DRS is available. Braking or the end of the zone closes it.",
-        );
-    });
-    setting_row(ui, "DRS anywhere", |ui| {
-        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
-            .on_hover_text(
-                "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
+            "DRS anywhere",
+            "Open DRS with F (gamepad B) anywhere on track. Braking still closes it. \
              AI cars keep to the race rules.",
-            );
+        )
+    };
+    setting_row(ui, auto_label, |ui| {
+        ui.checkbox(&mut aids.auto_drs, "Enabled")
+            .on_hover_text(auto_help);
+    });
+    setting_row(ui, anywhere_label, |ui| {
+        ui.checkbox(&mut aids.drs_anywhere, "Enabled")
+            .on_hover_text(anywhere_help);
     });
     ui.add_space(6.);
     if ui.available_width() >= 760. {
@@ -1958,6 +2148,9 @@ fn graphics_panel(ui: &mut egui::Ui, frontend: &mut Frontend, session: &mut Sess
         });
         setting_row(lighting, "Camera motion", |ui| {
             ui.checkbox(&mut video.camera_motion, "Enabled");
+        });
+        setting_row(lighting, "Cockpit mirrors", |ui| {
+            ui.checkbox(&mut video.mirrors, "Live rear view");
         });
         setting_row(lighting, "Haze", |ui| {
             ui.add_sized(
@@ -2313,8 +2506,7 @@ fn camera_panel(ui: &mut egui::Ui, selected: &mut Mode, session: &mut Session) {
         )
         .clicked()
     {
-        session.screen = Screen::CameraEditor;
-        session.paused = true;
+        edit_camera(session);
     }
 }
 
@@ -2323,9 +2515,13 @@ fn controls_panel(ui: &mut egui::Ui) {
     ui.add_space(4.);
     let bindings = [
         ["Action", "Keyboard", "Gamepad"],
-        ["Throttle / brake", "W / S or arrows", "RT / LT"],
-        ["Steer", "A / D or arrows", "Left stick"],
+        ["Throttle / brake", "W / S", "RT / LT"],
+        ["Steer", "A / D", "Left stick"],
+        ["Look around", "Arrow keys", "Right stick"],
+        ["Look back", "B (hold)", "Right stick back"],
         ["Shift up / down", "E / Q", "RB / LB"],
+        ["Harvest mode (2026 car)", "H", "D-pad down"],
+        ["Handbrake (drift car)", "Space", "D-pad left"],
         ["Cycle camera", "C (or 1 / 2 / 3)", "Y"],
         ["Adjust camera", "F4", "-"],
         ["Pause / resume", "Esc or P", "Start"],

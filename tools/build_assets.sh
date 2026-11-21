@@ -26,12 +26,32 @@ if [[ $selection == all || $selection == spa ]]; then
     fi
     "$python" "$repo/tools/track/convert_spa.py" "$spa" "$output/tracks/spa"
 fi
+if [[ $selection == all || $selection == driftpark ]]; then
+    "$python" "$repo/tools/track/generate_drift.py" "$output/tracks/driftpark"
+fi
 if [[ $selection == all || $selection == cars ]]; then
     extract '2010-redbull-rb6.zip'
     "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_car.py" -- \
         "$extracted/source/redbull rb6.glb" "$output/cars/rb6" \
         --wheel-materials wheel,wheel.001,tread,tyre --max-texture 1024
     "$repo/tools/car/build_gen22.sh" "$output/cars/gen22"
+    # 2026 car: optional, built when its archive is present.
+    if [[ -f "$zip_dir/2026-redbull-rb22.zip" ]]; then
+        extract '2026-redbull-rb22.zip'
+        "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
+            "$extracted/source/untitled.glb" "$output/cars/gen26"
+        cp "$repo/tools/car/gen26_teams.json" "$output/cars/gen26/ATTRIBUTION.json"
+    fi
+    # Drift-mode Thar from its Sketchfab GLB (CC BY 4.0, ansari_studios).
+    if [[ -n ${THAR_SOURCE:-} ]]; then
+        "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
+            "$THAR_SOURCE" "$output/cars/thar" \
+            --scale 0.0254 --front low --no-flap --lod-ratio 1 --inboard 0.35
+    fi
+    # Team cars: GEN26_SOURCES holds <team>.glb files (tools/car/gen26_teams.json).
+    if [[ -n ${GEN26_SOURCES:-} ]]; then
+        "$repo/tools/car/build_gen26.sh" "$GEN26_SOURCES" "$output"
+    fi
 fi
 found=false
 for config in "$repo"/tools/track/tracks/*.json; do
@@ -43,7 +63,8 @@ for config in "$repo"/tools/track/tracks/*.json; do
     extract "$archive"
     "$python" "$repo/tools/track/convert_glb.py" "$config" "$extracted/$model" "$output/tracks/$name"
 done
-if [[ $found == false && $selection != all && $selection != spa && $selection != cars ]]; then
+if [[ $found == false && $selection != all && $selection != spa && $selection != cars \
+    && $selection != driftpark ]]; then
     echo "unknown asset selection: $selection (use all, spa, cars, tracks, or a track directory name)" >&2
     exit 2
 fi

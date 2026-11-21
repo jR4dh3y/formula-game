@@ -183,7 +183,13 @@ pub fn draw(hud: &Hud, style: &HudStyle, session: &Session) {
             (session.telemetry.rpm.value(car.powertrain.rpm) / 50.).round() * 50.
         ),
     );
-    if let Some(lamp) = instruments::DrsLamp::of(session) {
+    if instruments::EnergyLamp::of(session).is_some() {
+        let rect = egui::Rect::from_min_size(
+            egui::pos2(gear_x + 10., PAD + 304.),
+            egui::vec2(gear_w - 20., 40.),
+        );
+        instruments::power_lamp(hud, style, rect, 28., session);
+    } else if let Some(lamp) = instruments::DrsLamp::of(session) {
         let (fill, ink) = match lamp {
             instruments::DrsLamp::Off => (Color::from_rgb(20, 22, 23), colors.muted),
             instruments::DrsLamp::Ready => (Color::from_rgb(20, 22, 23), GREEN),

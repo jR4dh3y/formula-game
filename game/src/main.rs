@@ -6,6 +6,7 @@ mod benchmark;
 mod camera;
 mod canvas;
 mod controls;
+mod drift;
 mod driving;
 mod effects;
 mod graphics;
@@ -13,12 +14,14 @@ mod hud;
 mod materials;
 mod menu;
 mod meshes;
+mod mirrors;
 mod online;
 mod options;
 mod pose;
 mod preferences;
 mod race_loop;
 mod road;
+mod script;
 mod sky;
 mod teams;
 #[cfg(test)]
@@ -70,6 +73,9 @@ pub struct Session {
     pub impact: f64,
     /// Strongest collision since the audio update, consumed once per frame.
     pub pending_impact: f64,
+    /// Collisions of any car since the effects last drew, for their sparks.
+    pub contacts: Vec<effects::Contact>,
+    pub drift_score: drift::DriftScore,
 }
 
 /// Seconds for a collision's camera jolt to fade to about a third.
@@ -163,8 +169,12 @@ fn build_app(mut options: Options) -> Result<App, String> {
         identities: teams.field(&options)?,
         rig: teams::Rig::load(&options)?,
         guidance: driving::Guidance::new(&race, player),
-        corner_braking: frontend.corner_braking,
-        show_racing_line: frontend.show_racing_line,
+        corner_braking: if options.drift() {
+            0.
+        } else {
+            frontend.corner_braking
+        },
+        show_racing_line: !options.drift() && frontend.show_racing_line,
         show_performance: false,
         camera: rig,
         minimap: hud::Minimap::new(&race.track),
@@ -180,6 +190,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        contacts: Vec::new(),
+        drift_score: default(),
         screen: if quick_race {
             menu::Screen::Racing
         } else {
@@ -204,6 +216,10 @@ fn build_app(mut options: Options) -> Result<App, String> {
             primary_window: Some(Window {
                 title,
                 resolution: (options.width, options.height).into(),
+                // A capture must be the size asked for: a fixed-size window is
+                // left alone by tiling compositors, which would otherwise
+                // stretch it to a column.
+                resizable: !capture_run,
                 ..default()
             }),
             ..default()
@@ -238,6 +254,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
     if let Some(run) = benchmark {
         app.insert_resource(run);
     }
+    if let Some(script) = script::Script::from_env().filter(|_| capture_run) {
+        app.insert_resource(script);
+    }
     app.add_plugins(plugins)
         .add_audio_source::<audio::Soundscape>()
         .add_plugins(EguiPlugin::default())
@@ -247,7 +266,9 @@ fn build_app(mut options: Options) -> Result<App, String> {
             auto_create_primary_context: false,
             ..default()
         })
-        .add_systems(Startup, (effects::setup, road::setup))
+        .add_plugins(effects::EffectsPlugin)
+        .add_plugins(mirrors::MirrorPlugin)
+        .add_systems(Startup, road::setup)
         .add_plugins(graphics::StaticSkyLighting)
         .add_plugins(wheel_dash::WheelDashPlugin)
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
@@ -263,6 +284,8 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .insert_resource(frontend)
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
+        .init_resource::<textures::TextureJobs>()
+        .init_resource::<meshes::MeshJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
             Startup,
@@ -275,6 +298,12 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
+        .add_systems(
+            Update,
+            assets::spawn_scene
+                .after(menu::apply)
+                .run_if(assets::launch_screen_shown),
+        )
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .init_resource::<race_loop::Run>()
         .add_systems(
@@ -293,7 +322,6 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 graphics::apply,
                 assets::update_opponent_lods.after(graphics::apply),
                 materials::prepare,
-                assets::check_loading.after(materials::prepare),
                 benchmark::advance,
                 assets::sync_cars,
                 assets::animate_controls,
@@ -318,15 +346,25 @@ fn build_app(mut options: Options) -> Result<App, String> {
         )
         .add_systems(
             EguiPrimaryContextPass,
-            (hud::update, menu::ui, race_loop::ui).chain(),
+            (hud::update, menu::ui, race_loop::ui, drift::ui).chain(),
         )
         .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(
             PostUpdate,
-            (textures::prepare, meshes::prepare).after(bevy::asset::AssetEventSystems),
+            ((textures::prepare, meshes::prepare), assets::check_loading)
+                .chain()
+                .after(bevy::asset::AssetEventSystems),
         )
         .add_systems(Last, capture);
     textures::register_normal_scales(&mut app);
+    assets::watch_gpu_uploads(&mut app);
+    if !(cfg!(test) || capture_run) {
+        // A scene's meshes and textures reach the GPU over a few frames rather
+        // than stalling one. Capture runs count frames and need them at once.
+        app.insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
+            8 << 20,
+        ));
+    }
     if profile {
         // F1_PROFILE=1 logs per-pass CPU/GPU render timings every few seconds.
         app.add_plugins((
@@ -366,6 +404,7 @@ fn step_race(
     mut session: ResMut<Session>,
     benchmark: Option<Res<benchmark::Run>>,
     mut online: Option<ResMut<online::Online>>,
+    mut script: Option<ResMut<script::Script>>,
 ) {
     if benchmark.is_some() {
         return;
@@ -403,7 +442,17 @@ fn step_race(
             .collect();
         pilot.drive(car, &race.track, &rivals, 1. / PHYSICS_RATE)
     });
+    let staged = if scripted.is_none() && !connected {
+        script
+            .as_mut()
+            .and_then(|script| script.input(&session.race, session.player))
+    } else {
+        None
+    };
+    let scripted = scripted.or(staged.and_then(Result::ok));
     let input = if let Some(input) = scripted {
+        input
+    } else if let Some(Err(input)) = staged {
         input
     } else if connected && session.screen != menu::Screen::Racing {
         racecraft_sim::CarInput {
@@ -440,7 +489,35 @@ fn step_race(
     } else {
         race.step(&[input]);
     }
-    let hit = session.race.entrants[session.player].car.impact;
+    let Session { race, contacts, .. } = &mut *session;
+    for entrant in &race.entrants {
+        let car = &entrant.car;
+        if car.impact >= f64::from(effects::IMPACT_THRESHOLD) && contacts.len() < 32 {
+            contacts.push(effects::Contact {
+                point: Vec3::new(
+                    car.impact_point.x as f32,
+                    car.position.y as f32 + 0.25,
+                    car.impact_point.y as f32,
+                ),
+                velocity: Vec3::new(car.velocity.x as f32, 0., car.velocity.y as f32),
+                impulse: car.impact as f32,
+            });
+        }
+    }
+    let player = session.player;
+    let hit = session.race.entrants[player].car.impact;
+    if !connected
+        && options.as_ref().is_some_and(|options| options.drift())
+        && matches!(
+            session.race.phase,
+            racecraft_sim::Phase::Racing | racecraft_sim::Phase::Finishing
+        )
+    {
+        let Session {
+            drift_score, race, ..
+        } = &mut *session;
+        drift_score.sample(&race.entrants[player].car, 1.0 / PHYSICS_RATE);
+    }
     session.pending_impact = session.pending_impact.max(hit);
     session.impact = (session.impact * (-1. / (PHYSICS_RATE * IMPACT_FADE)).exp()).max(hit);
     session.sample_hud();

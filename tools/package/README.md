@@ -39,3 +39,11 @@ packages are signature-verified; the uruntime v0.8.1 binary is SHA-256 pinned.
 Runtime: https://github.com/VHSgunzo/uruntime (MIT).
 Bundled package metadata, license texts and audio credits are inside the image.
 Track/car and reference-audio rights remain with their respective owners.
+
+Drift mode is included when the selected asset tree contains both `cars/thar`
+and `tracks/driftpark`. Both release builders reject incomplete drift payloads.
+Generate the park with `tools/build_assets.sh driftpark` and convert the Thar
+with `THAR_SOURCE=<glb> tools/build_assets.sh cars`. The pinned CI asset archive
+currently predates these assets; it must be replaced before hosted releases
+include drift mode. Native multiplayer ZIPs package only their selected car and
+track, and do not currently offer the drift mode payload.

@@ -128,6 +128,8 @@ pub struct Race {
     pub events: Vec<RaceEvent>,
     /// Empty when no car in the field has DRS.
     pub drs_zones: Vec<drs::Zone>,
+    /// Where 2026 active aero may run in straight mode; empty without it.
+    pub straight_zones: Vec<drs::Zone>,
     ai_power: f64,
     order: Vec<usize>,
     finish_order: Vec<usize>,
@@ -146,6 +148,8 @@ impl Race {
                     Assists {
                         automatic_gears: true,
                         stability: AI_STABILITY,
+                        // Overtake mode is engaged as soon as it is earned.
+                        auto_drs: true,
                         ..Assists::default()
                     }
                 } else {
@@ -181,12 +185,22 @@ impl Race {
             })
             .collect();
         let order = (0..entrants.len()).collect();
-        let drs_zones = if entrants.iter().any(|e| e.car.spec.aero.has_drs()) {
+        // 2026 cars earn overtake mode in the zones DRS would use.
+        let drs_zones = if entrants
+            .iter()
+            .any(|e| e.car.spec.aero.has_drs() || e.car.spec.hybrid.is_some())
+        {
             drs::zones(&track)
         } else {
             Vec::new()
         };
+        let straight_zones = if entrants.iter().any(|e| e.car.spec.aero.active.is_some()) {
+            drs::straight_mode_zones(&track)
+        } else {
+            Vec::new()
+        };
         Self {
+            straight_zones,
             ai_power: 1.,
             drs_zones,
             track,
@@ -306,10 +320,19 @@ impl Race {
                 .drs
                 .update(&self.track, &self.drs_zones, s, qualifies);
             let anywhere = entrant.car.assists.drs_anywhere;
+            let spec = &entrant.car.spec;
             entrant.car.drs.available = (open || anywhere)
                 && racing
                 && entrant.timing.finish_time.is_none()
-                && entrant.car.spec.aero.has_drs();
+                && (spec.aero.has_drs() || spec.hybrid.is_some());
+            // Straight mode is the car's own aero, not a race privilege: it
+            // runs from the start and after the flag, but not on the grid.
+            entrant.car.active_aero.allowed = spec.aero.active.is_some()
+                && !matches!(self.phase, Phase::Countdown { .. })
+                && self
+                    .straight_zones
+                    .iter()
+                    .any(|zone| zone.contains(&self.track, s));
         }
     }
 
@@ -603,6 +626,7 @@ impl Race {
                     timing.best_lap = Some(lap_time);
                 }
                 timing.sector_times = [None; SECTORS];
+                entrant.car.battery.new_lap();
                 self.events.push(RaceEvent::LapCompleted {
                     entrant: index,
                     lap: laps,
@@ -702,8 +726,9 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64, station: u
         .collision
         .ground(position + DVec3::Y * 2.0)
         .map_or(position.y, |hit| hit.height);
-    // Recovery clears crash dynamics, but does not grant fresh tyres.
+    // Recovery clears crash dynamics without replenishing tyres or energy.
     let tyres = car.tyres;
+    let battery = car.battery;
     *car = Car::new(
         car.spec.clone(),
         car.setup,
@@ -713,6 +738,8 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64, station: u
         yaw,
     );
     car.tyres = tyres;
+    car.battery = battery;
+    car.battery.recover();
     // A global projection can pick a nearby, different part of the circuit.
     car.track_position = track.project(car.position, Some(station));
 }
@@ -841,6 +868,24 @@ mod tests {
         assert_eq!(race.phase, Phase::Racing);
         assert!(race.events.contains(&RaceEvent::LightsOut));
         assert!(race.entrants[0].car.speed() > 5.0);
+    }
+
+    #[test]
+    fn hybrid_recovery_preserves_energy_and_lap_budget() {
+        let mut configs = field(1, 0);
+        configs[0].spec = Arc::new(CarSpec::gen26(test_wheels(), 5.4, 1.9));
+        let mut race = Race::new(Arc::new(oval_track()), configs, 1, 3);
+        let battery = &mut race.entrants[0].car.battery;
+        battery.energy = 1e6;
+        battery.lap_harvest = 2e6;
+        battery.bonus = 4e5;
+        battery.mode = crate::hybrid::DeployMode::Overtake;
+        race.recover(0);
+        let battery = &race.entrants[0].car.battery;
+        assert_eq!(battery.energy, 1e6);
+        assert_eq!(battery.lap_harvest, 2e6);
+        assert_eq!(battery.bonus, 0.0);
+        assert_eq!(battery.mode, crate::hybrid::DeployMode::Normal);
     }
 
     #[test]
@@ -988,6 +1033,7 @@ mod tests {
         let mut race = Race::new(Arc::new(oval_track()), field(1, 0), 1, 5);
         race.ai_takeover(0);
         assert!(race.entrants[0].car.assists.automatic_gears);
+        assert!(race.entrants[0].car.assists.auto_drs);
         assert!(race.entrants[0].car.assists.stability < 0.5);
         assert!(matches!(race.entrants[0].driver, Driver::Ai(_)));
     }
@@ -1891,6 +1937,7 @@ impl Race {
         if let Some(e) = self.entrants.get_mut(slot) {
             e.car.assists.automatic_gears = true;
             e.car.assists.stability = AI_STABILITY;
+            e.car.assists.auto_drs = true;
             e.driver = Driver::Ai(Box::new(AiDriver::new(
                 DriverProfile {
                     pace: 0.95,

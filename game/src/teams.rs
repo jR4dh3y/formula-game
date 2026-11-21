@@ -129,13 +129,55 @@ impl Teams {
             primary: rgb(&team.colors.primary).unwrap(),
         }
     }
+    pub fn online_field(
+        &self,
+        players: &[racecraft_net::Player],
+        size: usize,
+    ) -> Result<Vec<Option<Identity>>, String> {
+        let mut field = players
+            .iter()
+            .map(|player| {
+                player
+                    .identity
+                    .as_ref()
+                    .map(|identity| {
+                        self.selection(&identity.team, &identity.driver)
+                            .map(|(team, driver)| Self::identity(team, driver))
+                    })
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if field.iter().any(Option::is_some) {
+            let remaining: Vec<_> = self
+                .teams
+                .iter()
+                .flat_map(|team| {
+                    team.drivers
+                        .iter()
+                        .map(move |driver| Self::identity(team, driver))
+                })
+                .filter(|identity| !field.iter().flatten().any(|i| i.driver == identity.driver))
+                .take(size.saturating_sub(field.len()))
+                .map(Some)
+                .collect();
+            field.extend(remaining);
+        }
+        field.resize_with(size, || None);
+        Ok(field)
+    }
+
     /// First drivers across teams, then second drivers: teammates are spread across the grid.
     /// Put the selected driver's teammate first in the candidate list so even a small field includes them.
     pub fn field(
         &self,
         options: &crate::options::Options,
     ) -> Result<Vec<Option<Identity>>, String> {
-        if options.car == "rb6" {
+        // The RB6 races as itself; the 2026 car borrows the roster when it
+        // is installed and races anonymously otherwise.
+        if options.car == "rb6"
+            || options.drift()
+            || options.car == "gen26" && self.teams.is_empty()
+        {
             return Ok(vec![None; options.opponents + 1]);
         }
         let (team, driver) = self.selection(&options.team, &options.driver)?;

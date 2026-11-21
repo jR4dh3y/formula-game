@@ -101,7 +101,7 @@ assets/
 
 `tools/track/convert_spa.py` converts the upstream Spa track; `tools/car/prepare_car.py` prepares car models through Blender. Their module docstrings describe the source formats and arguments. The game uses the glTF files directly through Bevy. Car scenes must contain `body`, `wheel_fl`, `wheel_fr`, `wheel_rl` and `wheel_rr` nodes, with wheel pivots at their centres. The simulation and assets use +Z forward, +Y up, +X left, in metres.
 
-Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses a shared car model with installed team and driver liveries. Missing artwork falls back to neutral paint. Team and driver selections also control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
+Normal launches open Game play with the Track tab selected. Choose the circuit, laps, AI field, grid slot, tyres and wings there. Open its Car setup tab to choose the car, team and driver by name, then select Start race. Track and Car setup show the circuit outline with a live car preview beneath it. The race waits for its scenes to load before starting the countdown. `--quick-race` skips the menu using the CLI configuration; `--frames` also skips it for capture/testing. GEN22 uses a shared car model with installed team and driver liveries. Missing artwork falls back to neutral paint. Team and driver selections also control race identities and HUD colours. Use `--car gen22 --team ferrari --driver leclerc` to choose a 2022 entry, or `--car rb6` for a legacy race. `--car gen26` races the 2026-regulation car when `assets/cars/gen26` is installed (`tools/build_assets.sh cars` builds the base car from `2026-redbull-rb22.zip`; `tools/car/build_gen26.sh <dir>` builds each team's own car from its Sketchfab GLB, and the grid then races in team cars). It has no DRS: its wings switch into a low-drag straight mode by themselves on every long straight and close for braking or corners. A 4 MJ battery drives a 350 kW MGU-K that tapers off above 290 km/h and recharges under braking, off the throttle and by super clipping. F (gamepad B) is the overtake button: within a second of the car ahead at an overtake detection point it engages overtake mode (+0.5 MJ and full power to 337 km/h); anywhere else it toggles a boost that spends the battery until you brake. Overtake mode spends only its own allowance at full power. H (gamepad D-pad down) toggles harvest mode: no deployment and heavy super clipping at full throttle above 120 km/h, to refill the battery; it ends by itself when the battery is full. The HUD's DRS lamp becomes the battery gauge. `cargo test --release -p racecraft-sim --test era_probe -- --ignored --nocapture` compares lap time, top speed and energy per lap for all three eras on the installed circuits. **Drift mode** (`--drift`, or Mode → Drift in the menu) puts a 260 kW drift-build Mahindra Thar Roxx on the generated Racecraft Drift Park. Traction and stability control and the line guidance are off; Space (gamepad D-pad left) is the handbrake. Slides between 12° and 110° above 25 km/h score points by angle and speed; linking slides raises a multiplier up to x5, a chain banks after 1.2 s straight, and a spin, a wall or the grass loses it. `tools/track/generate_drift.py` builds the park; `THAR_SOURCE=<glb> tools/build_assets.sh cars` converts the car. `cargo test --release -p racecraft-sim --test drift_probe -- --ignored --nocapture` checks its drift envelope headlessly. Team and driver default to the first team and its first driver in `teams.json`; `--car rb22` remains a deprecated alias for `gen22`. Run `cargo run -p f1-the-game -- --help` for the full CLI.
 
 **Spa is the only supported circuit in normal builds.** Other track assets are hidden from the menu and rejected by `--track`. To enable unfinished circuits for development, build or run with the opt-in Cargo feature: `cargo run --release -p f1-the-game --features exp -- --assets ./assets`. Experimental builds discover converted circuits such as Silverstone, Bahrain and COTA; deferred Nürburgring assets remain unavailable until their conversion is repaired. The ignored `assets` symlink points at the original asset tree for convenient local launching.
 
@@ -215,10 +215,12 @@ Normal packaging always builds without `exp` and includes only Spa.
 
 | Action | Keyboard | Gamepad |
 | --- | --- | --- |
-| Throttle / brake | W / S or up / down | RT / LT |
-| Steer | A / D or left / right | Left stick |
+| Throttle / brake | W / S | RT / LT |
+| Steer | A / D | Left stick |
 | Shift up / down | E or Shift / Q or Ctrl | RB or A / LB or X |
 | Cycle camera | C | Y |
+| Look around | Arrows: left / right pan all the way round, up / down tilt | Right stick points the view; pull back to look behind |
+| Look back | B (hold) | Right stick back |
 | Adjust camera against live scene | F4; F4 / Esc to resume | — |
 | Cockpit / TV pod / third person | 1 / 2 / 3, or on-screen buttons | Cycle with Y |
 | Recover to track | R | Back / Select |
@@ -227,7 +229,7 @@ Normal packaging always builds without `exp` and includes only Spa.
 | Frame-rate readout | F3 | — |
 | Quit | Quit game in menu, or window close | Window close |
 
-There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or the Camera page. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and GEN22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
+There are exactly three camera modes: seated cockpit, TV pod above the driver's head, and third-person chase. Use 1 / 2 / 3, C, or the Camera page. Free look works in all three and eases back ahead when released: the chase camera swings round the car, and the cockpit view turns the driver's head, leans out to the side and, turned right round, rises over the roll hoop to see behind. F4 pauses the race with a live camera preview: adjust height, forward position, pitch, field of view, vibration and horizon stabilization. Positions save separately for RB6 and GEN22. Camera cuts reset temporal history; chase smoothing accounts for car velocity to avoid trailing farther behind at speed. `--manual-gears` disables automatic shifting. Keyboard steering and brake pressure are smoothed; gamepad steering has a deadzone and response curve.
 
 The RB6 and GEN22 cockpit steering wheels turn with the interpolated front-wheel steering angle, including steering assistance, at a 6:1 ratio. GEN22 uses the named `steering_wheel` node, including its live LCD and LEDs; RB6 keeps its legacy wheel and screen pod.
 
@@ -336,7 +338,17 @@ Track and car assets retain their upstream ownership and attribution; see the
 [asset conversion notes](tools/track/README.md). The repository's historical audio
 sources have [reference credits](game/audio/reference/CREDITS.md) and
 [V8 source credits](game/audio/v8/CREDITS_LICENSE.md); the active voices are procedural.
-The bundled font uses the [SIL Open Font License](game/fonts/OFL.txt).
+The 2026 team cars (`assets/cars/gen26`) are Dave Love's 2026 grid models
+([Sketchfab: Tyler_Dave](https://sketchfab.com/Tyler_Dave/models)): RB22,
+SF-26, W17, MCL40, AMR26, FW48, VF-26, R26 and MAC-26, each licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and listed in
+[tools/car/gen26_teams.json](tools/car/gen26_teams.json). They are converted
+for the game: wheels and the rear-wing flap split into their own nodes, and
+opponent copies decimated with textures capped at 2048 px. The drift-mode car is built from
+["Mahindra - Thar Roxx"](https://sketchfab.com/3d-models/mahindra-thar-roxx-f85210fe98774b7fab1199d8ee151ead)
+by ansari_studios, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
+converted for the game (scaled to metres, wheels split into their own nodes).
+The drift park is generated by the repository's own tooling. The bundled font uses the [SIL Open Font License](game/fonts/OFL.txt).
 AppImages include runtime package metadata and applicable license texts; see the
 [packaging notes](tools/package/README.md).
 

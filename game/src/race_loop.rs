@@ -294,6 +294,7 @@ fn jump(session: &mut Session, race: Race) {
     session.telemetry = default();
     session.impact = 0.;
     session.pending_impact = 0.;
+    session.contacts.clear();
     session.screen = Screen::Racing;
 }
 pub fn update(
@@ -335,6 +336,7 @@ pub fn update(
         {
             if let Some(snapshot) = run.history.pop_front() {
                 jump(&mut session, snapshot.race);
+                session.drift_score.discard_chain();
                 run.last_tick = session.race.tick;
                 run.score = snapshot.score;
                 run.score.lose();
@@ -360,8 +362,13 @@ pub fn update(
             if run.next {
                 race.laps += 1;
             }
-            race.entrants[session.player].car.assists = frontend.aids;
+            race.entrants[session.player].car.assists = if options.drift() {
+                crate::drift::assists(frontend.aids)
+            } else {
+                frontend.aids
+            };
             jump(&mut session, race.clone());
+            session.drift_score = default();
             run.last_tick = session.race.tick;
             session.paused = false;
             run.initial = Some(race);
@@ -430,7 +437,7 @@ pub fn ui(
         return Ok(());
     }
     let ctx = contexts.ctx_mut()?;
-    if session.screen == Screen::Main {
+    if session.screen == Screen::Main && frontend.launched {
         egui::Window::new("Driver record")
             .anchor(egui::Align2::RIGHT_TOP, [-16., 70.])
             .resizable(false)

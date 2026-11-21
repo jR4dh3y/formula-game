@@ -77,7 +77,7 @@ impl Default for RaceSettings {
 }
 impl RaceSettings {
     pub fn validate(&self) -> Result<(), String> {
-        if !matches!(self.car.as_str(), "rb6" | "gen22")
+        if !CarSpec::ERAS.contains(&self.car.as_str())
             || self.track.is_empty()
             || self.track.len() > 32
             || !self
@@ -126,9 +126,8 @@ fn simulation_files(root: &Path, settings: &RaceSettings) -> Vec<std::path::Path
         track.join("collision.bin"),
         car.join("car.json"),
     ];
-    if settings.car == "gen22" {
-        // The server assigns driver identities from this roster.
-        files.push(car.join("teams.json"));
+    if let Some(roster) = roster_file(root, &settings.car) {
+        files.push(roster);
     }
     files
 }
@@ -174,11 +173,7 @@ pub fn load_race(root: &Path, settings: &RaceSettings, players: &[Player]) -> Re
     }
     let track = Arc::new(Track::load(root.join("tracks").join(&settings.track))?);
     let geometry = CarGeometry::load(root.join("cars").join(&settings.car).join("car.json"))?;
-    let spec = Arc::new(if settings.car == "rb6" {
-        CarSpec::rb6_with(&geometry)
-    } else {
-        CarSpec::gen22_with(&geometry)
-    });
+    let spec = Arc::new(CarSpec::for_era(&settings.car, &geometry).ok_or("unknown car")?);
     let count = players
         .len()
         .checked_add(settings.ai_cars)
@@ -215,16 +210,22 @@ pub fn load_race(root: &Path, settings: &RaceSettings, players: &[Player]) -> Re
     Ok(race)
 }
 
-/// GEN22 keeps stock team/driver identities unique; unspecified selections get a free driver.
+// GEN26 uses the installed GEN22 roster when present.
+fn roster_file(root: &Path, car: &str) -> Option<std::path::PathBuf> {
+    let roster = root.join("cars/gen22/teams.json");
+    (car == "gen22" || car == "gen26" && roster.is_file()).then_some(roster)
+}
+
+/// Keep stock team/driver identities unique and assign free drivers to unspecified selections.
 pub fn select_identity(
     root: &Path,
     car: &str,
     requested: Option<DriverIdentity>,
     players: &[Player],
 ) -> Result<Option<DriverIdentity>, String> {
-    if car != "gen22" {
+    let Some(path) = roster_file(root, car) else {
         return Ok(None);
-    }
+    };
     #[derive(Deserialize)]
     struct Roster {
         teams: Vec<Team>,
@@ -238,10 +239,8 @@ pub fn select_identity(
     struct NamedDriver {
         id: String,
     }
-    let roster: Roster = serde_json::from_slice(
-        &std::fs::read(root.join("cars/gen22/teams.json")).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
+    let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let roster: Roster = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     let available: Vec<_> = roster
         .teams
         .into_iter()

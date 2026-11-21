@@ -6,6 +6,7 @@ Python, curl, tar/zstd and mksquashfs. Players need none of these tools.
 Official Arch package signatures and the pinned runtime digest are verified.
 """
 import argparse
+from drift_assets import copy_drift_assets
 import hashlib
 import json
 import os
@@ -159,10 +160,21 @@ def main():
             for filename in files:
                 shutil.copy2(assets / category / item / filename, destination / filename)
 
+    if copy_drift_assets(assets, APP / "usr/share/f1-racecraft/assets"):
+        tracks.append("driftpark")
+
+    shutil.copy2(ROOT / "README.md", APP / "usr/share/licenses/f1-racecraft/ASSET-CREDITS.md")
+
     # Include installed artwork with the car that uses it.
-    for car in ["gen22", "rb6"]:
+    for car in ["gen22", "rb6", "gen26"]:
+        # The 2026 car is optional: the menu only offers installed cars.
+        if car == "gen26" and not (assets / "cars" / car).is_dir():
+            continue
         shutil.copytree(assets / "cars" / car,
                         APP / "usr/share/f1-racecraft/assets/cars" / car)
+        if car == "gen26":
+            shutil.copy2(ROOT / "tools/car/gen26_teams.json",
+                         APP / "usr/share/licenses/f1-racecraft/GEN26-ATTRIBUTION.json")
 
     # Only generic x86-64 official packages are used. The build host's CachyOS
     # AVX2/v3-optimized libraries must not impose that CPU requirement on players.

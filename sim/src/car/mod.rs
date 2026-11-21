@@ -30,9 +30,16 @@ pub struct CarInput {
     pub brake: f64,
     pub shift_up: bool,
     pub shift_down: bool,
-    /// Asks to open DRS; it opens only where the race allows it.
+    /// Asks to open DRS; it opens only where the race allows it. On a 2026
+    /// car it is the overtake / boost button.
     #[serde(default)]
     pub drs: bool,
+    /// 2026 cars: toggles harvest (recharge) mode.
+    #[serde(default)]
+    pub harvest: bool,
+    /// Locks the rear wheels and declutches them, for starting a slide.
+    #[serde(default)]
+    pub handbrake: bool,
 }
 
 /// Driving aids. They help with control, never with racecraft, and are
@@ -217,6 +224,10 @@ pub struct Car {
     pub wheels: [WheelState; 4],
     pub aero: AeroInfluence,
     pub drs: Drs,
+    /// 2026 wings; idle on cars without active aero.
+    pub active_aero: crate::hybrid::ActiveAero,
+    /// 2026 energy store; idle on cars without a hybrid spec.
+    pub battery: crate::hybrid::Battery,
     pub downforce: f64,
     pub track_position: TrackPosition,
     /// Smoothed body-frame acceleration (forward, left), m/s².
@@ -225,6 +236,9 @@ pub struct Car {
     vertical_acceleration: f64,
     /// Strongest impact this tick (N·s), for camera shake and damage later.
     pub impact: f64,
+    /// Ground-plane point of that impact, for contact effects. Presentation
+    /// only: it is not part of the snapshot.
+    pub impact_point: DVec2,
 }
 
 /// Visual body pitch per m/s² of longitudinal acceleration, rad.
@@ -271,7 +285,14 @@ impl Car {
         yaw: f64,
     ) -> Self {
         let track_position = track.project(position, None);
+        let battery = spec
+            .hybrid
+            .as_ref()
+            .map(crate::hybrid::Battery::full)
+            .unwrap_or_default();
         Self {
+            battery,
+            active_aero: crate::hybrid::ActiveAero::default(),
             powertrain: Powertrain::new(&spec.engine),
             spec,
             setup: setup.clamped(),
@@ -304,6 +325,7 @@ impl Car {
             vertical_velocity: 0.0,
             vertical_acceleration: 0.0,
             impact: 0.0,
+            impact_point: DVec2::ZERO,
         }
     }
 
@@ -391,10 +413,10 @@ impl Car {
     }
 
     fn assisted_lock(&self, angle: f64) -> f64 {
-        const FULL_LOCK: f64 = 0.36;
+        let full_lock = self.spec.steer_lock;
         // Car::assists is mutable and can be restored from a host snapshot.
         let steering = self.assists.steering_filter();
-        FULL_LOCK + (angle.min(FULL_LOCK) - FULL_LOCK) * steering
+        full_lock + (angle.min(full_lock) - full_lock) * steering
     }
 
     /// Lock the steering and stability aids allow into the turn the car is
@@ -530,22 +552,63 @@ impl Car {
             self.powertrain
                 .drive_force(&spec.engine, throttle, forward_speed, rear_radius, dt);
 
+        // The MGU-K adds power at the wheels whenever the engine drives them.
+        let drive = match &spec.hybrid {
+            Some(hybrid) => {
+                let electric = self.battery.update(
+                    hybrid,
+                    &crate::hybrid::BatteryTick {
+                        button: input.drs,
+                        harvest_button: input.harvest,
+                        overtake_available: self.drs.available,
+                        auto_overtake: self.assists.auto_drs,
+                        throttle,
+                        brake,
+                        speed: forward_speed.max(0.0),
+                        straight_zone: self.active_aero.allowed,
+                        driving: drive > 0.0 && throttle > 0.0,
+                        max_brake_force: spec.max_brake_force,
+                        dt,
+                    },
+                );
+                drive + electric / forward_speed.max(5.0)
+            }
+            None => drive,
+        };
         // Preserve engine braking; scale only delivered propulsion.
         let drive = if drive > 0. { drive * power } else { drive };
 
-        // Aerodynamics. An open DRS flap stalls part of the rear wing.
-        self.drs
-            .update(input.drs || self.assists.auto_drs, brake, dt);
+        // Aerodynamics. An open DRS flap stalls part of the rear wing; 2026
+        // wings open into straight mode by themselves.
+        if spec.hybrid.is_none() {
+            self.drs
+                .update(input.drs || self.assists.auto_drs, brake, dt);
+        }
+        let (active_drag, active_front, active_rear) = match &spec.aero.active {
+            Some(active) => {
+                self.active_aero
+                    .update(throttle, brake, self.acceleration.y, forward_speed, dt);
+                let position = self.active_aero.position;
+                (
+                    active.drag * position,
+                    active.front_lift * position,
+                    active.rear_lift * position,
+                )
+            }
+            None => (0.0, 0.0, 0.0),
+        };
         let dynamic_pressure = 0.5 * AIR_DENSITY * speed * speed;
         let front_downforce = dynamic_pressure
-            * self.setup.front_lift_area(&spec.aero)
+            * (self.setup.front_lift_area(&spec.aero) - active_front)
             * self.aero.front_downforce_scale;
         let rear_downforce = dynamic_pressure
-            * (self.setup.rear_lift_area(&spec.aero) - spec.aero.drs_lift * self.drs.flap)
+            * (self.setup.rear_lift_area(&spec.aero)
+                - spec.aero.drs_lift * self.drs.flap
+                - active_rear)
             * self.aero.rear_downforce_scale;
         self.downforce = front_downforce + rear_downforce;
         let drag = dynamic_pressure
-            * (self.setup.drag_area(&spec.aero) - spec.aero.drs_drag * self.drs.flap)
+            * (self.setup.drag_area(&spec.aero) - spec.aero.drs_drag * self.drs.flap - active_drag)
             * self.aero.drag_scale;
 
         // Vertical loads with quasi-static weight transfer.
@@ -732,6 +795,10 @@ impl Car {
             // Longitudinal demand: drive on the rear, brakes everywhere.
             let mut brake_force = wheel_brakes[index];
             let mut drive_force = if front { 0.0 } else { drive * 0.5 };
+            let handbrake = input.handbrake && !front;
+            if handbrake {
+                drive_force = 0.0;
+            }
 
             // Partial ABS trims a locking demand to slightly under the limit, so
             // it never beats a driver who brakes right at the limit.
@@ -745,7 +812,10 @@ impl Car {
             } else {
                 1.0 + 0.5 * abs / (1.0 - abs)
             };
-            if brake_force > room {
+            if handbrake {
+                // The handbrake bypasses ABS and locks the rear at any speed.
+                locked = wheel_long.abs() > 0.5;
+            } else if brake_force > room {
                 if brake_force > room * lock_margin + 50.0 {
                     locked = wheel_long.abs() > 0.5;
                 } else {
@@ -903,6 +973,9 @@ impl Car {
         let arm = point - DVec2::new(self.position.x, self.position.z);
         self.velocity += impulse / self.spec.mass;
         self.yaw_rate -= arm.perp_dot(impulse) / self.spec.yaw_inertia;
+        if impulse.length() > self.impact {
+            self.impact_point = point;
+        }
         self.impact = self.impact.max(impulse.length());
     }
 
@@ -1897,6 +1970,10 @@ pub struct CarState {
     wheels: [WheelState; 4],
     aero: AeroInfluence,
     drs: Drs,
+    #[serde(default)]
+    active_aero: crate::hybrid::ActiveAero,
+    #[serde(default)]
+    battery: crate::hybrid::Battery,
     downforce: f64,
     track_position: TrackPosition,
     acceleration: DVec2,
@@ -1923,6 +2000,8 @@ impl Car {
             wheels: self.wheels,
             aero: self.aero,
             drs: self.drs,
+            active_aero: self.active_aero,
+            battery: self.battery,
             downforce: self.downforce,
             track_position: self.track_position,
             acceleration: self.acceleration,
@@ -1950,6 +2029,8 @@ impl Car {
         self.wheels = state.wheels;
         self.aero = state.aero;
         self.drs = state.drs;
+        self.active_aero = state.active_aero;
+        self.battery = state.battery;
         self.downforce = state.downforce;
         self.track_position = state.track_position;
         self.acceleration = state.acceleration;

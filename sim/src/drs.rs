@@ -52,8 +52,47 @@ impl Zone {
     }
 }
 
-/// The circuit's longest straights as DRS zones, in lap order.
+/// How runs of straight centerline become zones.
+struct Rules {
+    min_straight: f64,
+    max_zones: usize,
+    /// Only straights that end in a braking corner.
+    braking_end: bool,
+    entry: f64,
+    exit: f64,
+}
+
+/// The circuit's longest straights as DRS zones, in lap order. 2026 cars
+/// earn overtake mode in the same places.
 pub fn zones(track: &Track) -> Vec<Zone> {
+    find(
+        track,
+        Rules {
+            min_straight: MIN_STRAIGHT,
+            max_zones: MAX_ZONES,
+            braking_end: true,
+            entry: ENTRY,
+            exit: EXIT,
+        },
+    )
+}
+
+/// Every straight long enough for 2026 active aero to run in straight mode,
+/// whatever follows it: the wings close again before any real bend.
+pub fn straight_mode_zones(track: &Track) -> Vec<Zone> {
+    find(
+        track,
+        Rules {
+            min_straight: 250.0,
+            max_zones: usize::MAX,
+            braking_end: false,
+            entry: 30.0,
+            exit: 70.0,
+        },
+    )
+}
+
+fn find(track: &Track, rules: Rules) -> Vec<Zone> {
     let count = track.stations.len();
     let reach = (WINDOW / STATION_SPACING).ceil() as usize;
     if count < reach * 4 {
@@ -117,16 +156,19 @@ pub fn zones(track: &Track) -> Vec<Zone> {
                 stations as f64 * STATION_SPACING,
             )
         })
-        .filter(|&(start, length)| length >= MIN_STRAIGHT && ends_in_braking(track, start + length))
+        .filter(|&(start, length)| {
+            length >= rules.min_straight
+                && (!rules.braking_end || ends_in_braking(track, start + length))
+        })
         .collect();
     runs.sort_by(|a, b| b.1.total_cmp(&a.1));
-    runs.truncate(MAX_ZONES);
+    runs.truncate(rules.max_zones);
     let mut zones: Vec<Zone> = runs
         .into_iter()
         .map(|(start, length)| Zone {
-            detection: track.wrap(start + ENTRY - DETECTION),
-            start: track.wrap(start + ENTRY),
-            end: track.wrap(start + length - EXIT),
+            detection: track.wrap(start + rules.entry - DETECTION),
+            start: track.wrap(start + rules.entry),
+            end: track.wrap(start + length - rules.exit),
         })
         .collect();
     zones.sort_by(|a, b| a.start.total_cmp(&b.start));

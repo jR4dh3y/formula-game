@@ -138,7 +138,7 @@ are native executables with a `.command` launcher, not signed/notarized apps.
   newest snapshot the client holds.
 - Shifts and recovery use a separate ordered reliable channel, monotonically
   increasing command IDs and authoritative snapshot acknowledgements. A repeated
-  command ID cannot shift or recover the car twice. At most one command per car
+  command ID cannot shift, toggle harvest or recover the car twice. At most one command per car
   is consumed on each physics tick.
 - Complete mutable snapshots include timing, race order, RNG, DRS, tyres,
   suspension and AI decision state. Immutable specs and large AI track planning
