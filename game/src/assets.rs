@@ -8,7 +8,10 @@ use bevy::{
     world_serialization::WorldInstanceReady,
 };
 use racecraft_sim::{Assists, CarGeometry, CarSpec, DriverProfile, EntrantConfig, Race, Track};
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 
 #[derive(Component)]
 pub struct CarVisual(pub usize);
@@ -174,6 +177,46 @@ pub struct VisualAssets {
     handles: Vec<Handle<bevy::world_serialization::WorldAsset>>,
     started: Option<f64>,
     scene_count: usize,
+    upload_probe: Option<u64>,
+}
+
+#[derive(Resource, Clone, Default)]
+pub struct GpuUploads {
+    requested: u64,
+    complete: Arc<AtomicU64>,
+}
+
+pub fn watch_gpu_uploads(app: &mut App) {
+    use bevy::render::{
+        render_asset::RenderAssetBytesPerFrameLimiter, Extract, ExtractSchedule, Render, RenderApp,
+        RenderSystems,
+    };
+
+    let uploads = GpuUploads::default();
+    app.insert_resource(uploads.clone());
+    if let Some(render) = app.get_sub_app_mut(RenderApp) {
+        render
+            .insert_resource(uploads)
+            .add_systems(
+                ExtractSchedule,
+                |main: Extract<Res<GpuUploads>>, mut render: ResMut<GpuUploads>| {
+                    render.requested = main.requested;
+                },
+            )
+            .add_systems(
+                Render,
+                (|limit: Res<RenderAssetBytesPerFrameLimiter>, uploads: Res<GpuUploads>| {
+                    // An uncapped preparation pass drains the throttled asset queue.
+                    if limit
+                        .max_bytes
+                        .is_none_or(|max| limit.bytes_written.load(Ordering::Relaxed) < max)
+                    {
+                        uploads.complete.store(uploads.requested, Ordering::Release);
+                    }
+                })
+                .after(RenderSystems::PrepareMeshes),
+            );
+    }
 }
 
 /// Scene loading saturates every core preparing textures, which starved the
@@ -201,8 +244,11 @@ pub fn spawn_scene(
     server: Res<AssetServer>,
     options: Res<Options>,
     session: Res<Session>,
+    visuals: Option<Res<VisualAssets>>,
 ) {
-    spawn_visuals(&mut commands, &server, &options, &session);
+    if visuals.is_none() {
+        spawn_visuals(&mut commands, &server, &options, &session);
+    }
 }
 
 pub fn setup(mut commands: Commands, session: Res<Session>, mut images: ResMut<Assets<Image>>) {
@@ -224,9 +270,11 @@ pub fn spawn_visuals(
         .load(GltfAssetLabel::Scene(0).from_asset(format!("tracks/{}/visual.glb", options.track)));
     let car =
         server.load(GltfAssetLabel::Scene(0).from_asset(format!("cars/{}/car.glb", options.car)));
-    let has_gen22_lod1 = options.assets.join("cars/gen22/car_lod1.glb").is_file();
-    let opponent = if options.car == "gen22" && has_gen22_lod1 {
-        server.load(GltfAssetLabel::Scene(0).from_asset("cars/gen22/car_lod1.glb"))
+    let lod1 = format!("cars/{}/car_lod1.glb", options.car);
+    let opponent = if matches!(options.car.as_str(), "gen22" | "gen26")
+        && options.assets.join(&lod1).is_file()
+    {
+        server.load(GltfAssetLabel::Scene(0).from_asset(lod1))
     } else {
         car.clone()
     };
@@ -266,6 +314,7 @@ pub fn spawn_visuals(
             .is_file()
             .then(|| server.load(GltfAssetLabel::Scene(0).from_asset(path)))
     };
+    let mut handles = vec![track, car.clone(), opponent.clone()];
     for (index, entrant) in session.race.entrants.iter().enumerate() {
         let scene = team_scene(index).unwrap_or_else(|| {
             if index == session.player {
@@ -274,6 +323,7 @@ pub fn spawn_visuals(
                 opponent.clone()
             }
         });
+        handles.push(scene.clone());
         commands
             .spawn((
                 Name::new(format!("car-{index}")),
@@ -349,12 +399,12 @@ pub fn spawn_visuals(
         } else {
             0
         };
-    let mut handles = vec![track, car, opponent];
     handles.extend(distant);
     commands.insert_resource(VisualAssets {
         handles,
         started: None,
         scene_count,
+        upload_probe: None,
     });
 }
 
@@ -573,6 +623,8 @@ pub fn check_loading(
     mut menu: ResMut<crate::menu::Frontend>,
     texture_jobs: Res<crate::textures::TextureJobs>,
     mesh_jobs: Res<crate::meshes::MeshJobs>,
+    mut uploads: ResMut<GpuUploads>,
+    cap: Option<Res<bevy::render::render_asset::RenderAssetBytesPerFrame>>,
 ) {
     let Some(mut visuals) = visuals.filter(|_| !session.ready) else {
         return;
@@ -608,13 +660,26 @@ pub fn check_loading(
     }
     // Textures and meshes are prepared on worker threads after their scenes
     // spawn; the scene is not drawn in full until the last one is back.
-    if ready.iter().count() == visuals.scene_count
+    let cpu_ready = ready.iter().count() == visuals.scene_count
         && texture_jobs.pending == 0
         && mesh_jobs.pending == 0
         && textures
             .iter()
-            .all(|id| server.is_loaded_with_dependencies(*id))
-    {
+            .all(|id| server.is_loaded_with_dependencies(*id));
+    let render_ready = if !cpu_ready {
+        visuals.upload_probe = None;
+        false
+    } else if cap.is_some_and(|cap| cap.max_bytes.is_some()) {
+        // Wait for the render world to process a frame after the last CPU job.
+        let probe = *visuals.upload_probe.get_or_insert_with(|| {
+            uploads.requested += 1;
+            uploads.requested
+        });
+        uploads.complete.load(Ordering::Acquire) >= probe
+    } else {
+        true
+    };
+    if render_ready {
         session.ready = true;
         if session.screen == crate::menu::Screen::Loading {
             menu.race_started = true;
@@ -923,6 +988,12 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
     let identities = teams.field(options)?;
     // Grid: the player starts in the requested slot among the AI field.
     let player_slot = options.grid_slot - 1;
+    let aids = options.player_assists();
+    let aids = if options.drift() {
+        crate::drift::assists(aids)
+    } else {
+        aids
+    };
     let total = options.opponents + 1;
     let mut ai_index = 0;
     let entrants: Vec<EntrantConfig> = (0..total)
@@ -934,7 +1005,7 @@ pub fn load_race(options: &Options) -> Result<Race, String> {
                         .map_or_else(|| "You".into(), |identity| identity.name.clone()),
                     spec: field_spec.clone(),
                     setup: options.setup,
-                    assists: options.player_assists(),
+                    assists: aids,
                     ai: None,
                     human_slot: 0,
                     livery: [1.0, 1.0, 1.0],

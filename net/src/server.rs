@@ -657,6 +657,7 @@ impl Server {
                     match kind {
                         Command::ShiftUp => inputs[slot].shift_up = true,
                         Command::ShiftDown => inputs[slot].shift_down = true,
+                        Command::Harvest => inputs[slot].harvest = true,
                         Command::Recover => race.recover(slot),
                     }
                 }

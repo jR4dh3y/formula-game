@@ -95,8 +95,8 @@ def stripes(size, colours) -> Image.Image:
 
 
 def quad_grid(x0, x1, z0, z1, y, step, uv_scale):
-    xs = np.arange(x0, x1 + 1e-6, step)
-    zs = np.arange(z0, z1 + 1e-6, step)
+    xs = np.linspace(x0, x1, math.ceil((x1 - x0) / step) + 1)
+    zs = np.linspace(z0, z1, math.ceil((z1 - z0) / step) + 1)
     gx, gz = np.meshgrid(xs, zs)
     positions = np.stack([gx, np.full_like(gx, y), gz], axis=-1).reshape(-1, 3)
     uvs = np.stack([gx, gz], axis=-1).reshape(-1, 2) / uv_scale
@@ -131,6 +131,9 @@ def ring(outer_lo, outer_hi, inner_lo, inner_hi, y):
 def strip(points, left_offset, right_offset, y, closed=True, v_scale=4.0):
     """A ribbon along `points` between two lateral offsets (left positive)."""
     tangents = np.roll(points, -1, axis=0) - np.roll(points, 1, axis=0)
+    if not closed:
+        tangents[0] = points[1] - points[0]
+        tangents[-1] = points[-1] - points[-2]
     tangents /= np.linalg.norm(tangents, axis=1, keepdims=True)
     left = np.stack([-tangents[:, 1], tangents[:, 0]], axis=1)
     a = points + left * left_offset

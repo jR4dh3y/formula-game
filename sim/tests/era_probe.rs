@@ -19,28 +19,38 @@ fn root() -> Option<PathBuf> {
     let root = std::env::var_os("F1_TEST_ASSETS")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets"));
-    root.join("cars/gen22/car.json").is_file().then_some(root)
+    root.is_dir().then_some(root)
 }
 
 fn eras(root: &std::path::Path) -> Vec<(&'static str, Arc<CarSpec>)> {
-    let geometry = |dir: &str| CarGeometry::load(root.join(format!("cars/{dir}/car.json")));
-    let mut eras = vec![
-        (
-            "RB6",
-            Arc::new(CarSpec::rb6_with(&geometry("rb6").unwrap())),
-        ),
-        (
-            "GEN22",
-            Arc::new(CarSpec::gen22_with(&geometry("gen22").unwrap())),
-        ),
-    ];
-    // The 2026 body; falls back to the 2022 geometry when it is not installed.
-    let gen26 = geometry("rb22").or_else(|_| geometry("gen22")).unwrap();
-    eras.push(("GEN26", Arc::new(tuned(CarSpec::gen26_with(&gen26)))));
-    if let Ok(only) = std::env::var("ERA_CARS") {
-        eras.retain(|(name, _)| only.split(',').any(|o| o.eq_ignore_ascii_case(name)));
-    }
-    eras
+    let only = std::env::var("ERA_CARS").ok();
+    [("RB6", "rb6"), ("GEN22", "gen22"), ("GEN26", "gen26")]
+        .into_iter()
+        .filter(|(name, _)| {
+            only.as_ref()
+                .is_none_or(|list| list.split(',').any(|era| era.eq_ignore_ascii_case(name)))
+        })
+        .filter_map(|(name, id)| {
+            let geometry = |dir: &str| CarGeometry::load(root.join(format!("cars/{dir}/car.json")));
+            let geometry = geometry(id).or_else(|err| {
+                if id == "gen26" && !root.join("cars/gen26/car.json").is_file() {
+                    geometry("gen22")
+                } else {
+                    Err(err)
+                }
+            });
+            let geometry = match geometry {
+                Ok(geometry) => geometry,
+                Err(error) => {
+                    eprintln!("skipping {name}: {error}");
+                    return None;
+                }
+            };
+            let spec = CarSpec::for_era(id, &geometry).unwrap();
+            let spec = if id == "gen26" { tuned(spec) } else { spec };
+            Some((name, Arc::new(spec)))
+        })
+        .collect()
 }
 
 /// `GEN26_<NAME>=value` overrides for parameter sweeps without rebuilding.

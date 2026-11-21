@@ -39,6 +39,13 @@ def main():
             assets = args.assets.resolve()
             for part in [f'tracks/{args.track}', f'cars/{args.car}']:
                 shutil.copytree(assets / part, stage / 'assets' / part)
+            if args.car == 'gen26':
+                shutil.copy2(root / 'tools/car/gen26_teams.json', stage / 'GEN26-ATTRIBUTION.json')
+                roster = Path('cars/gen22/teams.json')
+                if (assets / roster).is_file():
+                    target_roster = stage / 'assets' / roster
+                    target_roster.parent.mkdir(parents=True)
+                    shutil.copy2(assets / roster, target_roster)
         shutil.copy2(root / 'docs' / 'multiplayer.md', stage / 'MULTIPLAYER.md')
         if system == 'windows':
             (stage / 'Play.bat').write_text(f'@echo off\r\ncd /d "%~dp0"\r\nf1-the-game.exe --assets assets --car {args.car} %*\r\n', encoding='utf-8')

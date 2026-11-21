@@ -71,6 +71,7 @@ pub struct Session {
     pub impact: f64,
     /// Strongest collision since the audio update, consumed once per frame.
     pub pending_impact: f64,
+    pub drift_score: drift::DriftScore,
 }
 
 /// Seconds for a collision's camera jolt to fade to about a third.
@@ -164,8 +165,12 @@ fn build_app(mut options: Options) -> Result<App, String> {
         identities: teams.field(&options)?,
         rig: teams::Rig::load(&options)?,
         guidance: driving::Guidance::new(&race, player),
-        corner_braking: frontend.corner_braking,
-        show_racing_line: frontend.show_racing_line,
+        corner_braking: if options.drift() {
+            0.
+        } else {
+            frontend.corner_braking
+        },
+        show_racing_line: !options.drift() && frontend.show_racing_line,
         show_performance: false,
         camera: rig,
         minimap: hud::Minimap::new(&race.track),
@@ -181,6 +186,7 @@ fn build_app(mut options: Options) -> Result<App, String> {
         pings: Vec::new(),
         impact: 0.,
         pending_impact: 0.,
+        drift_score: default(),
         screen: if quick_race {
             menu::Screen::Racing
         } else {
@@ -265,7 +271,6 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .init_resource::<Capture>()
         .init_resource::<textures::TextureDetail>()
         .init_resource::<textures::TextureJobs>()
-        .init_resource::<drift::DriftScore>()
         .init_resource::<meshes::MeshJobs>()
         .init_resource::<assets::OpponentLodDistance>()
         .add_systems(
@@ -279,10 +284,11 @@ fn build_app(mut options: Options) -> Result<App, String> {
             ),
         )
         .add_systems(PreUpdate, controls::update.after(bevy::input::InputSystems))
-        .add_systems(Update, drift::update)
         .add_systems(
             Update,
-            assets::spawn_scene.run_if(assets::launch_screen_shown),
+            assets::spawn_scene
+                .after(menu::apply)
+                .run_if(assets::launch_screen_shown),
         )
         .add_systems(Update, pause_on_focus_loss.before(menu::apply))
         .init_resource::<race_loop::Run>()
@@ -302,7 +308,6 @@ fn build_app(mut options: Options) -> Result<App, String> {
                 graphics::apply,
                 assets::update_opponent_lods.after(graphics::apply),
                 materials::prepare,
-                assets::check_loading.after(materials::prepare),
                 benchmark::advance,
                 assets::sync_cars,
                 assets::animate_controls,
@@ -332,10 +337,13 @@ fn build_app(mut options: Options) -> Result<App, String> {
         .add_systems(wheel_dash::WheelDashPass, wheel_dash::draw)
         .add_systems(
             PostUpdate,
-            (textures::prepare, meshes::prepare).after(bevy::asset::AssetEventSystems),
+            ((textures::prepare, meshes::prepare), assets::check_loading)
+                .chain()
+                .after(bevy::asset::AssetEventSystems),
         )
         .add_systems(Last, capture);
     textures::register_normal_scales(&mut app);
+    assets::watch_gpu_uploads(&mut app);
     if !(cfg!(test) || capture_run) {
         // A scene's meshes and textures reach the GPU over a few frames rather
         // than stalling one. Capture runs count frames and need them at once.
@@ -456,7 +464,20 @@ fn step_race(
     } else {
         race.step(&[input]);
     }
-    let hit = session.race.entrants[session.player].car.impact;
+    let player = session.player;
+    let hit = session.race.entrants[player].car.impact;
+    if !connected
+        && options.as_ref().is_some_and(|options| options.drift())
+        && matches!(
+            session.race.phase,
+            racecraft_sim::Phase::Racing | racecraft_sim::Phase::Finishing
+        )
+    {
+        let Session {
+            drift_score, race, ..
+        } = &mut *session;
+        drift_score.sample(&race.entrants[player].car, 1.0 / PHYSICS_RATE);
+    }
     session.pending_impact = session.pending_impact.max(hit);
     session.impact = (session.impact * (-1. / (PHYSICS_RATE * IMPACT_FADE)).exp()).max(hit);
     session.sample_hud();
