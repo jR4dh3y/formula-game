@@ -119,27 +119,6 @@ def islands(mesh):
     return parts
 
 
-def separate(body, face_indices, name):
-    """Moves faces of `body` into a new object called `name`."""
-    select_only([body])
-    bpy.ops.object.mode_set(mode="EDIT")
-    data = bmesh.from_edit_mesh(body.data)
-    data.faces.ensure_lookup_table()
-    wanted = set(face_indices)
-    for face in data.faces:
-        face.select = face.index in wanted
-    bmesh.update_edit_mesh(body.data)
-    bpy.ops.mesh.separate(type="SELECTED")
-    bpy.ops.object.mode_set(mode="OBJECT")
-    new = next(obj for obj in mesh_objects() if obj is not body and obj.name not in NAMED)
-    new.name = name
-    NAMED.add(name)
-    return new
-
-
-NAMED = {"body"}
-
-
 def main():
     source, out_dir, max_texture, lod_texture, lod_ratio, scale, front, no_flap, inboard = (
         parse_args()
@@ -291,6 +270,7 @@ def main():
     bmesh.update_edit_mesh(body.data)
     bpy.ops.object.mode_set(mode="OBJECT")
     split = {}
+    bpy.context.tool_settings.mesh_select_mode = (False, False, True)
     for number, name in enumerate(names, start=1):
         if not groups[number - 1]:
             continue

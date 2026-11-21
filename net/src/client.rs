@@ -57,6 +57,7 @@ pub struct Client {
     pub resims: u64,
     pub resims_skipped: u64,
     pub authoritative_tick: Option<u64>,
+    harvest_pending: bool,
     epoch: u64,
     pub last_correction: f64,
     pub observe: bool,
@@ -102,6 +103,7 @@ impl Client {
             resims: 0,
             resims_skipped: 0,
             authoritative_tick: None,
+            harvest_pending: false,
             epoch: 0,
             last_correction: 0.,
             observe: false,
@@ -201,6 +203,7 @@ impl Client {
                         }
                         self.epoch = lobby.epoch;
                         self.authoritative_tick = None;
+                        self.harvest_pending = false;
                         self.latest = None;
                         self.pending.clear();
                         self.commands.clear();
@@ -404,8 +407,11 @@ impl Client {
         let Some(authoritative) = self.authoritative_tick else {
             return Ok(());
         };
-        if !self.active() || self.stage() == Stage::Results || race.tick >= authoritative + MAX_LEAD
-        {
+        if !self.active() || self.stage() == Stage::Results {
+            return Ok(());
+        }
+        self.harvest_pending |= input.harvest;
+        if race.tick >= authoritative + MAX_LEAD {
             return Ok(());
         }
         let slot = self.slot().ok_or("Missing player slot")?;
@@ -415,6 +421,10 @@ impl Client {
         }
         if input.shift_down {
             self.command_at(tick, Command::ShiftDown)?;
+        }
+        if self.harvest_pending {
+            self.command_at(tick, Command::Harvest)?;
+            self.harvest_pending = false;
         }
         // Hold one tick now and then (about 6%) while ahead of the needed lead.
         // Any command just queued for this tick is applied on the next call.
@@ -520,6 +530,7 @@ fn apply_command(race: &mut Race, slot: usize, input: &mut CarInput, command: Co
         Command::Recover => race.recover(slot),
         Command::ShiftUp => input.shift_up = true,
         Command::ShiftDown => input.shift_down = true,
+        Command::Harvest => input.harvest = true,
     }
 }
 

@@ -36,6 +36,7 @@ pub struct Controls {
     pub look: (f64, f64),
     /// The arrow keys' own look direction, kept while they pan.
     key_look: (f64, f64),
+    stick_angle: Option<f64>,
 }
 
 /// Arrow-key panning rates, radians per second.
@@ -71,12 +72,20 @@ pub fn press_amount(age: f32) -> f32 {
 
 const STICK_DEADZONE: f32 = 0.08;
 
+fn right_stick(pad: &Gamepad) -> Vec2 {
+    Vec2::new(
+        pad.get(GamepadAxis::RightStickX).unwrap_or(0.0),
+        pad.get(GamepadAxis::RightStickY).unwrap_or(0.0),
+    )
+}
+
 /// Whether the driver is touching this pad.
 fn in_use(pad: &Gamepad) -> bool {
     let axis = |axis| pad.get(axis).unwrap_or(0.).abs();
     let trigger = |button| pad.get(button).unwrap_or(0.);
     pad.digital().get_just_pressed().next().is_some()
         || axis(GamepadAxis::LeftStickX) > STICK_DEADZONE
+        || right_stick(pad).length() > LOOK_DEADZONE
         || trigger(GamepadButton::RightTrigger2) > 0.1
         || trigger(GamepadButton::LeftTrigger2) > 0.1
 }
@@ -125,6 +134,14 @@ pub fn update(
             {
                 Some(e.entity)
             }
+            GamepadEvent::Axis(e)
+                if matches!(e.axis, GamepadAxis::RightStickX | GamepadAxis::RightStickY)
+                    && pads
+                        .get(e.entity)
+                        .is_ok_and(|(_, pad)| right_stick(pad).length() > LOOK_DEADZONE) =>
+            {
+                Some(e.entity)
+            }
             GamepadEvent::Button(e) if e.value > 0.1 => Some(e.entity),
             _ => None,
         };
@@ -155,8 +172,7 @@ pub fn update(
         if session.screen == Screen::CameraEditor {
             menu::resume(&mut session);
         } else if matches!(session.screen, Screen::Racing | Screen::Paused) {
-            session.screen = Screen::CameraEditor;
-            session.paused = true;
+            menu::edit_camera(&mut session);
         }
     }
     if session.screen != Screen::Racing {
@@ -186,6 +202,7 @@ pub fn update(
             }
         } else {
             session.race.recover(player);
+            session.drift_score.discard_chain();
         }
         session.recover_hud();
     }
@@ -283,7 +300,6 @@ impl Controls {
         }
     }
 
-    /// Command for one physics tick; queued shifts fire once.
     /// Look direction from B (look back), the right
     /// stick (points the view: down looks back) or the arrows (pan freely).
     /// With nothing held the view eases back to straight ahead.
@@ -294,7 +310,6 @@ impl Controls {
         dt: f64,
     ) -> (f64, f64) {
         let held = |key| input.pressed(key);
-        let axis = |axis| pad.and_then(|pad| pad.get(axis)).unwrap_or(0.0);
         let pan = held(KeyCode::ArrowLeft) as i32 - held(KeyCode::ArrowRight) as i32;
         let tilt = held(KeyCode::ArrowUp) as i32 - held(KeyCode::ArrowDown) as i32;
         if pan != 0 || tilt != 0 {
@@ -311,20 +326,28 @@ impl Controls {
         if held(KeyCode::KeyB) {
             return (std::f64::consts::PI, 0.0);
         }
-        let (x, y) = (
-            axis(GamepadAxis::RightStickX),
-            axis(GamepadAxis::RightStickY),
-        );
-        let deflection = (x.hypot(y) - LOOK_DEADZONE) / (1.0 - LOOK_DEADZONE);
-        if deflection > 0.0 {
-            // Up is ahead, sideways looks out, down looks behind; a part
-            // deflection turns the view part of the way.
-            let angle = -(x as f64).atan2(y as f64);
-            return (angle * (deflection as f64).min(1.0), 0.0);
-        }
-        self.key_look
+        let stick = pad.map_or(Vec2::ZERO, right_stick);
+        self.stick_look(stick)
+            .map_or(self.key_look, |yaw| (yaw, 0.0))
     }
 
+    fn stick_look(&mut self, stick: Vec2) -> Option<f64> {
+        let deflection = (stick.length() - LOOK_DEADZONE) / (1.0 - LOOK_DEADZONE);
+        if deflection <= 0.0 {
+            self.stick_angle = None;
+            return None;
+        }
+        let mut angle = (-f64::from(stick.x)).atan2(f64::from(stick.y));
+        if let Some(previous) = self.stick_angle {
+            // Unwrap before scaling so the two sides of straight back stay adjacent.
+            let turn = std::f64::consts::TAU;
+            angle += ((previous - angle) / turn).round() * turn;
+        }
+        self.stick_angle = Some(angle);
+        Some(angle * f64::from(deflection.min(1.0)))
+    }
+
+    /// Command for one physics tick; queued shifts fire once.
     pub fn car_input(&mut self) -> CarInput {
         let command = CarInput {
             steer: self.steer,
@@ -364,6 +387,23 @@ impl Controls {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn partial_rear_look_crosses_the_stick_centerline_smoothly() {
+        for side in [-1.0, 1.0] {
+            let mut controls = Controls::default();
+            let before = controls
+                .stick_look(Vec2::new(side * 0.001, -0.625))
+                .unwrap();
+            let after = controls
+                .stick_look(Vec2::new(-side * 0.001, -0.625))
+                .unwrap();
+            assert!((before - after).abs() < 0.01);
+            let back = controls.stick_look(Vec2::new(0.0, -1.0)).unwrap();
+            assert!((back.abs() - std::f64::consts::PI).abs() < 1e-6);
+            assert!(controls.stick_look(Vec2::ZERO).is_none());
+        }
+    }
 
     #[test]
     fn shifts_survive_render_frames_but_fire_for_one_physics_tick() {

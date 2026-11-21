@@ -79,6 +79,7 @@ pub enum Command {
     ShiftUp,
     ShiftDown,
     Recover,
+    Harvest,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct InputSample {
@@ -88,7 +89,7 @@ pub struct InputSample {
 /// Held controls in the exact resolution the server simulates.
 ///
 /// Clients predict with `pack(input).unpack()`, so prediction and authority use
-/// bit-identical values. Shifts never travel here; they are reliable commands.
+/// bit-identical values. Shifts and harvest toggles are reliable commands.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PackedInput {
     pub steer: i16,
@@ -97,7 +98,6 @@ pub struct PackedInput {
     pub flags: u8,
 }
 const DRS_FLAG: u8 = 1;
-const HARVEST_FLAG: u8 = 2;
 const HANDBRAKE_FLAG: u8 = 4;
 impl PackedInput {
     pub fn pack(input: &CarInput) -> Self {
@@ -107,7 +107,6 @@ impl PackedInput {
             throttle: unit(input.throttle),
             brake: unit(input.brake),
             flags: if input.drs { DRS_FLAG } else { 0 }
-                | if input.harvest { HARVEST_FLAG } else { 0 }
                 | if input.handbrake { HANDBRAKE_FLAG } else { 0 },
         }
     }
@@ -117,13 +116,12 @@ impl PackedInput {
             throttle: self.throttle as f64 / u16::MAX as f64,
             brake: self.brake as f64 / u16::MAX as f64,
             drs: self.flags & DRS_FLAG != 0,
-            harvest: self.flags & HARVEST_FLAG != 0,
             handbrake: self.flags & HANDBRAKE_FLAG != 0,
             ..CarInput::default()
         }
     }
     pub fn valid(&self) -> bool {
-        self.steer != i16::MIN && self.flags & !(DRS_FLAG | HARVEST_FLAG | HANDBRAKE_FLAG) == 0
+        self.steer != i16::MIN && self.flags & !(DRS_FLAG | HANDBRAKE_FLAG) == 0
     }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -265,16 +263,22 @@ mod tests {
 
     #[test]
     fn packed_buttons_round_trip_and_unknown_flags_are_invalid() {
-        for (drs, harvest) in [(false, false), (true, false), (false, true), (true, true)] {
+        for drs in [false, true] {
             let input = CarInput {
                 drs,
-                harvest,
+                harvest: true,
+                handbrake: true,
                 ..CarInput::default()
             };
             let packed = PackedInput::pack(&input);
             assert!(packed.valid());
             let back = packed.unpack();
-            assert_eq!((back.drs, back.harvest), (drs, harvest));
+            assert_eq!(back.drs, drs);
+            assert!(back.handbrake);
+            assert!(
+                !back.harvest,
+                "held samples must never replay a harvest toggle"
+            );
         }
         let unknown = PackedInput {
             flags: 8,

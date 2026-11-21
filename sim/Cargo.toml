@@ -3,6 +3,7 @@ name = "racecraft-sim"
 description = "Deterministic racecraft simulation: track model, car physics, aero interaction and AI"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

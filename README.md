@@ -326,6 +326,12 @@ The independent `archive/custom-engine/` workspace is frozen and excluded from n
 
 See [MIGRATION.md](MIGRATION.md) for migration coverage and recorded verification limits. The historical gameplay design in [the archived handoff](archive/custom-engine/handoff.md) also describes future features; those are not all implemented.
 
+## License
+
+The project's original code is licensed under **GPL-3.0-or-later**. See
+[LICENSE](LICENSE) for the full terms and [LICENSING.md](LICENSING.md) for scope
+and separate third-party asset terms.
+
 ## Credits
 
 Track and car assets retain their upstream ownership and attribution; see the
