@@ -24,7 +24,7 @@ pub struct Online {
     settings: RaceSettings,
     draft_owner: Option<u64>,
     pub error: Option<String>,
-    install: Option<Lobby>,
+    pub(crate) install: Option<Lobby>,
     loading: Option<u64>,
     last_event: u64,
     request: Option<bool>,
@@ -289,10 +289,11 @@ impl Online {
     pub fn finish(&mut self, frontend: &Frontend, session: &mut Session, options: &Options) {
         let intent = std::mem::take(&mut self.intent);
         if let Some(host) = intent.start {
-            self.identity = Some(racecraft_net::DriverIdentity {
-                team: frontend.draft.team.clone(),
-                driver: frontend.draft.driver.clone(),
-            });
+            self.identity = (!frontend.draft.team.is_empty() && !frontend.draft.driver.is_empty())
+                .then(|| racecraft_net::DriverIdentity {
+                    team: frontend.draft.team.clone(),
+                    driver: frontend.draft.driver.clone(),
+                });
             if let Err(error) = self.begin(host, options, frontend.aids) {
                 self.error = Some(error);
             }
@@ -1166,72 +1167,23 @@ pub fn install(
         frontend.vsync = true;
     }
     session.poses.advance_correction(time.delta_secs_f64());
-    if let Some(lobby) = online.install.take() {
+    if online.install.take().is_some() {
         if let Some(error) = frontend.error.clone() {
             online.error = Some(error);
             online.leave(&mut session);
             return;
         }
-        match racecraft_net::load_race(&options.assets, &lobby.settings, &lobby.players) {
-            Ok(race) => {
-                session.guidance = crate::driving::Guidance::new(&race, session.player);
-                session.poses = Poses::new(&race);
-                session.race = race;
-                if options.test_driver {
-                    online.pilot = Some(racecraft_sim::AiDriver::new(
-                        racecraft_sim::DriverProfile {
-                            pace: 0.93,
-                            aggression: 0.5,
-                            consistency: 1.,
-                        },
-                        &session.race.entrants[session.player].car,
-                        &session.race.track,
-                        session.player as u64 + 100,
-                    ));
-                }
-                if options.car == "gen22" {
-                    let mut field = Vec::new();
-                    for player in &lobby.players {
-                        if let Some(identity) = &player.identity {
-                            match frontend.teams.selection(&identity.team, &identity.driver) {
-                                Ok((team, driver)) => {
-                                    field.push(Some(crate::teams::Teams::identity(team, driver)))
-                                }
-                                Err(error) => {
-                                    online.error = Some(error);
-                                    online.leave(&mut session);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                    let remaining: Vec<_> = frontend
-                        .teams
-                        .teams
-                        .iter()
-                        .flat_map(|team| {
-                            team.drivers
-                                .iter()
-                                .map(move |driver| crate::teams::Teams::identity(team, driver))
-                        })
-                        .filter(|identity| {
-                            !field.iter().flatten().any(|i| i.driver == identity.driver)
-                        })
-                        .collect();
-                    field.extend(
-                        remaining
-                            .into_iter()
-                            .map(Some)
-                            .take(session.race.entrants.len().saturating_sub(field.len())),
-                    );
-                    session.identities = field;
-                }
-            }
-            Err(error) => {
-                online.error = Some(error);
-                online.leave(&mut session);
-                return;
-            }
+        if options.test_driver {
+            online.pilot = Some(racecraft_sim::AiDriver::new(
+                racecraft_sim::DriverProfile {
+                    pace: 0.93,
+                    aggression: 0.5,
+                    consistency: 1.,
+                },
+                &session.race.entrants[session.player].car,
+                &session.race.track,
+                session.player as u64 + 100,
+            ));
         }
     }
     let ready = session.ready;

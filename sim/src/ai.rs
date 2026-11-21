@@ -798,8 +798,11 @@ impl AiDriver {
             drs: match &car.spec.hybrid {
                 None => true,
                 Some(hybrid) => {
-                    let boosting = car.battery.mode == crate::hybrid::DeployMode::Boost;
-                    self.wants_boost(car, hybrid, rivals, corner, track) != boosting
+                    use crate::hybrid::DeployMode;
+                    let mode = car.battery.mode;
+                    mode != DeployMode::Overtake
+                        && self.wants_boost(car, hybrid, rivals, corner, track)
+                            != (mode == DeployMode::Boost)
                 }
             },
             // Normal deployment already recovers the AI's battery within a lap.

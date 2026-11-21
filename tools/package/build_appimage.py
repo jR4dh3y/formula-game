@@ -172,6 +172,9 @@ def main():
             continue
         shutil.copytree(assets / "cars" / car,
                         APP / "usr/share/f1-racecraft/assets/cars" / car)
+        if car == "gen26":
+            shutil.copy2(ROOT / "tools/car/gen26_teams.json",
+                         APP / "usr/share/licenses/f1-racecraft/GEN26-ATTRIBUTION.json")
 
     # Only generic x86-64 official packages are used. The build host's CachyOS
     # AVX2/v3-optimized libraries must not impose that CPU requirement on players.
@@ -219,6 +222,8 @@ def main():
             source = Path("/usr/share/licenses/spdx/exceptions") / f"{license_id}.txt"
         if source.exists():
             shutil.copy2(source, licenses / source.name)
+    shutil.copy2(ROOT / "LICENSE", licenses / "f1-racecraft" / "LICENSE")
+    shutil.copy2(ROOT / "LICENSING.md", licenses / "f1-racecraft" / "LICENSING.md")
     shutil.copy2(ROOT / "game/fonts/OFL.txt", licenses / "f1-racecraft/FONT-OFL.txt")
     shutil.copy2(ROOT / "game/audio/reference/CREDITS.md", licenses / "f1-racecraft/AUDIO-CREDITS.md")
     shutil.copy2(ROOT / "tools/package/README.md", APP / "README.txt")

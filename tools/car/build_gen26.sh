@@ -17,15 +17,24 @@ teams=$("$python" -c 'import json,sys; print(" ".join(json.load(open(sys.argv[1]
     "$repo/tools/car/gen26_teams.json")
 base=$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["base"])' \
     "$repo/tools/car/gen26_teams.json")
+built=false
 for team in $teams; do
     model="$source_dir/$team.glb"
     if [[ ! -f $model ]]; then
         echo "skipping $team: $model not found" >&2
         continue
     fi
-    "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
-        "$model" "$assets/cars/gen26/teams/$team"
+    "$blender" -b --disable-autoexec --factory-startup --python-exit-code 1 \
+        -P "$repo/tools/car/prepare_gen26.py" -- "$model" "$assets/cars/gen26/teams/$team"
+    built=true
 done
-for name in car.glb car_lod1.glb car.json; do
-    cp "$assets/cars/gen26/teams/$base/$name" "$assets/cars/gen26/$name"
-done
+if [[ -f "$source_dir/$base.glb" ]]; then
+    for name in car.glb car_lod1.glb car.json; do
+        cp "$assets/cars/gen26/teams/$base/$name" "$assets/cars/gen26/$name"
+    done
+elif [[ $built == true ]]; then
+    echo "skipping base car copy: $source_dir/$base.glb not found" >&2
+fi
+if [[ $built == true ]]; then
+    cp "$repo/tools/car/gen26_teams.json" "$assets/cars/gen26/ATTRIBUTION.json"
+fi

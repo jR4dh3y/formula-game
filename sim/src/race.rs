@@ -726,8 +726,9 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64, station: u
         .collision
         .ground(position + DVec3::Y * 2.0)
         .map_or(position.y, |hit| hit.height);
-    // Recovery clears crash dynamics, but does not grant fresh tyres.
+    // Recovery clears crash dynamics without replenishing tyres or energy.
     let tyres = car.tyres;
+    let battery = car.battery;
     *car = Car::new(
         car.spec.clone(),
         car.setup,
@@ -737,6 +738,8 @@ fn reset_car(car: &mut Car, track: &Track, position: DVec3, yaw: f64, station: u
         yaw,
     );
     car.tyres = tyres;
+    car.battery = battery;
+    car.battery.recover();
     // A global projection can pick a nearby, different part of the circuit.
     car.track_position = track.project(car.position, Some(station));
 }
@@ -865,6 +868,24 @@ mod tests {
         assert_eq!(race.phase, Phase::Racing);
         assert!(race.events.contains(&RaceEvent::LightsOut));
         assert!(race.entrants[0].car.speed() > 5.0);
+    }
+
+    #[test]
+    fn hybrid_recovery_preserves_energy_and_lap_budget() {
+        let mut configs = field(1, 0);
+        configs[0].spec = Arc::new(CarSpec::gen26(test_wheels(), 5.4, 1.9));
+        let mut race = Race::new(Arc::new(oval_track()), configs, 1, 3);
+        let battery = &mut race.entrants[0].car.battery;
+        battery.energy = 1e6;
+        battery.lap_harvest = 2e6;
+        battery.bonus = 4e5;
+        battery.mode = crate::hybrid::DeployMode::Overtake;
+        race.recover(0);
+        let battery = &race.entrants[0].car.battery;
+        assert_eq!(battery.energy, 1e6);
+        assert_eq!(battery.lap_harvest, 2e6);
+        assert_eq!(battery.bonus, 0.0);
+        assert_eq!(battery.mode, crate::hybrid::DeployMode::Normal);
     }
 
     #[test]
@@ -1012,6 +1033,7 @@ mod tests {
         let mut race = Race::new(Arc::new(oval_track()), field(1, 0), 1, 5);
         race.ai_takeover(0);
         assert!(race.entrants[0].car.assists.automatic_gears);
+        assert!(race.entrants[0].car.assists.auto_drs);
         assert!(race.entrants[0].car.assists.stability < 0.5);
         assert!(matches!(race.entrants[0].driver, Driver::Ai(_)));
     }
@@ -1915,6 +1937,7 @@ impl Race {
         if let Some(e) = self.entrants.get_mut(slot) {
             e.car.assists.automatic_gears = true;
             e.car.assists.stability = AI_STABILITY;
+            e.car.assists.auto_drs = true;
             e.driver = Driver::Ai(Box::new(AiDriver::new(
                 DriverProfile {
                     pace: 0.95,

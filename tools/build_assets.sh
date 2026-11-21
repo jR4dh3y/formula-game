@@ -40,6 +40,7 @@ if [[ $selection == all || $selection == cars ]]; then
         extract '2026-redbull-rb22.zip'
         "$blender" -b --disable-autoexec --factory-startup -P "$repo/tools/car/prepare_gen26.py" -- \
             "$extracted/source/untitled.glb" "$output/cars/gen26"
+        cp "$repo/tools/car/gen26_teams.json" "$output/cars/gen26/ATTRIBUTION.json"
     fi
     # Drift-mode Thar from its Sketchfab GLB (CC BY 4.0, ansari_studios).
     if [[ -n ${THAR_SOURCE:-} ]]; then
