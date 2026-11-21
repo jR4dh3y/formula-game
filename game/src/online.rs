@@ -2,7 +2,6 @@
 use crate::{
     menu::{section, setting_row, Frontend, Screen, Tab, DIM, HOUSING, LABEL, RED, WELL, WELL_RIM},
     options::Options,
-    pose::Poses,
     Session,
 };
 use bevy::prelude::*;
